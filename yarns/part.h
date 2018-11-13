@@ -328,6 +328,7 @@ class Part {
   inline bool recording() const { return seq_recording_; }
   inline bool overdubbing() const { return seq_overdubbing_; }
   inline uint8_t recording_step() const { return seq_rec_step_; }
+  inline uint8_t playing_step() const { return seq_step_; }
   inline uint8_t num_steps() const { return seq_.num_steps; }
   inline void set_recording_step(uint8_t n) { seq_rec_step_ = n; }
   

@@ -715,6 +715,13 @@ void Ui::DoEvents() {
     OnClickLearning(Event());
   }
   
+  if ((mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) &&
+      recording_part().recording_step() == recording_part().playing_step()) {
+    display_.set_brightness(3);
+  } else {
+    display_.set_brightness(2);
+  }
+
   if (refresh_display) {
     queue_.Touch();
     (this->*modes_[mode_].refresh_display)();
