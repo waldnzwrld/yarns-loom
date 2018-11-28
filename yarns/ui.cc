@@ -234,6 +234,12 @@ void Ui::Poll() {
       }
     }
   }
+  if ((mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) &&
+      recording_part().recording_step() != recording_part().playing_step()) {
+    display_.set_brightness(2);
+  } else {
+    display_.set_brightness(3);
+  }
   display_.RefreshSlow();
   
   // Read LED brightness from multi and copy to LEDs driver.
