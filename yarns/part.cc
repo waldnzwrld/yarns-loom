@@ -326,7 +326,7 @@ void Part::ClockSequencer() {
 
   if (step.has_note()) {
     int16_t note = step.note();
-    if (pressed_keys_.size() && !seq_recording_) {
+    if (pressed_keys_.size() && !multi_is_recording_) {
       switch (seq_.input_response) {
         case SEQUENCER_INPUT_RESPONSE_TRANSPOSE:
           {

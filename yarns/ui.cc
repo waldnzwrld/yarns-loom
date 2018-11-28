@@ -326,12 +326,16 @@ void Ui::PrintRecordingStatus() {
   }
 }
 
-void Ui::PrintPushItNote() {
-  buffer_[0] = notes_long[2 * (push_it_note_ % 12)];
-  buffer_[1] = notes_long[1 + 2 * (push_it_note_ % 12)];
-  buffer_[1] = buffer_[1] == ' ' ? octave[push_it_note_ / 12] : buffer_[1];
+void Ui::PrintNote(int16_t note) {
+  buffer_[0] = notes_long[2 * (note % 12)];
+  buffer_[1] = notes_long[1 + 2 * (note % 12)];
+  buffer_[1] = buffer_[1] == ' ' ? octave[note / 12] : buffer_[1];
   buffer_[2] = '\0';
   display_.Print(buffer_, buffer_);
+}
+
+void Ui::PrintPushItNote() {
+  PrintNote(push_it_note_);
 }
 
 void Ui::PrintLearning() {
@@ -703,12 +707,25 @@ void Ui::DoEvents() {
       refresh_display = true;
     }
   }
-  if (queue_.idle_time() > 400 && multi.latched()) {
-    display_.Print("//");
+  uint8_t recording_step_index = recording_part().recording_step();
+  if (queue_.idle_time() > 400) {
+    if (multi.latched()) {
+      display_.Print("//");
+    } else if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
+      SequencerStep selected_step = recording_part().sequencer_settings().step[recording_step_index];
+      if (selected_step.is_rest()) {
+        display_.Print("RS");
+      } else if (selected_step.is_tie()) {
+        display_.Print("TI");
+      } else {
+        PrintNote(selected_step.note());
+      }
+    }
   }
-  if (queue_.idle_time() > 50 &&
+  if (displayed_recording_step_index_ != recording_step_index &&
       (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
     refresh_display = true;
+    displayed_recording_step_index_ = recording_step_index;
   }
 
   if (mode_ == UI_MODE_LEARNING && !multi.learning()) {
