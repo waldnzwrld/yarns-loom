@@ -717,7 +717,7 @@ void Ui::DoEvents() {
   if (queue_.idle_time() > 400) {
     if (multi.latched()) {
       display_.Print("//");
-    } else if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
+    } else if (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
       SequencerStep selected_step = recording_part().sequencer_settings().step[recording_step_index];
       if (selected_step.is_rest()) {
         display_.Print("RS");
