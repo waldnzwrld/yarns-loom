@@ -236,9 +236,9 @@ void Ui::Poll() {
   }
   if ((mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) &&
       recording_part().recording_step() != recording_part().playing_step()) {
-    display_.set_brightness(2);
+    display_.set_brightness(4);
   } else {
-    display_.set_brightness(3);
+    display_.set_brightness(6);
   }
   display_.RefreshSlow();
   
