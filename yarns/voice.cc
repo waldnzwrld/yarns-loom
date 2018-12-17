@@ -136,11 +136,20 @@ void Voice::Refresh() {
   int32_t lfo = lfo_phase_ < 1UL << 31
       ?  -32768 + (lfo_phase_ >> 15)
       : 0x17fff - (lfo_phase_ >> 15);
-  note += lfo * mod_wheel_ * vibrato_range_ >> 15;
+  uint16_t vibrato_control_value = 0;
+  switch (vibrato_control_source_) {
+    case VIBRATO_CONTROL_SOURCE_MODWHEEL:
+      vibrato_control_value = mod_wheel_;
+      break;
+    case VIBRATO_CONTROL_SOURCE_AFTERTOUCH:
+      vibrato_control_value = mod_aux_[2];
+      break;
+  }
+  note += lfo * (vibrato_control_value + vibrato_initial_) * vibrato_range_ >> 15;
   mod_aux_[0] = mod_velocity_ << 9;
   mod_aux_[1] = mod_wheel_ << 9;
   mod_aux_[5] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[6] = (lfo * mod_wheel_ >> 7) + 32768;
+  mod_aux_[6] = (lfo * vibrato_control_value >> 7) + 32768;
   mod_aux_[7] = lfo + 32768;
   
   if (retrigger_delay_) {

@@ -110,6 +110,8 @@ struct VoicingSettings {
   uint8_t legato_mode;
   uint8_t pitch_bend_range;
   uint8_t vibrato_range;
+  uint8_t vibrato_initial;
+  uint8_t vibrato_control_source;
   uint8_t modulation_rate;
   int8_t tuning_transpose;
   int8_t tuning_fine;
@@ -139,6 +141,8 @@ enum PartSetting {
   PART_VOICING_LEGATO_MODE,
   PART_VOICING_PITCH_BEND_RANGE,
   PART_VOICING_VIBRATO_RANGE,
+  PART_VOICING_VIBRATO_INITIAL,
+  PART_VOICING_VIBRATO_CONTROL_SOURCE,
   PART_VOICING_MODULATION_RATE,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,

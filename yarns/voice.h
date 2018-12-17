@@ -54,6 +54,11 @@ enum AudioMode {
   AUDIO_MODE_SINE
 };
 
+enum VibratoControlSource {
+  VIBRATO_CONTROL_SOURCE_MODWHEEL,
+  VIBRATO_CONTROL_SOURCE_AFTERTOUCH
+};
+
 class Oscillator {
  public:
   Oscillator() { }
@@ -127,6 +132,12 @@ class Voice {
   }
   inline void set_vibrato_range(uint8_t vibrato_range) {
     vibrato_range_ = vibrato_range;
+  }
+  inline void set_vibrato_initial(uint8_t n) {
+    vibrato_initial_ = n;
+  }
+  inline void set_vibrato_control_source(uint8_t n) {
+    vibrato_control_source_ = n;
   }
   inline void set_trigger_duration(uint8_t trigger_duration) {
     trigger_duration_ = trigger_duration;
@@ -245,6 +256,8 @@ class Voice {
   uint8_t pitch_bend_range_;
   uint8_t modulation_rate_;
   uint8_t vibrato_range_;
+  uint8_t vibrato_initial_;
+  uint8_t vibrato_control_source_;
   
   uint8_t trigger_duration_;
   uint8_t trigger_shape_;
