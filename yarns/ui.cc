@@ -515,10 +515,7 @@ void Ui::OnIncrementRecording(const stmlib::Event& e) {
   if (push_it_) {
     OnIncrementPushItNote(e);
   } else {
-    int8_t step = recording_part().recording_step();
-    step += e.data;
-    CONSTRAIN(step, 0, recording_part().num_steps());
-    mutable_recording_part()->set_recording_step(step);
+    mutable_recording_part()->increment_recording_step_index(e.data);
   }
 }
 
@@ -528,14 +525,7 @@ void Ui::OnIncrementOverdubbing(const stmlib::Event& e) {
     CONSTRAIN(push_it_note_, 0, 127);
     mutable_recording_part()->ModifyNoteAtCurrentStep(push_it_note_);
   } else {
-    int8_t step = recording_part().recording_step();
-    step += e.data;
-    if (recording_part().overdubbing()) {
-      CONSTRAIN(step, 0, recording_part().num_steps() - 1);
-    } else {
-      CONSTRAIN(step, 0, kNumSteps - 1);
-    }
-    mutable_recording_part()->set_recording_step(step);
+    mutable_recording_part()->increment_recording_step_index(e.data);
   }
 }
 
