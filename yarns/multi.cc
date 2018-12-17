@@ -198,7 +198,7 @@ void Multi::Clock() {
 }
 
 void Multi::Start(bool started_by_keyboard) {
-  if (running_ || recording_) {
+  if (running_) {
     return;
   }
   if (internal_clock()) {
