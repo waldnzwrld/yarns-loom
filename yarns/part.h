@@ -338,10 +338,14 @@ class Part {
   inline uint8_t recording_step() const { return seq_rec_step_; }
   inline uint8_t playing_step() const {
     // correct for preemptive increment
-    return (seq_.num_steps + ((seq_step_ - 1) % seq_.num_steps)) % seq_.num_steps;
+    return modulo(seq_step_ - 1, seq_.num_steps);
   }
   inline uint8_t num_steps() const { return seq_.num_steps; }
-  inline void set_recording_step(uint8_t n) { seq_rec_step_ = n; }
+  inline void increment_recording_step_index(uint8_t n) {
+    seq_rec_step_ += n;
+    seq_rec_step_ = modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
+  }
+  inline uint8_t modulo(int8_t a, int8_t b) const { return (b + (a % b)) % b; }
   
   void Touch() {
     TouchVoices();
