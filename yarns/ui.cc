@@ -645,7 +645,7 @@ void Ui::OnSwitchHeld(const Event& e) {
 }
 
 void Ui::DoInitCommand() {
-  multi.Init();
+  multi.Init(false);
 }
 
 void Ui::DoDumpCommand() {
