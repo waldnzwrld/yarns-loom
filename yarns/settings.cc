@@ -71,7 +71,7 @@ const char* const voicing_oscillator_values[] = {
 };
 
 const char* const voicing_allocation_priority_values[] = {
-  "LAST", "LOW", "HIGH"
+  "LAST", "LOW", "HIGH", "FIRST"
 };
 
 const char* const trigger_shape_values[] = {
@@ -256,7 +256,7 @@ const Setting Settings::settings_[] = {
   {
     "NP", "NOTE PRIORITY",
     SETTING_DOMAIN_PART, { PART_VOICING_ALLOCATION_PRIORITY, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 2, voicing_allocation_priority_values,
+    SETTING_UNIT_ENUMERATION, 0, 3, voicing_allocation_priority_values,
     19, 9,
   },
   {
