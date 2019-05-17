@@ -28,6 +28,8 @@
 
 #include "yarns/part.h"
 
+#include <cmath>
+
 #include <algorithm>
 
 #include "stmlib/midi/midi.h"
@@ -259,6 +261,7 @@ void Part::Clock() {
   
   if (voicing_.modulation_rate >= 100) {
     uint32_t num_ticks = clock_divisions[voicing_.modulation_rate - 100];
+    // TODO decipher this math -- how much to add so that the voices are in quadrature?
     uint32_t expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
     for (uint8_t i = 0; i < num_voices_; ++i) {
       voice_[i]->TapLfo(expected_phase << 16);
@@ -649,7 +652,7 @@ void Part::TouchVoices() {
   CONSTRAIN(voicing_.aux_cv_2, 0, 7);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
-    voice_[i]->set_modulation_rate(voicing_.modulation_rate);
+    voice_[i]->set_modulation_rate(voicing_.modulation_rate * pow(1.123, (int) i));
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_trigger_duration(voicing_.trigger_duration);
     voice_[i]->set_trigger_scale(voicing_.trigger_scale);
