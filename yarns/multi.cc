@@ -754,10 +754,10 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
         voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
         voicing->portamento = 0;
         voicing->legato_mode = 0;
-        part_[0].AllocateVoices(&voice_[0], 3, false);
+        part_[0].AllocateVoices(&voice_[0], 2, false);
 
         for (uint8_t i = 1; i < 3; ++i) {
-          MidiSettings* midi = part_[i].mutable_midi_settings();
+          midi = part_[i].mutable_midi_settings();
           if (old_layout == LAYOUT_QUAD_TRIGGERS) {
             midi->min_note = 0;
             midi->max_note = 127;
