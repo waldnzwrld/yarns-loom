@@ -27,6 +27,7 @@
 // Parameter definitions.
 
 #include "yarns/settings.h"
+#include "yarns/resources.h"
 
 #include <algorithm>
 #include <cstring>
@@ -276,7 +277,7 @@ const Setting Settings::settings_[] = {
   {
     "PO", "PORTAMENTO",
     SETTING_DOMAIN_PART, { PART_VOICING_PORTAMENTO, 0 },
-    SETTING_UNIT_PORTAMENTO, 0, 101, NULL,
+    SETTING_UNIT_PORTAMENTO, 0, 127, NULL,
     5, 10,
   },
   {
@@ -1107,13 +1108,13 @@ void Settings::Print(const Setting& setting, char* buffer) const {
       break;
       
     case SETTING_UNIT_PORTAMENTO:
-      if (value <= 50) {
+      if (value < (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1)) {
         PrintInteger(buffer, value);
       } else {
-        PrintInteger(buffer, value - 51);
+        PrintInteger(buffer, value - (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1));
       }
       if (buffer[0] == ' ') {
-        buffer[0] = (value <= 50) ? 'T' : 'R';
+        buffer[0] = (value < (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1)) ? 'T' : 'R';
       }
       break;
       
