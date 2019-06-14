@@ -241,10 +241,10 @@ void Part::Reset() {
 
 void Part::Clock() {
   if (!arp_seq_prescaler_) {
-    if (seq_.num_steps && seq_running_) {
-      ClockSequencer();
-    } else if (seq_.arp_range) {
+    if (seq_.arp_range) {
       ClockArpeggiator();
+    } else if (seq_.num_steps && seq_running_) {
+      ClockSequencer();
     }
   }
   
@@ -383,6 +383,7 @@ void Part::ClockArpeggiator() {
 
   uint32_t pattern = lut_arpeggiator_patterns[seq_.arp_pattern];
   uint32_t pattern_length = 16;
+  uint32_t change_arp_note = pattern_mask & pattern;
   
   if (seq_.euclidean_length != 0) {
     pattern_length = seq_.euclidean_length;
@@ -390,10 +391,15 @@ void Part::ClockArpeggiator() {
     // Read euclidean pattern from ROM.
     uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) * 32;
     pattern = lut_euclidean[offset + seq_.euclidean_fill];
+    change_arp_note = pattern_mask & pattern;
+  } else if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER) {
+    pattern_length = seq_.num_steps;
+    change_arp_note = seq_.step[arp_step_].has_note();
   }
   
   uint8_t num_notes = pressed_keys_.size();
-  if ((pattern_mask & pattern) && num_notes) {
+  if (change_arp_note && num_notes) {
+    int8_t next_arp_note = arp_note_;
     // Update arepggiator note/octave counter.
     if (num_notes == 1 && seq_.arp_range == 1) {
       // This is a corner case for the Up/down pattern code.
@@ -405,6 +411,17 @@ void Part::ClockArpeggiator() {
         uint16_t random = Random::GetSample();
         arp_octave_ = (random & 0xff) % seq_.arp_range;
         arp_note_ = (random >> 8) % num_notes;
+      } else if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER) {
+        // TODO respect arp range?
+        // TODO played vs sorted priority
+        // TODO jump before play, not after?
+        // TODO why isn't velocity note-specific?
+        SequencerStep step = seq_.step[arp_step_];
+        if (step.is_white()) {
+          next_arp_note = modulo(arp_note_ + step.white_key_value(), num_notes);
+        } else {
+          next_arp_note = modulo(step.black_key_value(), num_notes);
+        }
       } else {
         bool wrapped = true;
         while (wrapped) {
@@ -423,10 +440,12 @@ void Part::ClockArpeggiator() {
             }
           }
         }
+        next_arp_note = arp_note_ + arp_direction_;
       }
     }
     
     // Kill pending notes (if any).
+    //TODO respect tie from sequencer?
     StopSequencerArpeggiatorNotes();
     
     // Trigger arpeggiated note or chord.
@@ -450,7 +469,7 @@ void Part::ClockArpeggiator() {
         InternalNoteOn(chord_note.note, chord_note.velocity & 0x7f);
       }
     }
-    arp_note_ += arp_direction_;
+    arp_note_ = next_arp_note;
     gate_length_counter_ = seq_.gate_length;
   }
   
