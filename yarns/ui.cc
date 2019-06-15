@@ -711,7 +711,22 @@ void Ui::DoEvents() {
       } else if (selected_step.is_tie()) {
         display_.Print("TI");
       } else {
-        PrintNote(selected_step.note());
+        if (recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER) {
+          if (selected_step.is_white()) {
+            Settings::PrintInteger(buffer_, selected_step.white_key_value());
+            if (buffer_[0] == ' ') {
+              buffer_[0] = selected_step.white_key_value() >= 0 ? '+' : '-';
+            }
+          } else {
+            Settings::PrintInteger(buffer_, selected_step.black_key_value() + 1);
+            if (buffer_[0] == ' ') {
+              buffer_[0] = selected_step.black_key_value() >= 0 ? '>' : '<';
+            }
+          }
+          display_.Print(buffer_, buffer_);
+        } else {
+          PrintNote(selected_step.note());
+        }
       }
     }
   }
