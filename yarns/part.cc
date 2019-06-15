@@ -399,7 +399,6 @@ void Part::ClockArpeggiator() {
   
   uint8_t num_notes = pressed_keys_.size();
   if (change_arp_note && num_notes) {
-    int8_t next_arp_note = arp_note_;
     // Update arepggiator note/octave counter.
     if (num_notes == 1 && seq_.arp_range == 1) {
       // This is a corner case for the Up/down pattern code.
@@ -414,13 +413,11 @@ void Part::ClockArpeggiator() {
       } else if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER) {
         // TODO respect arp range?
         // TODO played vs sorted priority
-        // TODO jump before play, not after?
-        // TODO why isn't velocity note-specific?
         SequencerStep step = seq_.step[arp_step_];
         if (step.is_white()) {
-          next_arp_note = modulo(arp_note_ + step.white_key_value(), num_notes);
+          arp_note_ = modulo(arp_note_ + step.white_key_value(), num_notes);
         } else {
-          next_arp_note = modulo(step.black_key_value(), num_notes);
+          arp_note_ = modulo(step.black_key_value(), num_notes);
         }
       } else {
         bool wrapped = true;
@@ -440,7 +437,6 @@ void Part::ClockArpeggiator() {
             }
           }
         }
-        next_arp_note = arp_note_ + arp_direction_;
       }
     }
     
@@ -469,7 +465,7 @@ void Part::ClockArpeggiator() {
         InternalNoteOn(chord_note.note, chord_note.velocity & 0x7f);
       }
     }
-    arp_note_ = next_arp_note;
+    arp_note_ += arp_direction_;
     gate_length_counter_ = seq_.gate_length;
   }
   
