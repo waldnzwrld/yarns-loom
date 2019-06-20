@@ -445,7 +445,6 @@ void Part::ClockArpeggiator() {
     }
     
     // Kill pending notes (if any).
-    //TODO respect tie from sequencer?
     StopSequencerArpeggiatorNotes();
     
     // Trigger arpeggiated note or chord.
