@@ -455,6 +455,9 @@ void Part::ClockArpeggiator() {
           &pressed_keys_.sorted_note(arp_note_);
       uint8_t note = arpeggio_note->note;
       uint8_t velocity = arpeggio_note->velocity & 0x7f;
+      if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER) {
+        velocity = (velocity * seq_.step[arp_step_].velocity()) >> 7;
+      }
       note += 12 * arp_octave_;
       while (note > 127) {
         note -= 12;
