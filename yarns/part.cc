@@ -84,6 +84,10 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   bool sent_from_step_editor = channel & 0x80;
   
+  // scale velocity to compensate for its min/max range, so that voices using
+  // velocity filtering can still have a full velocity range
+  velocity = (128 * (velocity - midi_.min_velocity)) / (midi_.max_velocity - midi_.min_velocity + 1);
+
   if (release_latched_keys_on_next_note_on_) {
     bool still_latched = ignore_note_off_messages_;
 
