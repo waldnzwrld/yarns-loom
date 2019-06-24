@@ -175,6 +175,7 @@ class Settings {
   }
   
   static void PrintInteger(char* buffer, uint8_t number);
+  static void PrintSignedInteger(char* buffer, int8_t number);
   const SettingIndex* menu() {
     return menus_[multi.layout()];
   }

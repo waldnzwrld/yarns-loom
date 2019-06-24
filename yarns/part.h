@@ -42,18 +42,18 @@ class Voice;
 const uint8_t kNumSteps = 64;
 const uint8_t kMaxNumVoices = 4;
 
-const uint8_t whiteKeyValues[] = {
-  0,    0xff, 1,    0xff,
-  2,    3,    0xff, 4,
-  0xff, 5,    0xff, 6,
+const int8_t whiteKeyValues[] = {
+  0,    0x7f, 1,    0x7f,
+  2,    3,    0x7f, 4,
+  0x7f, 5,    0x7f, 6,
 };
-const uint8_t blackKeyValues[] = {
-  0xff, 0,    0xff, 1,
-  0xff, 0xff, 2,    0xff,
-  3,    0xff, 4,    0xff,
+const int8_t blackKeyValues[] = {
+  0x7f, 0,    0x7f, 1,
+  0x7f, 0x7f, 2,    0x7f,
+  3,    0x7f, 4,    0x7f,
 };
-const uint8_t kNumBlackKeys = 5;
-const uint8_t kNumWhiteKeys = 7;
+const int8_t kNumBlackKeys = 5;
+const int8_t kNumWhiteKeys = 7;
 
 
 enum ArpeggiatorDirection {
@@ -212,10 +212,10 @@ struct SequencerStep {
   inline bool is_slid() const { return data[1] & 0x80; }
   inline uint8_t velocity() const { return data[1] & 0x7f; }
 
-  inline bool is_white() const { return whiteKeyValues[note() % 12] != 0xff; }
-  inline uint8_t octaves_above_middle_c() const { return (note() / 12) - (60 / 12); }
-  inline uint8_t white_key_value() const { return octaves_above_middle_c() * kNumWhiteKeys + whiteKeyValues[note() % 12]; }
-  inline uint8_t black_key_value() const { return octaves_above_middle_c() * kNumBlackKeys + blackKeyValues[note() % 12]; }
+  inline bool is_white() const { return whiteKeyValues[note() % 12] != 0x7f; }
+  inline int8_t octaves_above_middle_c() const { return ((int8_t) (note() / 12)) - (60 / 12); }
+  inline int8_t white_key_value() const { return octaves_above_middle_c() * kNumWhiteKeys + whiteKeyValues[note() % 12]; }
+  inline int8_t black_key_value() const { return octaves_above_middle_c() * kNumBlackKeys + blackKeyValues[note() % 12]; }
 };
 
 struct SequencerSettings {

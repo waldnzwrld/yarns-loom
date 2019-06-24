@@ -1092,22 +1092,7 @@ void Settings::Print(const Setting& setting, char* buffer) const {
       break;
       
     case SETTING_UNIT_INT8:
-      {
-        int8_t value_signed = value;
-        if (value_signed >= 0) {
-          PrintInteger(buffer, value_signed);
-        } else if (value_signed > -10){
-          PrintInteger(buffer, -value_signed);
-          buffer[0] = '-';
-        } else {
-          PrintInteger(buffer, -value_signed);
-          buffer[2] = ' ';
-          buffer[3] = '-';
-          buffer[4] = buffer[0];
-          buffer[5] = buffer[1];
-          buffer[6] = '\0';
-        }
-      }
+      PrintSignedInteger(buffer, value);
       break;
     
     case SETTING_UNIT_INDEX:
@@ -1195,6 +1180,26 @@ void Settings::PrintInteger(char* buffer, uint8_t number) {
   buffer[0] = number ? '0' + (number % 10) : ' ';
   number /= 10;
   buffer[2] = '\0';
+}
+
+/* static */
+void Settings::PrintSignedInteger(char* buffer, int8_t number) {
+  if (number >= 0) {
+    PrintInteger(buffer, number);
+    if (buffer[0] == ' ') {
+      buffer[0] = '+';
+    }
+  } else if (number > -10){
+    PrintInteger(buffer, -number);
+    buffer[0] = '-';
+  } else {
+    PrintInteger(buffer, -number);
+    buffer[2] = ' ';
+    buffer[3] = '-';
+    buffer[4] = buffer[0];
+    buffer[5] = buffer[1];
+    buffer[6] = '\0';
+  }
 }
 
 /* extern */

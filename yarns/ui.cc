@@ -717,14 +717,12 @@ void Ui::DoEvents() {
           recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
         ) {
           if (selected_step.is_white()) {
-            Settings::PrintInteger(buffer_, selected_step.white_key_value());
-            if (buffer_[0] == ' ') {
-              buffer_[0] = selected_step.white_key_value() >= 0 ? '+' : '-';
-            }
+            Settings::PrintSignedInteger(buffer_, selected_step.white_key_value());
           } else {
-            Settings::PrintInteger(buffer_, selected_step.black_key_value() + 1);
+            int8_t value = selected_step.black_key_value();
+            Settings::PrintSignedInteger(buffer_, (value >= 0 ? value + 1 : abs(value)));
             if (buffer_[0] == ' ') {
-              buffer_[0] = selected_step.black_key_value() >= 0 ? '>' : '<';
+              buffer_[0] = value >= 0 ? '>' : '<';
             }
           }
           display_.Print(buffer_, buffer_);
