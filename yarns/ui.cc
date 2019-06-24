@@ -701,17 +701,21 @@ void Ui::DoEvents() {
     }
   }
   uint8_t recording_step_index = recording_part().recording_step();
-  if (queue_.idle_time() > 600) {
-    if (multi.latched()) {
-      display_.Print("//");
-    } else if (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
+  uint8_t print_step_value = (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING));
+  if (queue_.idle_time() > 300 && queue_.idle_time() <= 600 && multi.latched() && print_step_value) {
+    display_.Print("//");
+  } else if (queue_.idle_time() > 600) {
+    if (print_step_value) {
       SequencerStep selected_step = recording_part().sequencer_settings().step[recording_step_index];
       if (selected_step.is_rest()) {
         display_.Print("RS");
       } else if (selected_step.is_tie()) {
         display_.Print("TI");
       } else {
-        if (recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER) {
+        if (
+          recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
+          recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
+        ) {
           if (selected_step.is_white()) {
             Settings::PrintInteger(buffer_, selected_step.white_key_value());
             if (buffer_[0] == ' ') {
@@ -728,6 +732,8 @@ void Ui::DoEvents() {
           PrintNote(selected_step.note());
         }
       }
+    } else if (multi.latched()) {
+      display_.Print("//");
     }
   }
   if (displayed_recording_step_index_ != recording_step_index &&
