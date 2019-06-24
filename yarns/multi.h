@@ -209,10 +209,6 @@ class Multi {
   
   void StartRecording(uint8_t part) {
     if (!recording_) {
-      // Do not record while the arpeggiator is running!
-      if (started_by_keyboard_ && running()) {
-        Stop();
-      }
       part_[part].StartRecording();
       uint8_t channel = part_[part].midi_settings().channel;
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
