@@ -510,7 +510,7 @@ void Part::ArpeggiatorNoteOn() {
   arp_note_ += arp_direction_;
   gate_length_counter_ = seq_.gate_length;
 }
-  
+
 void Part::ResetAllControllers() {
   ignore_note_off_messages_ = false;
   for (uint8_t i = 0; i < num_voices_; ++i) {
