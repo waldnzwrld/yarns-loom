@@ -139,7 +139,7 @@ struct VoicingSettings {
   uint8_t audio_mode;
   uint8_t aux_cv_2;
   uint8_t tuning_factor;
-  uint8_t padding[14];
+  uint8_t padding[12];
 };
 
 
@@ -230,7 +230,7 @@ struct SequencerSettings {
   uint8_t input_response;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
-  uint8_t padding[7];
+  uint8_t padding[6];
   
   int16_t first_note() {
     for (uint8_t i = 0; i < num_steps; ++i) {
