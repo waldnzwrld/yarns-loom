@@ -517,7 +517,7 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
       brightness[0] = voice_[0].gate() ? (voice_[0].velocity() << 1) : 0;
       brightness[1] = voice_[1].gate() ? (voice_[1].velocity() << 1) : 0;
       brightness[2] = voice_[2].gate() ? 255 : 0;
-      brightness[3] = voice_[2].aux_cv_2();
+      brightness[3] = clock() ? voice_[2].aux_cv_2() : 0;
       break;
 
     case LAYOUT_QUAD_VOLTAGES:
