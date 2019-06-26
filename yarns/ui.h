@@ -150,6 +150,12 @@ class Ui {
   inline const Part& recording_part() const {
     return multi.part(recording_part_);
   }
+  inline Part* mutable_active_part() {
+    return multi.mutable_part(settings.Get(GLOBAL_ACTIVE_PART));
+  }
+  inline const Part& active_part() const {
+    return multi.part(settings.Get(GLOBAL_ACTIVE_PART));
+  }
   
   // Generic Handler.
   void OnClick(const stmlib::Event& event);
@@ -193,6 +199,7 @@ class Ui {
   void PrintLearning();
   void PrintFactoryTesting();
   void PrintVersionNumber();
+  void PrintActivePartAndSequencerPlayMode();
   
   void DoInitCommand();
   void DoDumpCommand();
@@ -225,10 +232,12 @@ class Ui {
   Switches switches_;
   char buffer_[32];
   
-  bool start_stop_long_press_event_sent_;
-  uint32_t start_stop_press_time_;
   bool rec_long_press_event_sent_;
   uint32_t rec_press_time_;
+  bool start_stop_long_press_event_sent_;
+  uint32_t start_stop_press_time_;
+  bool tap_tempo_long_press_event_sent_;
+  uint32_t tap_tempo_press_time_;
   bool encoder_long_press_event_sent_;
   uint32_t encoder_press_time_;
   

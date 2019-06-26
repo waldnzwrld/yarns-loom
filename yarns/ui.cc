@@ -214,11 +214,10 @@ void Ui::Poll() {
 
   // Switch press and long press.
   switches_.Debounce();
-  if (switches_.just_pressed(UI_SWITCH_TAP_TEMPO)) {
-    queue_.AddEvent(CONTROL_SWITCH, UI_SWITCH_TAP_TEMPO, 0);
-  }
-  Ui::PollSwitch(UI_SWITCH_START_STOP , start_stop_press_time_, start_stop_long_press_event_sent_ );
-  Ui::PollSwitch(UI_SWITCH_REC        , rec_press_time_       , rec_long_press_event_sent_        );
+  PollSwitch(UI_SWITCH_REC        , rec_press_time_       , rec_long_press_event_sent_        );
+  PollSwitch(UI_SWITCH_START_STOP , start_stop_press_time_, start_stop_long_press_event_sent_ );
+  PollSwitch(UI_SWITCH_TAP_TEMPO  , tap_tempo_press_time_ , tap_tempo_long_press_event_sent_  );
+
   if ((mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) &&
       recording_part().recording_step() != recording_part().playing_step()) {
     display_.set_brightness(3);
@@ -651,17 +650,6 @@ void Ui::OnSwitchPress(const Event& e) {
 
 void Ui::OnSwitchHeld(const Event& e) {
   switch (e.control_id) {
-    case UI_SWITCH_START_STOP:
-      if (!push_it_ && !multi.latched()) {
-        if (multi.running()) {
-          multi.Latch();
-        } else {
-          mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
-          push_it_ = true;
-          multi.PushItNoteOn(push_it_note_);
-        }
-      }
-      break;
 
     case UI_SWITCH_REC:
       if (mode_ == UI_MODE_DELETE_SEQUENCE) {
@@ -681,6 +669,14 @@ void Ui::OnSwitchHeld(const Event& e) {
           delete_sequence_part_ = modes_[mode_].max_value;
         }
       }
+      break;
+
+    case UI_SWITCH_START_STOP:
+      settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
+      break;
+
+    case UI_SWITCH_TAP_TEMPO:
+      mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().Get(PART_SEQUENCER_PLAY_MODE)) % PLAY_MODE_LAST);
       break;
 
     default:
@@ -717,6 +713,13 @@ void Ui::TapTempo() {
   previous_tap_time_ = tap_time;
 }
 
+void Ui::PrintActivePartAndSequencerPlayMode() {
+  strcpy(buffer_, "1M");
+  buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
+  buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().Get(PART_SEQUENCER_PLAY_MODE)][0];
+  display_.Print(buffer_);
+}
+
 void Ui::DoEvents() {
   bool refresh_display = false;
   bool scroll_display = false;
@@ -746,8 +749,8 @@ void Ui::DoEvents() {
   }
   uint8_t recording_step_index = recording_part().recording_step();
   uint8_t print_step_value = (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING));
-  if (queue_.idle_time() > 300 && queue_.idle_time() <= 600 && multi.latched() && print_step_value) {
-    display_.Print("//");
+  if (queue_.idle_time() > 300 && queue_.idle_time() <= 600 && print_step_value) {
+    Ui::PrintActivePartAndSequencerPlayMode();
   } else if (queue_.idle_time() > 600) {
     if (print_step_value) {
       SequencerStep selected_step = recording_part().sequencer_settings().step[recording_step_index];
@@ -774,8 +777,8 @@ void Ui::DoEvents() {
           PrintNote(selected_step.note());
         }
       }
-    } else if (multi.latched()) {
-      display_.Print("//");
+    } else {
+      Ui::PrintActivePartAndSequencerPlayMode();
     }
   }
   if (displayed_recording_step_index_ != recording_step_index &&

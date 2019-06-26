@@ -120,6 +120,14 @@ const char* const tuning_system_values[] = {
   "CUSTOM"
 };
 
+const char* const sequencer_play_mode_values[] = {
+  "M",
+  "L",
+  "*",
+  "A",
+  "S"
+};
+
 const char* const sequencer_input_response_values[] = {
   "TRANSPOSE", "OVERRIDE", "OFF"
 };
@@ -451,6 +459,12 @@ const Setting Settings::settings_[] = {
     SETTING_DOMAIN_PART, { PART_SEQUENCER_EUCLIDEAN_ROTATE, 0 },
     SETTING_UNIT_UINT8, 0, 32, NULL,
     109, 31,
+  },
+  {
+    "SP", "SEQUENCER PLAY MODE",
+    SETTING_DOMAIN_PART, { PART_SEQUENCER_PLAY_MODE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
+    0, 0,
   },
   {
     "SI", "SEQUENCER INPUT RESPONSE",

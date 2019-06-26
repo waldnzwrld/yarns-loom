@@ -304,7 +304,7 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  seq_rec_step_ = 0;
+  seq_rec_step_ = 0; // TODO don't reset this
   seq_overdubbing_ = seq_.num_steps && seq_running_;
 }
 

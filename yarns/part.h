@@ -108,6 +108,15 @@ enum SequencerInputResponse {
   SEQUENCER_INPUT_RESPONSE_OFF
 };
 
+enum PlayMode {
+  PLAY_MODE_MANUAL,
+  PLAY_MODE_MANUAL_LATCH,
+  PLAY_MODE_ARPEGGIATOR_LATCH,
+  PLAY_MODE_ARPEGGIATOR,
+  PLAY_MODE_SEQUENCER,
+  PLAY_MODE_LAST
+};
+
 struct MidiSettings {
   uint8_t channel;
   uint8_t min_note;
@@ -172,6 +181,7 @@ enum PartSetting {
   PART_VOICING_AUX_CV_2,
   PART_VOICING_TUNING_FACTOR,
   PART_VOICING_LAST = PART_VOICING_ALLOCATION_MODE + sizeof(VoicingSettings) - 1,
+  PART_SEQUENCER_PLAY_MODE,
   PART_SEQUENCER_CLOCK_DIVISION,
   PART_SEQUENCER_GATE_LENGTH,
   PART_SEQUENCER_ARP_RANGE,
@@ -219,6 +229,7 @@ struct SequencerStep {
 };
 
 struct SequencerSettings {
+  uint8_t play_mode;
   uint8_t clock_division;
   uint8_t gate_length;
   uint8_t arp_range;
@@ -230,7 +241,7 @@ struct SequencerSettings {
   uint8_t input_response;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
-  uint8_t padding[6];
+  uint8_t padding[5];
   
   int16_t first_note() {
     for (uint8_t i = 0; i < num_steps; ++i) {
