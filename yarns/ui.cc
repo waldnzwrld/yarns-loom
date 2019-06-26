@@ -111,6 +111,12 @@ Ui::Mode Ui::modes_[] = {
     UI_MODE_RECORDING,
     NULL, 0, 0 },
   
+  // UI_MODE_DELETE_SEQUENCE
+  { &Ui::OnIncrement, &Ui::OnClickDeleteSequence,
+    &Ui::PrintDeleteSequence,
+    UI_MODE_PARAMETER_SELECT,
+    NULL, 0, 0 },
+
   // UI_MODE_RECORDING
   { &Ui::OnIncrementRecording, &Ui::OnClickRecording,
     &Ui::PrintRecordingStatus,
@@ -172,6 +178,8 @@ void Ui::Init() {
       &calibration_note_;
   modes_[UI_MODE_SELECT_RECORDING_PART].incremented_variable = \
       &recording_part_;
+  modes_[UI_MODE_DELETE_SEQUENCE].incremented_variable = \
+      &delete_sequence_part_;
   modes_[UI_MODE_FACTORY_TESTING].incremented_variable = \
       &factory_testing_number_;
   PrintVersionNumber();
@@ -206,34 +214,11 @@ void Ui::Poll() {
 
   // Switch press and long press.
   switches_.Debounce();
-  if (switches_.just_pressed(UI_SWITCH_REC)) {
-    queue_.AddEvent(CONTROL_SWITCH, UI_SWITCH_REC, 0);
-  }
   if (switches_.just_pressed(UI_SWITCH_TAP_TEMPO)) {
     queue_.AddEvent(CONTROL_SWITCH, UI_SWITCH_TAP_TEMPO, 0);
   }
-  if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
-    if (switches_.just_pressed(UI_SWITCH_TIE)) {
-      queue_.AddEvent(CONTROL_SWITCH, UI_SWITCH_TIE, 0);
-    }
-  } else {
-    if (switches_.just_pressed(UI_SWITCH_START_STOP)) {
-      start_stop_press_time_ = system_clock.milliseconds();
-      long_press_event_sent_ = false;
-    }
-    if (!long_press_event_sent_) {
-      if (switches_.pressed(UI_SWITCH_START_STOP)) {
-        uint32_t duration = system_clock.milliseconds() - start_stop_press_time_;
-        if (duration >= kEncoderLongPressTime && !long_press_event_sent_) {
-          queue_.AddEvent(CONTROL_SWITCH_HOLD, UI_SWITCH_START_STOP, 0);
-          long_press_event_sent_ = true;
-        }
-      } else if (switches_.released(UI_SWITCH_START_STOP)
-                 && !long_press_event_sent_) {
-        queue_.AddEvent(CONTROL_SWITCH, UI_SWITCH_START_STOP, 0);
-      }
-    }
-  }
+  Ui::PollSwitch(UI_SWITCH_START_STOP , start_stop_press_time_, start_stop_long_press_event_sent_ );
+  Ui::PollSwitch(UI_SWITCH_REC        , rec_press_time_       , rec_long_press_event_sent_        );
   if ((mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) &&
       recording_part().recording_step() != recording_part().playing_step()) {
     display_.set_brightness(3);
@@ -261,6 +246,25 @@ void Ui::Poll() {
   
   leds_.Write(leds_brightness);
   leds_.Write();
+}
+
+void Ui::PollSwitch(const UiSwitch ui_switch, uint32_t& press_time, bool& long_press_event_sent) {
+  if (switches_.just_pressed(ui_switch)) {
+    press_time = system_clock.milliseconds();
+    long_press_event_sent = false;
+  }
+  if (!long_press_event_sent) {
+    if (switches_.pressed(ui_switch)) {
+      uint32_t duration = system_clock.milliseconds() - press_time;
+      if (duration >= kEncoderLongPressTime && !long_press_event_sent) {
+        queue_.AddEvent(CONTROL_SWITCH_HOLD, ui_switch, 0);
+        long_press_event_sent = true;
+      }
+    } else if (switches_.released(ui_switch)
+               && !long_press_event_sent) {
+      queue_.AddEvent(CONTROL_SWITCH, ui_switch, 0);
+    }
+  }
 }
 
 void Ui::FlushEvents() {
@@ -317,6 +321,12 @@ void Ui::PrintCalibrationNote() {
 void Ui::PrintRecordingPart() {
   strcpy(buffer_, "R1");
   buffer_[1] += recording_part_;
+  display_.Print(buffer_);
+}
+
+void Ui::PrintDeleteSequence() {
+  strcpy(buffer_, "D1");
+  buffer_[1] += delete_sequence_part_;
   display_.Print(buffer_);
 }
 
@@ -458,6 +468,20 @@ void Ui::OnClickSelectRecordingPart(const Event& e) {
     mode_ = UI_MODE_OVERDUBBING;
   } else {
     mode_ = UI_MODE_RECORDING;
+  }
+}
+
+void Ui::OnClickDeleteSequence(const Event& e) {
+  multi.mutable_part(delete_sequence_part_)->DeleteSequence();
+  if (
+    recording_part_ == delete_sequence_part_ && (
+      previous_mode_ == UI_MODE_RECORDING ||
+      previous_mode_ == UI_MODE_OVERDUBBING
+    )
+  ) {
+    mode_ = UI_MODE_PARAMETER_SELECT;
+  } else {
+    mode_ = previous_mode_;
   }
 }
 
@@ -639,6 +663,26 @@ void Ui::OnSwitchHeld(const Event& e) {
       }
       break;
 
+    case UI_SWITCH_REC:
+      if (mode_ == UI_MODE_DELETE_SEQUENCE) {
+        // cancel deletion
+        mode_ = previous_mode_;
+        break;
+      }
+      previous_mode_ = mode_;
+      if (multi.num_active_parts() == 1) {
+        delete_sequence_part_ = 0;
+        OnClickDeleteSequence(e);
+      } else {
+        // Go into part selection mode.
+        mode_ = UI_MODE_DELETE_SEQUENCE;
+        modes_[mode_].max_value = multi.num_active_parts() - 1;
+        if (delete_sequence_part_ >= modes_[mode_].max_value) {
+          delete_sequence_part_ = modes_[mode_].max_value;
+        }
+      }
+      break;
+
     default:
       break;
   }
@@ -753,6 +797,7 @@ void Ui::DoEvents() {
     display_.set_blink(
         mode_ == UI_MODE_CALIBRATION_ADJUST_LEVEL ||
         mode_ == UI_MODE_SELECT_RECORDING_PART ||
+        mode_ == UI_MODE_DELETE_SEQUENCE ||
         mode_ == UI_MODE_LEARNING);
     if (mode_ == UI_MODE_MAIN_MENU) {
       display_.set_fade(160);

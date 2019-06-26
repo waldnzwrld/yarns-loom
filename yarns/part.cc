@@ -306,13 +306,15 @@ void Part::StartRecording() {
   seq_recording_ = true;
   seq_rec_step_ = 0;
   seq_overdubbing_ = seq_.num_steps && seq_running_;
-  if (!seq_overdubbing_ && !seq_.arp_range) {
-    std::fill(
-        &seq_.step[0],
-        &seq_.step[kNumSteps],
-        SequencerStep(SEQUENCER_STEP_REST, 0));
-    seq_.num_steps = 0;
-  }
+}
+
+void Part::DeleteSequence() {
+  std::fill(
+    &seq_.step[0],
+    &seq_.step[kNumSteps],
+    SequencerStep(SEQUENCER_STEP_REST, 0)
+  );
+  seq_.num_steps = 0;
 }
 
 void Part::StopSequencerArpeggiatorNotes() {

@@ -273,6 +273,7 @@ class Part {
     seq_recording_ = false;
   }
   void StartRecording();
+  void DeleteSequence();
   
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
