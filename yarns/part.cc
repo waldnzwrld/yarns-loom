@@ -775,6 +775,8 @@ void Part::Set(uint8_t address, uint8_t value) {
         
       case PART_SEQUENCER_ARP_DIRECTION:
         arp_direction_ = 1;
+        break;
+
       case PART_SEQUENCER_INPUT_RESPONSE:
         break;
     }
