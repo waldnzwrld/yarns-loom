@@ -104,7 +104,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     }
     pressed_keys_.NoteOn(note, velocity);
   
-    if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range)
+    if (seq_.play_mode == PLAY_MODE_MANUAL
         || sent_from_step_editor) {
       InternalNoteOn(note, velocity);
     }
@@ -126,7 +126,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
   } else {
     pressed_keys_.NoteOff(note);
     
-    if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range) ||
+    if (seq_.play_mode == PLAY_MODE_MANUAL ||
         sent_from_step_editor) {
       InternalNoteOff(note);
     }
@@ -245,9 +245,9 @@ void Part::Reset() {
 
 void Part::Clock() {
   if (!arp_seq_prescaler_) {
-    if (seq_.arp_range) {
+    if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR || seq_.play_mode == PLAY_MODE_ARPEGGIATOR_LATCH) {
       ClockArpeggiator();
-    } else if (seq_.num_steps && seq_running_) {
+    } else if (seq_.play_mode == PLAY_MODE_SEQUENCER && seq_running_) {
       ClockSequencer();
     }
   }
@@ -304,7 +304,7 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  seq_rec_step_ = 0; // TODO don't reset this
+  seq_rec_step_ = 0;
   seq_overdubbing_ = seq_.num_steps && seq_running_;
 }
 
@@ -779,6 +779,27 @@ void Part::Set(uint8_t address, uint8_t value) {
 
       case PART_SEQUENCER_INPUT_RESPONSE:
         break;
+
+      case PART_SEQUENCER_PLAY_MODE:
+        switch (value) {
+          case PLAY_MODE_MANUAL:
+            Unlatch();
+            break;
+          case PLAY_MODE_MANUAL_LATCH:
+            Latch();
+            break;
+          case PLAY_MODE_ARPEGGIATOR_LATCH:
+            Latch();
+            break;
+          case PLAY_MODE_ARPEGGIATOR:
+            Unlatch();
+            break;
+          case PLAY_MODE_SEQUENCER:
+            Unlatch();
+            break;
+        }
+        break;
+
     }
   }
 }

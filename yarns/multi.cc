@@ -61,7 +61,6 @@ void Multi::Init(bool reset_calibration) {
     voice_[i].Init(reset_calibration);
   }
   running_ = false;
-  latched_ = false;
   recording_ = false;
   
   // Put the multi in a usable state. Even if these settings will later be
@@ -237,7 +236,6 @@ void Multi::Start(bool started_by_keyboard) {
 
   started_by_keyboard_ = started_by_keyboard;
   running_ = true;
-  latched_ = false;
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;
   stop_count_down_ = 0;
@@ -267,7 +265,6 @@ void Multi::Stop() {
   reset_pulse_counter_ = 0;
   stop_count_down_ = 0;
   running_ = false;
-  latched_ = false;
   started_by_keyboard_ = false;
   song_pointer_ = NULL;
 }

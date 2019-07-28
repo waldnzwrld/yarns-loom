@@ -54,8 +54,6 @@ enum UiMode {
   UI_MODE_CALIBRATION_SELECT_VOICE,
   UI_MODE_CALIBRATION_SELECT_NOTE,
   UI_MODE_CALIBRATION_ADJUST_LEVEL,
-  UI_MODE_SELECT_RECORDING_PART,
-  UI_MODE_DELETE_SEQUENCE,
   UI_MODE_RECORDING,
   UI_MODE_OVERDUBBING,
   UI_MODE_PUSH_IT_SELECT_NOTE,
@@ -145,10 +143,10 @@ class Ui {
   void RefreshDisplay();
   void TapTempo();
   inline Part* mutable_recording_part() {
-    return multi.mutable_part(recording_part_);
+    return mutable_active_part();
   }
   inline const Part& recording_part() const {
-    return multi.part(recording_part_);
+    return active_part();
   }
   inline Part* mutable_active_part() {
     return multi.mutable_part(settings.Get(GLOBAL_ACTIVE_PART));
@@ -199,7 +197,7 @@ class Ui {
   void PrintLearning();
   void PrintFactoryTesting();
   void PrintVersionNumber();
-  void PrintActivePartAndSequencerPlayMode();
+  void PrintSequencerPlayModeAndActivePart();
   
   void DoInitCommand();
   void DoDumpCommand();
@@ -250,8 +248,6 @@ class Ui {
   int8_t calibration_note_;
   int8_t program_index_;
   int8_t active_program_;
-  int8_t recording_part_;
-  int8_t delete_sequence_part_;
   bool push_it_;
   int16_t push_it_note_;
   uint8_t displayed_recording_step_index_;

@@ -387,6 +387,7 @@ class Part {
     seq_rec_step_ = modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
   }
   inline uint8_t modulo(int8_t a, int8_t b) const { return (b + (a % b)) % b; }
+  inline bool latched() const { return latched_; }
   
   void Touch() {
     TouchVoices();
@@ -394,10 +395,12 @@ class Part {
   }
   
   inline void Latch() {
+    latched_ = true;
     ignore_note_off_messages_ = true;
     release_latched_keys_on_next_note_on_ = true;
   }
   inline void Unlatch() {
+    latched_ = false
     ignore_note_off_messages_ = false;
     release_latched_keys_on_next_note_on_ = true;
   }
@@ -440,6 +443,7 @@ class Part {
   uint8_t num_voices_;
   bool polychained_;
   
+  bool latched_;
   bool ignore_note_off_messages_;
   bool release_latched_keys_on_next_note_on_;
   

@@ -105,18 +105,6 @@ Ui::Mode Ui::modes_[] = {
     UI_MODE_CALIBRATION_SELECT_NOTE,
     NULL, 0, 0 },
   
-  // UI_MODE_SELECT_RECORDING_PART
-  { &Ui::OnIncrement, &Ui::OnClickSelectRecordingPart,
-    &Ui::PrintRecordingPart,
-    UI_MODE_RECORDING,
-    NULL, 0, 0 },
-  
-  // UI_MODE_DELETE_SEQUENCE
-  { &Ui::OnIncrement, &Ui::OnClickDeleteSequence,
-    &Ui::PrintDeleteSequence,
-    UI_MODE_PARAMETER_SELECT,
-    NULL, 0, 0 },
-
   // UI_MODE_RECORDING
   { &Ui::OnIncrementRecording, &Ui::OnClickRecording,
     &Ui::PrintRecordingStatus,
@@ -176,10 +164,6 @@ void Ui::Init() {
       &calibration_voice_;
   modes_[UI_MODE_CALIBRATION_SELECT_NOTE].incremented_variable = \
       &calibration_note_;
-  modes_[UI_MODE_SELECT_RECORDING_PART].incremented_variable = \
-      &recording_part_;
-  modes_[UI_MODE_DELETE_SEQUENCE].incremented_variable = \
-      &delete_sequence_part_;
   modes_[UI_MODE_FACTORY_TESTING].incremented_variable = \
       &factory_testing_number_;
   PrintVersionNumber();
@@ -317,18 +301,6 @@ void Ui::PrintCalibrationNote() {
       calibration_strings[calibration_note_]);
 }
 
-void Ui::PrintRecordingPart() {
-  strcpy(buffer_, "R1");
-  buffer_[1] += recording_part_;
-  display_.Print(buffer_);
-}
-
-void Ui::PrintDeleteSequence() {
-  strcpy(buffer_, "D1");
-  buffer_[1] += delete_sequence_part_;
-  display_.Print(buffer_);
-}
-
 void Ui::PrintRecordingStatus() {
   if (push_it_) {
     PrintPushItNote();
@@ -462,7 +434,7 @@ void Ui::OnClickCalibrationSelectNote(const Event& e) {
 }
 
 void Ui::OnClickSelectRecordingPart(const Event& e) {
-  multi.StartRecording(recording_part_);
+  multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
   if (recording_part().overdubbing() || multi.running()) {
     mode_ = UI_MODE_OVERDUBBING;
   } else {
@@ -471,12 +443,10 @@ void Ui::OnClickSelectRecordingPart(const Event& e) {
 }
 
 void Ui::OnClickDeleteSequence(const Event& e) {
-  multi.mutable_part(delete_sequence_part_)->DeleteSequence();
+  mutable_active_part()->DeleteSequence();
   if (
-    recording_part_ == delete_sequence_part_ && (
       previous_mode_ == UI_MODE_RECORDING ||
       previous_mode_ == UI_MODE_OVERDUBBING
-    )
   ) {
     mode_ = UI_MODE_PARAMETER_SELECT;
   } else {
@@ -579,26 +549,13 @@ void Ui::OnSwitchPress(const Event& e) {
       {
         if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
           // Finish recording.
-          multi.StopRecording(recording_part_);
-          mode_ = previous_mode_;
-        } else if (mode_ == UI_MODE_SELECT_RECORDING_PART) {
-          // Cancel recording.
+          multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
           mode_ = previous_mode_;
         } else {
           previous_mode_ = mode_;
-          if (multi.num_active_parts() == 1) {
-            recording_part_ = 0;
-            multi.StartRecording(0);
-            mode_ = recording_part().overdubbing() ?
+          multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
+          mode_ = active_part().overdubbing() ?
                 UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
-          } else {
-            // Go into channel selection mode.
-            mode_ = UI_MODE_SELECT_RECORDING_PART;
-            modes_[mode_].max_value = multi.num_active_parts() - 1;
-            if (recording_part_ >= modes_[mode_].max_value) {
-              recording_part_ = modes_[mode_].max_value;
-            }
-          }
         }
       }
       break;
@@ -609,7 +566,7 @@ void Ui::OnSwitchPress(const Event& e) {
           multi.PushItNoteOff(push_it_note_);
         }
         push_it_ = false;
-        multi.mutable_part(recording_part_)->RecordStep(SEQUENCER_STEP_TIE);
+        mutable_active_part()->RecordStep(SEQUENCER_STEP_TIE);
       } else {
         if (push_it_) {
           multi.PushItNoteOff(push_it_note_);
@@ -617,9 +574,6 @@ void Ui::OnSwitchPress(const Event& e) {
           if (mode_ == UI_MODE_PUSH_IT_SELECT_NOTE) {
             mode_ = UI_MODE_PARAMETER_SELECT;
           }
-        } else {
-          if (multi.latched()) {
-            multi.Unlatch();
           } else {
             if (!multi.running()) {
               multi.Start(false);
@@ -629,7 +583,7 @@ void Ui::OnSwitchPress(const Event& e) {
             } else {
               multi.Stop();
             }
-          }
+
         }
       }
       break;
@@ -640,7 +594,7 @@ void Ui::OnSwitchPress(const Event& e) {
           multi.PushItNoteOff(push_it_note_);
         }
         push_it_ = false;
-        multi.mutable_part(recording_part_)->RecordStep(SEQUENCER_STEP_REST);
+        mutable_active_part()->RecordStep(SEQUENCER_STEP_REST);
       } else {
         TapTempo();
       }
@@ -652,27 +606,20 @@ void Ui::OnSwitchHeld(const Event& e) {
   switch (e.control_id) {
 
     case UI_SWITCH_REC:
-      if (mode_ == UI_MODE_DELETE_SEQUENCE) {
-        // cancel deletion
-        mode_ = previous_mode_;
-        break;
-      }
-      previous_mode_ = mode_;
-      if (multi.num_active_parts() == 1) {
-        delete_sequence_part_ = 0;
-        OnClickDeleteSequence(e);
+      if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
+        mutable_active_part()->DeleteSequence();
+        mode_ = UI_MODE_PARAMETER_SELECT;
       } else {
-        // Go into part selection mode.
-        mode_ = UI_MODE_DELETE_SEQUENCE;
-        modes_[mode_].max_value = multi.num_active_parts() - 1;
-        if (delete_sequence_part_ >= modes_[mode_].max_value) {
-          delete_sequence_part_ = modes_[mode_].max_value;
-        }
+        settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
       }
       break;
 
     case UI_SWITCH_START_STOP:
-      settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
+      if (active_part().latched()) {
+        mutable_active_part()->Unlatch();
+      } else {
+        mutable_active_part()->Latch();
+      }
       break;
 
     case UI_SWITCH_TAP_TEMPO:
@@ -713,7 +660,7 @@ void Ui::TapTempo() {
   previous_tap_time_ = tap_time;
 }
 
-void Ui::PrintActivePartAndSequencerPlayMode() {
+void Ui::PrintSequencerPlayModeAndActivePart() {
   strcpy(buffer_, "1M");
   buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
   buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().Get(PART_SEQUENCER_PLAY_MODE)][0];
@@ -750,7 +697,7 @@ void Ui::DoEvents() {
   uint8_t recording_step_index = recording_part().recording_step();
   uint8_t print_step_value = (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING));
   if (queue_.idle_time() > 300 && queue_.idle_time() <= 600 && print_step_value) {
-    Ui::PrintActivePartAndSequencerPlayMode();
+    Ui::PrintSequencerPlayModeAndActivePart();
   } else if (queue_.idle_time() > 600) {
     if (print_step_value) {
       SequencerStep selected_step = recording_part().sequencer_settings().step[recording_step_index];
@@ -778,7 +725,7 @@ void Ui::DoEvents() {
         }
       }
     } else {
-      Ui::PrintActivePartAndSequencerPlayMode();
+      Ui::PrintSequencerPlayModeAndActivePart();
     }
   }
   if (displayed_recording_step_index_ != recording_step_index &&
@@ -799,8 +746,6 @@ void Ui::DoEvents() {
     }
     display_.set_blink(
         mode_ == UI_MODE_CALIBRATION_ADJUST_LEVEL ||
-        mode_ == UI_MODE_SELECT_RECORDING_PART ||
-        mode_ == UI_MODE_DELETE_SEQUENCE ||
         mode_ == UI_MODE_LEARNING);
     if (mode_ == UI_MODE_MAIN_MENU) {
       display_.set_fade(160);
