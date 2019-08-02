@@ -124,6 +124,10 @@ const char* const sequencer_input_response_values[] = {
   "TRANSPOSE", "OVERRIDE", "OFF"
 };
 
+const char* const sustain_mode_values[] = {
+  "NORMAL", "SOSTENUTO", "LATCH", "OFF"
+};
+
 const char* const vibrato_control_source_values[] = {
   "MODWHEEL", "AFTERTOUCH"
 };
@@ -456,6 +460,12 @@ const Setting Settings::settings_[] = {
     "SI", "SEQUENCER INPUT RESPONSE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_INPUT_RESPONSE, 0 },
     SETTING_UNIT_ENUMERATION, 0, 2, sequencer_input_response_values,
+    0, 0,
+  },
+  {
+    "SM", "SUSTAIN MODE",
+    SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, 3, sustain_mode_values,
     0, 0,
   },
   {

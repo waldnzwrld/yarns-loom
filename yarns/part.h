@@ -108,6 +108,13 @@ enum SequencerInputResponse {
   SEQUENCER_INPUT_RESPONSE_OFF
 };
 
+enum SustainMode {
+  SUSTAIN_MODE_NORMAL,
+  SUSTAIN_MODE_SOSTENUTO,
+  SUSTAIN_MODE_LATCH,
+  SUSTAIN_MODE_OFF
+};
+
 struct MidiSettings {
   uint8_t channel;
   uint8_t min_note;
@@ -115,7 +122,8 @@ struct MidiSettings {
   uint8_t min_velocity;
   uint8_t max_velocity;
   uint8_t out_mode;
-  uint8_t padding[10];
+  uint8_t sustain_mode;
+  uint8_t padding[9];
 };
 
 struct VoicingSettings {
@@ -150,6 +158,7 @@ enum PartSetting {
   PART_MIDI_MIN_VELOCITY,
   PART_MIDI_MAX_VELOCITY,
   PART_MIDI_OUT_MODE,
+  PART_MIDI_SUSTAIN_TYPE,
   PART_MIDI_LAST = PART_MIDI_CHANNEL + sizeof(MidiSettings) - 1,
   PART_VOICING_ALLOCATION_MODE,
   PART_VOICING_ALLOCATION_PRIORITY,
