@@ -124,11 +124,23 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       }
     }
   } else {
-    pressed_keys_.NoteOff(note);
+    bool off = true;
+    if (midi_.sustain_mode == SUSTAIN_MODE_SOSTENUTO) {
+      for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
+        NoteEntry* e = pressed_keys_.mutable_note(i);
+        // If this note is flagged, don't remove it
+        if (e->note == note && e->velocity && (e->velocity & 0x80)) {
+          off = false;
+        }
+      }
+    }
+    if (off) {
+      pressed_keys_.NoteOff(note);
     
-    if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range) ||
-        sent_from_step_editor) {
-      InternalNoteOff(note);
+      if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range) ||
+          sent_from_step_editor) {
+        InternalNoteOff(note);
+      }
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -165,10 +177,40 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
     case kCCHoldPedal:
       {
         if (value >= 64) {
+          switch (midi_.sustain_mode) {
+            case SUSTAIN_MODE_NORMAL:
           ignore_note_off_messages_ = true;
+              break;
+            case SUSTAIN_MODE_SOSTENUTO:
+              for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
+                // Flag the note so that it is removed once the sustain pedal is released.
+                NoteEntry* e = pressed_keys_.mutable_note(i);
+                e->velocity |= 0x80;
+              }
+              break;
+            case SUSTAIN_MODE_LATCH:
+              Latch();
+              break;
+            case SUSTAIN_MODE_OFF:
+            default:
+              break;
+          }
         } else {
+          switch (midi_.sustain_mode) {
+            case SUSTAIN_MODE_NORMAL:
           ignore_note_off_messages_ = false;
           ReleaseLatchedNotes();
+              break;
+            case SUSTAIN_MODE_SOSTENUTO:
+              ReleaseLatchedNotes();
+              break;
+            case SUSTAIN_MODE_LATCH:
+              Unlatch();
+              break;
+            case SUSTAIN_MODE_OFF:
+            default:
+              break;
+          }
         }
       }
       break;
@@ -748,6 +790,7 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MAX_NOTE:
       case PART_MIDI_MIN_VELOCITY:
       case PART_MIDI_MAX_VELOCITY:
+      case PART_MIDI_SUSTAIN_MODE:
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();
