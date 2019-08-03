@@ -695,7 +695,10 @@ void Part::InternalNoteOff(uint8_t note) {
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
     mono_allocator_.NoteOff(note);
     KillAllInstancesOfNote(note);
-    if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1) {
+    if (
+        voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
+        mono_allocator_.size() >= num_voices_
+    ) {
       DispatchSortedNotes(true);
     }
   } else {
