@@ -179,7 +179,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         if (value >= 64) {
           switch (midi_.sustain_mode) {
             case SUSTAIN_MODE_NORMAL:
-          ignore_note_off_messages_ = true;
+              ignore_note_off_messages_ = true;
               break;
             case SUSTAIN_MODE_SOSTENUTO:
               for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
@@ -198,8 +198,8 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         } else {
           switch (midi_.sustain_mode) {
             case SUSTAIN_MODE_NORMAL:
-          ignore_note_off_messages_ = false;
-          ReleaseLatchedNotes();
+              ignore_note_off_messages_ = false;
+              ReleaseLatchedNotes();
               break;
             case SUSTAIN_MODE_SOSTENUTO:
               ReleaseLatchedNotes();
@@ -489,7 +489,7 @@ void Part::ArpeggiatorNoteOn() {
           return;
         }
         arp_direction_ = 0; // these arp directions move before playing the note
-        }
+      }
       break;
     default:
       {
