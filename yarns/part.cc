@@ -125,6 +125,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     }
   } else {
     bool off = true;
+    /*
     if (midi_.sustain_mode == SUSTAIN_MODE_SOSTENUTO) {
       for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
         NoteEntry* e = pressed_keys_.mutable_note(i);
@@ -134,6 +135,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
         }
       }
     }
+    */
     if (off) {
       pressed_keys_.NoteOff(note);
     
@@ -181,6 +183,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
             case SUSTAIN_MODE_NORMAL:
               ignore_note_off_messages_ = true;
               break;
+            /*
             case SUSTAIN_MODE_SOSTENUTO:
               for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
                 // Flag the note so that it is removed once the sustain pedal is released.
@@ -188,6 +191,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
                 e->velocity |= 0x80;
               }
               break;
+            */
             case SUSTAIN_MODE_LATCH:
               Latch();
               break;
@@ -201,9 +205,12 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
               ignore_note_off_messages_ = false;
               ReleaseLatchedNotes();
               break;
+            /*
             case SUSTAIN_MODE_SOSTENUTO:
+              // TODO this is busted -- these notes could still be held
               ReleaseLatchedNotes();
               break;
+            */
             case SUSTAIN_MODE_LATCH:
               Unlatch();
               break;

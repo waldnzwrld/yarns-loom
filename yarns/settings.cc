@@ -125,7 +125,10 @@ const char* const sequencer_input_response_values[] = {
 };
 
 const char* const sustain_mode_values[] = {
-  "NORMAL", "SOSTENUTO", "LATCH", "OFF"
+  "NORMAL",
+  // "SOSTENUTO",
+  "LATCH",
+  "OFF"
 };
 
 const char* const vibrato_control_source_values[] = {

@@ -110,7 +110,7 @@ enum SequencerInputResponse {
 
 enum SustainMode {
   SUSTAIN_MODE_NORMAL,
-  SUSTAIN_MODE_SOSTENUTO,
+  // SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
   SUSTAIN_MODE_OFF,
 };
