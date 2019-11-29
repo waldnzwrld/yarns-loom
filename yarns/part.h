@@ -397,7 +397,8 @@ class Part {
   }
   inline void Unlatch() {
     ignore_note_off_messages_ = false;
-    release_latched_keys_on_next_note_on_ = true;
+    release_latched_keys_on_next_note_on_ = false;
+    ReleaseLatchedNotes();
   }
   
   inline void SetMultiIsRecording(bool b) {

@@ -804,6 +804,7 @@ void Part::Set(uint8_t address, uint8_t value) {
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();
+        Unlatch();
         break;
         
       case PART_VOICING_ALLOCATION_MODE:
