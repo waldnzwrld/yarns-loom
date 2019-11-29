@@ -466,7 +466,7 @@ const Setting Settings::settings_[] = {
     0, 0,
   },
   {
-    "SM", "SUSTAIN MODE",
+    "SU", "SUSTAIN MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, 3, sustain_mode_values,
     0, 0,
