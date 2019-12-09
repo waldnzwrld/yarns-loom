@@ -56,7 +56,7 @@ const char* const voicing_allocation_mode_values[] = {
 };
 
 const char* const sequencer_arp_direction_values[] = {
-  "LINEAR", "BOUNCE", "RANDOM", "CHORD", "HIT SEQ", "REST SEQ"
+  "LINEAR", "BOUNCE", "RANDOM", "CHORD", "HIT SEQ", "REST SEQ", "WRAP SEQ"
 };
 
 const char* const voicing_aux_cv_values[] = {

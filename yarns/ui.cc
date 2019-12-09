@@ -761,14 +761,22 @@ void Ui::DoEvents() {
           recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
         ) {
           if (selected_step.is_white()) {
-            Settings::PrintSignedInteger(buffer_, selected_step.white_key_value());
+            Settings::PrintSignedInteger(buffer_, selected_step.white_key_distance_from_middle_c());
           } else {
-            int8_t value = selected_step.black_key_value();
+            int8_t value = selected_step.black_key_distance_from_middle_c();
             Settings::PrintSignedInteger(buffer_, (value >= 0 ? value + 1 : abs(value)));
             if (buffer_[0] == ' ') {
               buffer_[0] = value >= 0 ? '>' : '<';
             }
           }
+          display_.Print(buffer_, buffer_);
+        } else if (recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP) {
+          if (selected_step.is_white()) {
+            buffer_[0] = '\x90' + selected_step.white_key_value(); // spinner 1
+          } else {
+            buffer_[0] = '\x98' + selected_step.black_key_value(); // spinner 2
+          }
+          buffer_[1] = octave[selected_step.octave()];
           display_.Print(buffer_, buffer_);
         } else {
           PrintNote(selected_step.note());

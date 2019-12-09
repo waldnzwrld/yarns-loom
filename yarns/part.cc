@@ -443,7 +443,8 @@ void Part::ClockArpeggiator() {
     }
   } else if (
     seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST ||
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
   ) {
     pattern_length = seq_.num_steps;
     seq_step_ = arp_step_;
@@ -481,19 +482,42 @@ void Part::ArpeggiatorNoteOn() {
       break;
     case ARPEGGIATOR_DIRECTION_SEQUENCER_ALL:
     case ARPEGGIATOR_DIRECTION_SEQUENCER_REST:
+    case ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP:
       {
         // TODO respect arp range?
         SequencerStep step = seq_.step[arp_step_];
-        uint8_t new_arp_note;
-        if (step.is_white()) {
-          new_arp_note = arp_note_ + step.white_key_value();
+        if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP) {
+          // Movement instructions derived from sequence step
+          uint8_t limit = step.octave();
+          uint8_t clock;
+          uint8_t spacer;
+          if (step.is_white()) {
+            clock = step.white_key_value(); // TODO is 0 clock useful?
+            spacer = 1;
+          } else {
+            clock = 1;
+            spacer = step.black_key_value() + 1; // TODO is 0 spacer useful?
+          }
+          uint8_t old_pos = modulo(arp_note_ / spacer, limit);
+          uint8_t new_pos = modulo(old_pos + clock, limit);
+          uint8_t increment_without_wrap = spacer * (new_pos - old_pos);
+          if ((arp_note_ + increment_without_wrap) < num_notes) {
+            arp_note_ += increment_without_wrap;
+          } else {
+            arp_note_ -= spacer * old_pos;
+          }
         } else {
-          new_arp_note = step.black_key_value();
-        }
-        arp_note_ = modulo(new_arp_note, num_notes);
-        if (arp_note_ != new_arp_note && seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST) {
-          // if we moved out of bounds, rest this step
-          return;
+          uint8_t new_arp_note;
+          if (step.is_white()) {
+            new_arp_note = arp_note_ + step.white_key_distance_from_middle_c();
+          } else {
+            new_arp_note = step.black_key_distance_from_middle_c();
+          }
+          arp_note_ = modulo(new_arp_note, num_notes);
+          if (arp_note_ != new_arp_note && seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST) {
+            // if we moved out of bounds, rest this step
+            return;
+          }
         }
         arp_direction_ = 0; // these arp directions move before playing the note
       }
