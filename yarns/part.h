@@ -110,8 +110,6 @@ enum SequencerInputResponse {
 
 enum PlayMode {
   PLAY_MODE_MANUAL,
-  PLAY_MODE_MANUAL_LATCH,
-  PLAY_MODE_ARPEGGIATOR_LATCH,
   PLAY_MODE_ARPEGGIATOR,
   PLAY_MODE_SEQUENCER,
   PLAY_MODE_LAST
@@ -400,7 +398,7 @@ class Part {
     release_latched_keys_on_next_note_on_ = true;
   }
   inline void Unlatch() {
-    latched_ = false
+    latched_ = false;
     ignore_note_off_messages_ = false;
     release_latched_keys_on_next_note_on_ = true;
   }

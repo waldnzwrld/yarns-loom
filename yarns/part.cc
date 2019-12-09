@@ -245,7 +245,7 @@ void Part::Reset() {
 
 void Part::Clock() {
   if (!arp_seq_prescaler_) {
-    if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR || seq_.play_mode == PLAY_MODE_ARPEGGIATOR_LATCH) {
+    if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       ClockArpeggiator();
     } else if (seq_.play_mode == PLAY_MODE_SEQUENCER && seq_running_) {
       ClockSequencer();
@@ -778,28 +778,8 @@ void Part::Set(uint8_t address, uint8_t value) {
         break;
 
       case PART_SEQUENCER_INPUT_RESPONSE:
-        break;
-
       case PART_SEQUENCER_PLAY_MODE:
-        switch (value) {
-          case PLAY_MODE_MANUAL:
-            Unlatch();
-            break;
-          case PLAY_MODE_MANUAL_LATCH:
-            Latch();
-            break;
-          case PLAY_MODE_ARPEGGIATOR_LATCH:
-            Latch();
-            break;
-          case PLAY_MODE_ARPEGGIATOR:
-            Unlatch();
-            break;
-          case PLAY_MODE_SEQUENCER:
-            Unlatch();
-            break;
-        }
         break;
-
     }
   }
 }
