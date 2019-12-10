@@ -115,6 +115,14 @@ enum PlayMode {
   PLAY_MODE_LAST
 };
 
+enum SustainMode {
+  SUSTAIN_MODE_NORMAL,
+  // SUSTAIN_MODE_SOSTENUTO,
+  SUSTAIN_MODE_LATCH,
+  SUSTAIN_MODE_OFF,
+  SUSTAIN_MODE_LAST,
+};
+
 struct MidiSettings {
   uint8_t channel;
   uint8_t min_note;
@@ -122,7 +130,8 @@ struct MidiSettings {
   uint8_t min_velocity;
   uint8_t max_velocity;
   uint8_t out_mode;
-  uint8_t padding[10];
+  uint8_t sustain_mode;
+  uint8_t padding[9];
 };
 
 struct VoicingSettings {
@@ -157,6 +166,7 @@ enum PartSetting {
   PART_MIDI_MIN_VELOCITY,
   PART_MIDI_MAX_VELOCITY,
   PART_MIDI_OUT_MODE,
+  PART_MIDI_SUSTAIN_MODE,
   PART_MIDI_LAST = PART_MIDI_CHANNEL + sizeof(MidiSettings) - 1,
   PART_VOICING_ALLOCATION_MODE,
   PART_VOICING_ALLOCATION_PRIORITY,
@@ -400,7 +410,8 @@ class Part {
   inline void Unlatch() {
     latched_ = false;
     ignore_note_off_messages_ = false;
-    release_latched_keys_on_next_note_on_ = true;
+    release_latched_keys_on_next_note_on_ = false;
+    ReleaseLatchedNotes();
   }
   
   inline void SetMultiIsRecording(bool b) {
