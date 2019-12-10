@@ -671,6 +671,7 @@ void Ui::PrintSequencerPlayModeAndActivePart() {
   strcpy(buffer_, "1M");
   buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
   buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().Get(PART_SEQUENCER_PLAY_MODE)][0];
+  buffer_[2] = '\0';
   display_.Print(buffer_);
 }
 
