@@ -181,7 +181,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         if (value >= 64) {
           switch (midi_.sustain_mode) {
             case SUSTAIN_MODE_NORMAL:
-          ignore_note_off_messages_ = true;
+              ignore_note_off_messages_ = true;
               break;
             /*
             case SUSTAIN_MODE_SOSTENUTO:
@@ -202,8 +202,8 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         } else {
           switch (midi_.sustain_mode) {
             case SUSTAIN_MODE_NORMAL:
-          ignore_note_off_messages_ = false;
-          ReleaseLatchedNotes();
+              ignore_note_off_messages_ = false;
+              ReleaseLatchedNotes();
               break;
             /*
             case SUSTAIN_MODE_SOSTENUTO:

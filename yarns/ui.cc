@@ -621,7 +621,7 @@ void Ui::OnSwitchHeld(const Event& e) {
       if (!push_it_ && !multi.latched()) {
         if (multi.running()) {
           multi.Latch();
-      } else {
+        } else {
           mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
           push_it_ = true;
           multi.PushItNoteOn(push_it_note_);
