@@ -574,6 +574,9 @@ void Ui::OnSwitchPress(const Event& e) {
           if (mode_ == UI_MODE_PUSH_IT_SELECT_NOTE) {
             mode_ = UI_MODE_PARAMETER_SELECT;
           }
+        } else {
+          if (multi.latched()) {
+            multi.Unlatch();
           } else {
             if (!multi.running()) {
               multi.Start(false);
@@ -583,7 +586,7 @@ void Ui::OnSwitchPress(const Event& e) {
             } else {
               multi.Stop();
             }
-
+          }
         }
       }
       break;
@@ -615,10 +618,14 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_START_STOP:
-      if (active_part().latched()) {
-        mutable_active_part()->Unlatch();
+      if (!push_it_ && !multi.latched()) {
+        if (multi.running()) {
+          multi.Latch();
       } else {
-        mutable_active_part()->Latch();
+          mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
+          push_it_ = true;
+          multi.PushItNoteOn(push_it_note_);
+        }
       }
       break;
 

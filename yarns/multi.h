@@ -232,6 +232,24 @@ class Multi {
     }
   }
   
+  inline void Latch() {
+    if (!latched_) {
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        part_[i].Latch();
+      }
+      latched_ = true;
+    }
+  }
+
+  inline void Unlatch() {
+    if (latched_) {
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        part_[i].Unlatch();
+      }
+      latched_ = false;
+    }
+  }
+  
   void PushItNoteOn(uint8_t note) {
     uint8_t mask = recording_ ? 0x80 : 0;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
@@ -296,6 +314,7 @@ class Multi {
   inline bool internal_clock() const { return settings_.clock_tempo >= 40; }
   inline uint8_t tempo() const { return settings_.clock_tempo; }
   inline bool running() const { return running_; }
+  inline bool latched() const { return latched_; }
   inline bool recording() const { return recording_; }
   inline bool clock() const {
     return clock_pulse_counter_ > 0 && \
@@ -407,6 +426,7 @@ class Multi {
   
   bool running_;
   bool started_by_keyboard_;
+  bool latched_;
   bool recording_;
   
   InternalClock internal_clock_;
