@@ -496,7 +496,7 @@ void Part::ArpeggiatorNoteOn() {
           return;
         }
         arp_direction_ = 0; // these arp directions move before playing the note
-        }
+      }
       break;
     default:
       {
