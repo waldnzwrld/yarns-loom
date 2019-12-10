@@ -630,7 +630,7 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_TAP_TEMPO:
-      mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().Get(PART_SEQUENCER_PLAY_MODE)) % PLAY_MODE_LAST);
+      mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
       break;
 
     default:
@@ -670,7 +670,18 @@ void Ui::TapTempo() {
 void Ui::PrintSequencerPlayModeAndActivePart() {
   strcpy(buffer_, "1M");
   buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
-  buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().Get(PART_SEQUENCER_PLAY_MODE)][0];
+  // buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().sequencer_settings().play_mode][0];
+  switch (active_part().sequencer_settings().play_mode) {
+    case PLAY_MODE_MANUAL:
+      buffer_[1] = 'M';
+      break;
+    case PLAY_MODE_ARPEGGIATOR:
+      buffer_[1] = 'A';
+      break;
+    case PLAY_MODE_SEQUENCER:
+      buffer_[1] = 'S';
+      break;
+  }
   buffer_[2] = '\0';
   display_.Print(buffer_);
 }
