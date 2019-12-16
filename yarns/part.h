@@ -35,26 +35,15 @@
 #include "stmlib/algorithms/voice_allocator.h"
 #include "stmlib/algorithms/note_stack.h"
 
+#include "yarns/sequencer_step.h"
+#include "yarns/looper.h"
+
 namespace yarns {
 
 class Voice;
 
 const uint8_t kNumSteps = 64;
 const uint8_t kMaxNumVoices = 4;
-
-const int8_t whiteKeyValues[] = {
-  0,    0x7f, 1,    0x7f,
-  2,    3,    0x7f, 4,
-  0x7f, 5,    0x7f, 6,
-};
-const int8_t blackKeyValues[] = {
-  0x7f, 0,    0x7f, 1,
-  0x7f, 0x7f, 2,    0x7f,
-  3,    0x7f, 4,    0x7f,
-};
-const int8_t kNumBlackKeys = 5;
-const int8_t kNumWhiteKeys = 7;
-
 
 enum ArpeggiatorDirection {
   ARPEGGIATOR_DIRECTION_LINEAR,
@@ -193,41 +182,6 @@ enum PartSetting {
   PART_SEQUENCER_INPUT_RESPONSE
 };
 
-enum SequencerStepFlags {
-  SEQUENCER_STEP_REST = 0x80,
-  SEQUENCER_STEP_TIE = 0x81
-};
-
-struct SequencerStep {
-  // BYTE 0:
-  // 0x00 to 0x7f: note
-  // 0x80: rest
-  // 0x81: tie
-  //
-  // BYTE 1:
-  // 7 bits of velocity + 1 bit for slide flag.
-  SequencerStep() { }
-  SequencerStep(uint8_t data_0, uint8_t data_1) {
-    data[0] = data_0;
-    data[1] = data_1;
-  }
-  
-  uint8_t data[2];
-  
-  inline bool has_note() const { return !(data[0] & 0x80); }
-  inline bool is_rest() const { return data[0] == SEQUENCER_STEP_REST; }
-  inline bool is_tie() const { return data[0] == SEQUENCER_STEP_TIE; }
-  inline uint8_t note() const { return data[0] & 0x7f; }
-  
-  inline bool is_slid() const { return data[1] & 0x80; }
-  inline uint8_t velocity() const { return data[1] & 0x7f; }
-
-  inline bool is_white() const { return whiteKeyValues[note() % 12] != 0x7f; }
-  inline int8_t octaves_above_middle_c() const { return ((int8_t) (note() / 12)) - (60 / 12); }
-  inline int8_t white_key_value() const { return octaves_above_middle_c() * kNumWhiteKeys + whiteKeyValues[note() % 12]; }
-  inline int8_t black_key_value() const { return octaves_above_middle_c() * kNumBlackKeys + blackKeyValues[note() % 12]; }
-};
-
 struct SequencerSettings {
   uint8_t clock_division;
   uint8_t gate_length;
@@ -240,7 +194,8 @@ struct SequencerSettings {
   uint8_t input_response;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
-  uint8_t padding[6];
+  looper::Recorder looper;
+  uint8_t padding[6]; //TODO
   
   int16_t first_note() {
     for (uint8_t i = 0; i < num_steps; ++i) {
