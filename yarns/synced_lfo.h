@@ -1,4 +1,4 @@
-// Copyright 2019 Chris Rogers.
+// Copyright 2013 Emilie Gillet.
 //
 // Author: Chris Rogers (teukros@gmail.com)
 //
@@ -24,53 +24,48 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Voice.
+// Synced LFO.
 
-#ifndef YARNS_LOOPER_H_
-#define YARNS_LOOPER_H_
-
-#include "yarns/sequencer_step.h"
+#ifndef YARNS_SYNCED_LFO_H_
+#define YARNS_SYNCED_LFO_H_
 
 namespace yarns {
 
-namespace looper {
-
-const uint8_t kMaxNotes = 64;
-
-struct Link {
-  Link() { }
-  uint8_t on_index;
-  uint8_t off_index;
-};
-
-struct Note {
-  Note() { }
-  Link next_link;
-  SequencerStep step;
-  uint16_t on_pos;
-  uint16_t off_pos;
-};
-
-class Recorder {
+class SyncedLFO {
  public:
 
   uint8_t clock_division_;
 
-  Recorder() { }
-  ~Recorder() { }
+  SyncedLFO() { }
+  ~SyncedLFO() { }
   void Init();
+
+  void Tap(uint32_t current_phase, uint32_t target_phase) {
+    uint32_t target_increment = target_phase - previous_target_phase_;
+
+    int32_t d_error = target_increment - (current_phase - previous_phase_);
+    int32_t p_error = target_phase - current_phase;
+    int32_t error = d_error + (p_error >> 1);
+
+    phase_increment_ += error >> 11;
+
+    previous_phase_ = current_phase;
+    previous_target_phase_ = target_phase;
+  }
+
+  uint32_t GetPhaseIncrement() {
+    return phase_increment_;
+  }
 
  private:
 
-  Note notes_[kMaxNotes];
-  Link head_link_;
-  uint8_t oldest_index;
-  uint8_t newest_index;
+  uint32_t phase_increment_;
+  uint32_t previous_target_phase_;
+  uint32_t previous_phase_;
 
-  DISALLOW_COPY_AND_ASSIGN(Recorder);
+  DISALLOW_COPY_AND_ASSIGN(SyncedLFO);
 };
 
-} // namespace looper
-}  // namespace yarns
+} // namespace yarns
 
-#endif // YARNS_LOOPER_H_
+#endif // YARNS_SYNCED_LFO_H_

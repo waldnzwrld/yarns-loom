@@ -134,7 +134,7 @@ void Voice::Refresh() {
   if (modulation_rate_ < 100) {
     lfo_phase_ += lut_lfo_increments[modulation_rate_];
   } else {
-    lfo_phase_ += lfo_pll_phase_increment_;
+    lfo_phase_ += synced_lfo_.GetPhaseIncrement();
   }
   int32_t lfo = lfo_phase_ < 1UL << 31
       ?  -32768 + (lfo_phase_ >> 15)

@@ -37,6 +37,7 @@
 
 #include "yarns/sequencer_step.h"
 #include "yarns/looper.h"
+#include "yarns/synced_lfo.h"
 
 namespace yarns {
 
@@ -44,6 +45,7 @@ class Voice;
 
 const uint8_t kNumSteps = 64;
 const uint8_t kMaxNumVoices = 4;
+const uint8_t kNoteStackSize = 12;
 
 enum ArpeggiatorDirection {
   ARPEGGIATOR_DIRECTION_LINEAR,
@@ -418,6 +420,10 @@ class Part {
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
   
+  SyncedLFO looper_synced_lfo_;
+  uint32_t looper_phase_;
+  uint8_t looper_note_index_for_pressed_key_index_[kNoteStackSize];
+
   uint16_t gate_length_counter_;
   uint16_t lfo_counter_;
   
