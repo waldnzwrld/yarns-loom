@@ -292,7 +292,9 @@ void Multi::Refresh() {
     }
   }
 
-  //TODO calculate an exact bar position and advance loopers
+  for (uint8_t j = 0; j < num_active_parts_; ++j) {
+    part_[j].Refresh();
+  }
 
   for (uint8_t i = 0; i < kNumVoices; ++i) {
     voice_[i].Refresh();

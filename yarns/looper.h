@@ -54,11 +54,11 @@ struct Note {
 class Recorder {
  public:
 
-  uint8_t clock_division_;
+  uint8_t clock_division;
 
   Recorder() { }
   ~Recorder() { }
-  void Init();
+  void Init() { }
 
  private:
 

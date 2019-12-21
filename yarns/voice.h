@@ -223,7 +223,7 @@ class Voice {
   }
   
   void TapLfo(uint32_t target_phase) {
-    synced_lfo_.Tap(lfo_phase_, target_phase);
+    synced_lfo_.Tap(target_phase);
   }
   
  private:
@@ -258,7 +258,6 @@ class Voice {
   uint8_t aux_cv_source_;
   uint8_t aux_cv_source_2_;
   
-  uint32_t lfo_phase_;
   uint32_t portamento_phase_;
   uint32_t portamento_phase_increment_;
   bool portamento_exponential_shape_;

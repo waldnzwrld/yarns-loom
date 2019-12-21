@@ -58,7 +58,8 @@ void Voice::Init(bool reset_calibration) {
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
   
-  lfo_phase_ = portamento_phase_ = 0;
+  synced_lfo_.Init();
+  portamento_phase_ = 0;
   portamento_phase_increment_ = 1U << 31;
   portamento_exponential_shape_ = false;
   
@@ -131,14 +132,15 @@ void Voice::Refresh() {
   note += tuning_;
   
   // Add vibrato.
+  uint32_t lfo_phase;
   if (modulation_rate_ < 100) {
-    lfo_phase_ += lut_lfo_increments[modulation_rate_];
+    lfo_phase = synced_lfo_.Increment(lut_lfo_increments[modulation_rate_]);
   } else {
-    lfo_phase_ += synced_lfo_.GetPhaseIncrement();
+    lfo_phase = synced_lfo_.Refresh();
   }
-  int32_t lfo = lfo_phase_ < 1UL << 31
-      ?  -32768 + (lfo_phase_ >> 15)
-      : 0x17fff - (lfo_phase_ >> 15);
+  int32_t lfo = lfo_phase < 1UL << 31
+      ?  -32768 + (lfo_phase >> 15)
+      : 0x17fff - (lfo_phase >> 15);
   uint16_t vibrato_control_value = 0;
   switch (vibrato_control_source_) {
     case VIBRATO_CONTROL_SOURCE_MODWHEEL:

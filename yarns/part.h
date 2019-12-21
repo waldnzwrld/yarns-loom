@@ -215,6 +215,7 @@ class Part {
   ~Part() { }
   
   void Init();
+  void Refresh();
   
   // The return value indicates whether the message can be forwarded to the
   // MIDI out (soft-thru). For example, when the arpeggiator is on, NoteOn
@@ -421,7 +422,6 @@ class Part {
   uint8_t seq_rec_step_;
   
   SyncedLFO looper_synced_lfo_;
-  uint32_t looper_phase_;
   uint8_t looper_note_index_for_pressed_key_index_[kNoteStackSize];
 
   uint16_t gate_length_counter_;

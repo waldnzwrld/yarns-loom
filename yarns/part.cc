@@ -66,6 +66,8 @@ void Part::Init() {
   seq_running_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
+  seq_.looper.Init();
+  looper_synced_lfo_.Init();
 }
   
 void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
@@ -79,6 +81,10 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
   poly_allocator_.Clear();
   poly_allocator_.set_size(num_voices_ * (polychain ? 2 : 1));
   TouchVoices();
+}
+
+void Part::Refresh() {
+  looper_synced_lfo_.Refresh();
 }
 
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
@@ -312,14 +318,19 @@ void Part::Clock() {
     arp_seq_prescaler_ = 0;
   }
   
+  uint32_t num_ticks;
+  uint32_t expected_phase;
   if (voicing_.modulation_rate >= 100) {
-    uint32_t num_ticks = clock_divisions[voicing_.modulation_rate - 100];
+    num_ticks = clock_divisions[voicing_.modulation_rate - 100];
     // TODO decipher this math -- how much to add so that the voices are in quadrature?
-    uint32_t expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
+    expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
     for (uint8_t i = 0; i < num_voices_; ++i) {
       voice_[i]->TapLfo(expected_phase << 16);
     }
   }
+  num_ticks = clock_divisions[seq_.looper.clock_division];
+  expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
+  looper_synced_lfo_.Tap(expected_phase << 16);
   ++lfo_counter_;
 }
 
