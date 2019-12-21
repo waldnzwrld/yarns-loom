@@ -84,7 +84,10 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
 }
 
 void Part::Refresh() {
-  looper_synced_lfo_.Refresh();
+  uint32_t old_phase = looper_synced_lfo_.GetPhase();
+  uint32_t new_phase = looper_synced_lfo_.Refresh();
+
+  uint8_t seen_index;
 }
 
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {

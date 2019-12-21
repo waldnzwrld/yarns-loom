@@ -42,9 +42,13 @@ class SyncedLFO {
     phase_ = 0;
   }
 
+  uint32_t GetPhase() {
+    return phase_;
+  }
+
   uint32_t Increment(uint32_t increment) {
     phase_ += increment;
-    return phase_;
+    return GetPhase();
   }
 
   uint32_t Refresh() {

@@ -24,10 +24,12 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Voice.
+// Looper.
 
 #ifndef YARNS_LOOPER_H_
 #define YARNS_LOOPER_H_
+
+#include "stmlib/stmlib.h"
 
 #include "yarns/sequencer_step.h"
 
@@ -60,7 +62,25 @@ class Recorder {
   ~Recorder() { }
   void Init() { }
 
+  void RemoveAll();
+  bool IsEmpty();
+  void ResetHead();
+
+  void RemoveOldestNote();
+  void RemoveNewestNote();
+
+  uint8_t PeekNextOnIndex();
+  uint8_t PeekNextOffIndex();
+  SequencerStep TryAdvanceOn();
+  SequencerStep TryAdvanceOff();
+  uint8_t RecordNoteOn(uint16_t pos, SequencerStep step);
+  uint8_t RecordNoteOff(uint16_t pos, SequencerStep step);
+
  private:
+
+  bool Passed(uint16_t target, uint16_t before, uint16_t after);
+  void InsertOn(uint8_t index, uint16_t pos);
+  void InsertOff(uint8_t index, uint16_t pos);
 
   Note notes_[kMaxNotes];
   Link head_link_;

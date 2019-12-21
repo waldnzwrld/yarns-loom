@@ -401,9 +401,9 @@ class Part {
   bool ignore_note_off_messages_;
   bool release_latched_keys_on_next_note_on_;
   
-  stmlib::NoteStack<12> pressed_keys_;
-  stmlib::NoteStack<12> generated_notes_;  // by sequencer or arpeggiator.
-  stmlib::NoteStack<12> mono_allocator_;
+  stmlib::NoteStack<kNoteStackSize> pressed_keys_;
+  stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
+  stmlib::NoteStack<kNoteStackSize> mono_allocator_;
   stmlib::VoiceAllocator<kMaxNumVoices * 2> poly_allocator_;
   uint8_t active_note_[kMaxNumVoices];
   uint8_t cyclic_allocation_note_counter_;
