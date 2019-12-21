@@ -137,13 +137,15 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     }
     */
     if (off) {
-    pressed_keys_.NoteOff(note);
+      pressed_keys_.NoteOff(note);
     
-    if (seq_.play_mode == PLAY_MODE_MANUAL ||
-        sent_from_step_editor) {
-      InternalNoteOff(note);
+      if (
+        seq_.play_mode == PLAY_MODE_MANUAL ||
+        sent_from_step_editor
+      ) {
+        InternalNoteOff(note);
+      }
     }
-  }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
 }
