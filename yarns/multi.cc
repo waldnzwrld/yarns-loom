@@ -249,7 +249,7 @@ void Multi::Start(bool started_by_keyboard) {
   fill(&swing_predelay_[0], &swing_predelay_[12], -1);
   
   for (uint8_t i = 0; i < num_active_parts_; ++i) {
-    part_[i].Start(started_by_keyboard);
+    part_[i].Start();
   }
   song_pointer_ = NULL;
   midi_clock_tick_duration_ = 0;

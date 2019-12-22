@@ -63,7 +63,6 @@ void Part::Init() {
   polychained_ = false;
   ignore_note_off_messages_ = false;
   seq_recording_ = false;
-  seq_running_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
 }
@@ -296,7 +295,7 @@ void Part::Clock() {
   if (!arp_seq_prescaler_) {
     if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       ClockArpeggiator();
-    } else if (seq_.play_mode == PLAY_MODE_SEQUENCER && seq_running_) {
+    } else if (seq_.play_mode == PLAY_MODE_SEQUENCER) {
       ClockSequencer();
     }
   }
@@ -323,11 +322,10 @@ void Part::Clock() {
   ++lfo_counter_;
 }
 
-void Part::Start(bool started_by_keyboard) {
+void Part::Start() {
   arp_seq_prescaler_ = 0;
 
   seq_step_ = 0;
-  seq_running_ = !started_by_keyboard;
   
   release_latched_keys_on_next_note_on_ = false;
   ignore_note_off_messages_ = false;
@@ -343,7 +341,6 @@ void Part::Start(bool started_by_keyboard) {
 }
 
 void Part::Stop() {
-  seq_running_ = false;
   StopSequencerArpeggiatorNotes();
   AllNotesOff();
 }
@@ -354,7 +351,7 @@ void Part::StartRecording() {
   }
   seq_recording_ = true;
   seq_rec_step_ = 0;
-  seq_overdubbing_ = seq_.num_steps && seq_running_;
+  seq_overdubbing_ = seq_.num_steps;
 }
 
 void Part::DeleteSequence() {

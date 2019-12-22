@@ -286,7 +286,7 @@ class Part {
   void AllNotesOff();
   void Reset();
   void Clock();
-  void Start(bool started_by_keyboard);
+  void Start();
   void Stop();
   void StopRecording() {
     seq_recording_ = false;
@@ -466,7 +466,6 @@ class Part {
   int8_t arp_octave_;
   int8_t arp_direction_;
   
-  bool seq_running_;
   bool seq_recording_;
   bool seq_overdubbing_;
   uint8_t seq_step_;
