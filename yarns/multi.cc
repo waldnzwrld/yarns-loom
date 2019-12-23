@@ -113,11 +113,7 @@ void Multi::Init(bool reset_calibration) {
   seq->input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   seq->play_mode = PLAY_MODE_MANUAL;
   
-  fill(
-      &seq->step[0],
-      &seq->step[kNumSteps],
-      SequencerStep(SEQUENCER_STEP_REST, 0));
-  seq->num_steps = 0;
+  part_[0].DeleteSequence();
   // A test sequence...
   // seq->num_steps = 4;
   // seq->step[0].data[0] = 48;

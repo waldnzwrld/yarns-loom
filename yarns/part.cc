@@ -351,7 +351,7 @@ void Part::StartRecording() {
   }
   seq_recording_ = true;
   seq_rec_step_ = 0;
-  seq_overdubbing_ = seq_.num_steps;
+  seq_overdubbing_ = seq_.num_steps > 0;
 }
 
 void Part::DeleteSequence() {

@@ -630,7 +630,10 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_TAP_TEMPO:
-      mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
+      {
+        const Setting s = settings.setting(PART_SEQUENCER_PLAY_MODE);
+        settings.Set(s, (1 + settings.Get(s)) % PLAY_MODE_LAST);
+      }
       break;
 
     default:

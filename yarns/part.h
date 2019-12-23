@@ -236,6 +236,7 @@ struct SequencerStep {
   inline int8_t black_key_value() const { return octaves_above_middle_c() * kNumBlackKeys + blackKeyValues[note() % 12]; }
 };
 
+// TODO rec step is wrapping at 255
 struct SequencerSettings {
   uint8_t clock_division;
   uint8_t gate_length;
