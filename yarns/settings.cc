@@ -121,9 +121,9 @@ const char* const tuning_system_values[] = {
 };
 
 const char* const sequencer_play_mode_values[] = {
-  "M",
-  "A",
-  "S"
+  "m",
+  "a",
+  "s"
 };
 
 const char* const sequencer_input_response_values[] = {
