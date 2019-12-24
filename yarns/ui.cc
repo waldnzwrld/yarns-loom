@@ -742,7 +742,7 @@ void Ui::DoEvents() {
   } else if (queue_.idle_time() > 600) {
     if (print_step_value) {
       PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
-      } else {
+    } else {
       PrintSequencerPlayModeAndActivePart();
     }
   }
