@@ -739,9 +739,7 @@ void Ui::DoEvents() {
 
   uint8_t recording_step_index = recording_part().recording_step();
   uint8_t print_step_value = (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING));
-  if (queue_.idle_time() > 300 && queue_.idle_time() <= 600 && print_step_value) {
-    Ui::PrintSequencerPlayModeAndActivePart();
-  } else if (queue_.idle_time() > 600) {
+  if (queue_.idle_time() > 600) {
     if (print_step_value) {
       PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
     } else {
