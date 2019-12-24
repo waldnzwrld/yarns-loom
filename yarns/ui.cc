@@ -735,11 +735,10 @@ void Ui::DoEvents() {
   }
 
   uint8_t recording_step_index = recording_part().recording_step();
-  uint8_t print_step_value = (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING));
   if (queue_.idle_time() > 600) {
-    if (print_step_value) {
+    if (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
       PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
-    } else {
+    } else if (!display_.scrolling()) {
       PrintSequencerPlayModeAndActivePart();
     }
   }
