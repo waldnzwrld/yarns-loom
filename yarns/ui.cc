@@ -482,27 +482,6 @@ void Ui::OnClickCalibrationSelectNote(const Event& e) {
   }
 }
 
-void Ui::OnClickSelectRecordingPart(const Event& e) {
-  multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
-  if (recording_part().overdubbing() || multi.running()) {
-    mode_ = UI_MODE_OVERDUBBING;
-  } else {
-    mode_ = UI_MODE_RECORDING;
-  }
-}
-
-void Ui::OnClickDeleteSequence(const Event& e) {
-  mutable_active_part()->DeleteSequence();
-  if (
-      previous_mode_ == UI_MODE_RECORDING ||
-      previous_mode_ == UI_MODE_OVERDUBBING
-  ) {
-    mode_ = UI_MODE_PARAMETER_SELECT;
-  } else {
-    mode_ = previous_mode_;
-  }
-}
-
 void Ui::OnClickRecording(const Event& e) {
   if (push_it_) {
     multi.PushItNoteOff(push_it_note_);

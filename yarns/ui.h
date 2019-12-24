@@ -168,8 +168,6 @@ class Ui {
   void OnClickLoadSave(const stmlib::Event& e);
   void OnClickCalibrationSelectVoice(const stmlib::Event& e);
   void OnClickCalibrationSelectNote(const stmlib::Event& e);
-  void OnClickSelectRecordingPart(const stmlib::Event& e);
-  void OnClickDeleteSequence(const stmlib::Event& e);
   void OnClickRecording(const stmlib::Event& e);
   void OnClickOverdubbing(const stmlib::Event& e);
   void OnClickLearning(const stmlib::Event& event);
