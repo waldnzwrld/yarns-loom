@@ -630,7 +630,9 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_TAP_TEMPO:
-      mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
+      if (!(mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
+        mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
+      }
       break;
 
     default:
