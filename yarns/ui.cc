@@ -301,6 +301,46 @@ void Ui::PrintCalibrationNote() {
       calibration_strings[calibration_note_]);
 }
 
+void Ui::PrintSequencerPlayModeAndActivePart() {
+  strcpy(buffer_, "1x");
+  buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
+  buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().sequencer_settings().play_mode][0];
+  buffer_[2] = '\0';
+  display_.Print(buffer_);
+}
+
+void Ui::PrintRecordingStep(SequencerStep step) {
+  if (step.is_rest()) {
+    display_.Print("RS");
+    return;
+  }
+  if (step.is_tie()) {
+    display_.Print("TI");
+    return;
+  }
+  if (
+    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
+    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
+  ) {
+    PrintArpeggiatorMovementStep(step);
+    return;
+  }
+  PrintNote(step.note());
+}
+
+void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
+  if (step.is_white()) {
+    Settings::PrintSignedInteger(buffer_, step.white_key_value());
+  } else {
+    int8_t value = step.black_key_value();
+    Settings::PrintSignedInteger(buffer_, (value >= 0 ? value + 1 : abs(value)));
+    if (buffer_[0] == ' ') {
+      buffer_[0] = value >= 0 ? '>' : '<';
+    }
+  }
+  display_.Print(buffer_, buffer_);
+}
+
 void Ui::PrintRecordingStatus() {
   if (push_it_) {
     PrintPushItNote();
@@ -667,46 +707,6 @@ void Ui::TapTempo() {
     tap_tempo_sum_ = 0;
   }
   previous_tap_time_ = tap_time;
-}
-
-void Ui::PrintSequencerPlayModeAndActivePart() {
-  strcpy(buffer_, "1x");
-  buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
-  buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().sequencer_settings().play_mode][0];
-  buffer_[2] = '\0';
-  display_.Print(buffer_);
-}
-
-void Ui::PrintRecordingStep(SequencerStep step) {
-  if (step.is_rest()) {
-    display_.Print("RS");
-    return;
-  }
-  if (step.is_tie()) {
-    display_.Print("TI");
-    return;
-  }
-  if (
-    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
-    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
-  ) {
-    PrintArpSeqStep(step);
-    return;
-  }
-  PrintNote(step.note());
-}
-
-void Ui::PrintArpSeqStep(SequencerStep step) {
-  if (step.is_white()) {
-    Settings::PrintSignedInteger(buffer_, step.white_key_value());
-  } else {
-    int8_t value = step.black_key_value();
-    Settings::PrintSignedInteger(buffer_, (value >= 0 ? value + 1 : abs(value)));
-    if (buffer_[0] == ' ') {
-      buffer_[0] = value >= 0 ? '>' : '<';
-    }
-  }
-  display_.Print(buffer_, buffer_);
 }
 
 void Ui::DoEvents() {
