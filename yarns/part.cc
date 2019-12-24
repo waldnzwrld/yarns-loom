@@ -355,11 +355,13 @@ void Part::StartRecording() {
 }
 
 void Part::DeleteSequence() {
+  StopRecording();
   std::fill(
     &seq_.step[0],
     &seq_.step[kNumSteps],
     SequencerStep(SEQUENCER_STEP_REST, 0)
   );
+  seq_rec_step_ = 0;
   seq_.num_steps = 0;
 }
 
