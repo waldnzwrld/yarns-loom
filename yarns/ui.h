@@ -199,7 +199,7 @@ class Ui {
   void PrintVersionNumber();
   void PrintRecordingStep(SequencerStep step);
   void PrintArpeggiatorMovementStep(SequencerStep step);
-  void PrintSequencerPlayModeAndActivePart();
+  void PrintActivePartAndPlayMode();
   
   void DoInitCommand();
   void DoDumpCommand();

@@ -298,7 +298,7 @@ void Ui::PrintCalibrationNote() {
       calibration_strings[calibration_note_]);
 }
 
-void Ui::PrintSequencerPlayModeAndActivePart() {
+void Ui::PrintActivePartAndPlayMode() {
   strcpy(buffer_, "1x");
   buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
   buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().sequencer_settings().play_mode][0];
@@ -739,7 +739,7 @@ void Ui::DoEvents() {
     if (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
       PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
     } else if (!display_.scrolling()) {
-      PrintSequencerPlayModeAndActivePart();
+      PrintActivePartAndPlayMode();
     }
   }
   if (displayed_recording_step_index_ != recording_step_index &&
