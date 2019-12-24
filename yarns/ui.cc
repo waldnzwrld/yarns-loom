@@ -675,6 +675,38 @@ void Ui::PrintSequencerPlayModeAndActivePart() {
   display_.Print(buffer_);
 }
 
+void Ui::PrintRecordingStep(SequencerStep step) {
+  if (step.is_rest()) {
+    display_.Print("RS");
+    return;
+  }
+  if (step.is_tie()) {
+    display_.Print("TI");
+    return;
+  }
+  if (
+    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
+    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
+  ) {
+    PrintArpSeqStep(step);
+    return;
+  }
+  PrintNote(step.note());
+}
+
+void Ui::PrintArpSeqStep(SequencerStep step) {
+  if (step.is_white()) {
+    Settings::PrintSignedInteger(buffer_, step.white_key_value());
+  } else {
+    int8_t value = step.black_key_value();
+    Settings::PrintSignedInteger(buffer_, (value >= 0 ? value + 1 : abs(value)));
+    if (buffer_[0] == ' ') {
+      buffer_[0] = value >= 0 ? '>' : '<';
+    }
+  }
+  display_.Print(buffer_, buffer_);
+}
+
 void Ui::DoEvents() {
   bool refresh_display = false;
   bool scroll_display = false;
@@ -702,38 +734,16 @@ void Ui::DoEvents() {
       refresh_display = true;
     }
   }
+
   uint8_t recording_step_index = recording_part().recording_step();
   uint8_t print_step_value = (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING));
   if (queue_.idle_time() > 300 && queue_.idle_time() <= 600 && print_step_value) {
     Ui::PrintSequencerPlayModeAndActivePart();
   } else if (queue_.idle_time() > 600) {
     if (print_step_value) {
-      SequencerStep selected_step = recording_part().sequencer_settings().step[recording_step_index];
-      if (selected_step.is_rest()) {
-        display_.Print("RS");
-      } else if (selected_step.is_tie()) {
-        display_.Print("TI");
+      PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
       } else {
-        if (
-          recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
-          recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
-        ) {
-          if (selected_step.is_white()) {
-            Settings::PrintSignedInteger(buffer_, selected_step.white_key_value());
-          } else {
-            int8_t value = selected_step.black_key_value();
-            Settings::PrintSignedInteger(buffer_, (value >= 0 ? value + 1 : abs(value)));
-            if (buffer_[0] == ' ') {
-              buffer_[0] = value >= 0 ? '>' : '<';
-            }
-          }
-          display_.Print(buffer_, buffer_);
-        } else {
-          PrintNote(selected_step.note());
-        }
-      }
-    } else {
-      Ui::PrintSequencerPlayModeAndActivePart();
+      PrintSequencerPlayModeAndActivePart();
     }
   }
   if (displayed_recording_step_index_ != recording_step_index &&

@@ -197,6 +197,8 @@ class Ui {
   void PrintLearning();
   void PrintFactoryTesting();
   void PrintVersionNumber();
+  void PrintRecordingStep(SequencerStep step);
+  void PrintArpSeqStep(SequencerStep step);
   void PrintSequencerPlayModeAndActivePart();
   
   void DoInitCommand();
