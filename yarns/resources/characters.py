@@ -94,7 +94,7 @@ characters = {
   'p': 'afpje',
   'q': 'afpkbl',
   'r': 'mk',
-  's': 'agkcd',
+  's': 'kld',
   't': 'fedp',
   'u': 'edc',
   'v': 'en',
