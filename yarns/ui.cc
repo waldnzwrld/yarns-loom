@@ -40,9 +40,6 @@ using namespace std;
 using namespace stmlib;
 
 const uint32_t kEncoderLongPressTime = 600;
-const uint8_t kNumScrolls = 1;
-const uint8_t kScrollingDelaySeconds = 1;
-const uint16_t kScrollingCharacterTime = 140;
 
 /* static */
 const Ui::Command Ui::commands_[] = {
