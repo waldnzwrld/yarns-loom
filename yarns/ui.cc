@@ -136,7 +136,13 @@ Ui::Mode Ui::modes_[] = {
   { &Ui::OnIncrementParameterSelect, &Ui::OnClick,
     &Ui::PrintVersionNumber,
     UI_MODE_PARAMETER_SELECT,
-    NULL, 0, 0 }
+    NULL, 0, 0 },
+
+  // UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE
+  { &Ui::OnIncrementParameterSelect, &Ui::OnClick,
+    &Ui::PrintActivePartAndPlayMode,
+    UI_MODE_PARAMETER_SELECT,
+    NULL, 0, 0 },
 };
 
 void Ui::Init() {
@@ -146,7 +152,8 @@ void Ui::Init() {
   queue_.Init();
   leds_.Init();
   
-  previous_mode_ = mode_ = UI_MODE_SPLASH;
+  previous_mode_ = UI_MODE_PARAMETER_SELECT;
+  mode_ = UI_MODE_SPLASH;
   setting_index_ = 0;
   previous_tap_time_ = 0;
   tap_tempo_count_ = 0;
@@ -396,6 +403,11 @@ void Ui::PrintFactoryTesting() {
 
 void Ui::PrintVersionNumber() {
   display_.Print("L2"); // Loom v1.2.0
+}
+
+void Ui::ChangedActivePartOrPlayMode() {
+  previous_mode_ = mode_;
+  mode_ = UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE;
 }
 
 // Generic Handlers
@@ -651,6 +663,7 @@ void Ui::OnSwitchHeld(const Event& e) {
         mode_ = UI_MODE_PARAMETER_SELECT;
       } else {
         settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
+        ChangedActivePartOrPlayMode();
       }
       break;
 
@@ -669,6 +682,7 @@ void Ui::OnSwitchHeld(const Event& e) {
     case UI_SWITCH_TAP_TEMPO:
       if (!(mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
         mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
+        ChangedActivePartOrPlayMode();
       }
       break;
 
@@ -727,6 +741,9 @@ void Ui::DoEvents() {
     refresh_display = true;
     scroll_display = true;
   }
+  if (queue_.idle_time() > 300 && mode_ == UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE) {
+    refresh_display = true;
+  }
   if (queue_.idle_time() > 900) {
     if (!display_.scrolling()) {
       factory_testing_display_ = UI_FACTORY_TESTING_DISPLAY_EMPTY;
@@ -738,7 +755,7 @@ void Ui::DoEvents() {
   if (queue_.idle_time() > 600) {
     if (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
       PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
-    } else if (!display_.scrolling()) {
+    } else if (!display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT) {
       PrintActivePartAndPlayMode();
     }
   }
@@ -770,8 +787,8 @@ void Ui::DoEvents() {
       display_.set_fade(0);
     }
     
-    if (mode_ == UI_MODE_SPLASH) {
-      mode_ = UI_MODE_PARAMETER_SELECT;
+    if (mode_ == UI_MODE_SPLASH || mode_ == UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE) {
+      mode_ = previous_mode_;
     }
   }
 }

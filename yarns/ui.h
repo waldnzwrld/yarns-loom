@@ -60,6 +60,7 @@ enum UiMode {
   UI_MODE_LEARNING,
   UI_MODE_FACTORY_TESTING,
   UI_MODE_SPLASH,
+  UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
   UI_MODE_LAST
 };
 
@@ -201,6 +202,8 @@ class Ui {
   void PrintArpeggiatorMovementStep(SequencerStep step);
   void PrintActivePartAndPlayMode();
   
+  void ChangedActivePartOrPlayMode();
+
   void DoInitCommand();
   void DoDumpCommand();
   void DoLearnCommand();
