@@ -259,7 +259,7 @@ const char* const calibration_strings[] = {
   "-3", "-2", "-1", " 0", "+1", "+2", "+3", "+4", "+5", "+6", "+7", "OK"
 };
 
-const char notes_long[] = "C DbD EbE F GbG AbA BbB ";
+const char notes_long[] = "C d D e E F g G a A b B ";
 const char octave[] = "-0123456789";
 
 void Ui::PrintParameterName() {
