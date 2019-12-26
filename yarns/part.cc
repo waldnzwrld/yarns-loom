@@ -63,7 +63,6 @@ void Part::Init() {
   polychained_ = false;
   ignore_note_off_messages_ = false;
   seq_recording_ = false;
-  seq_running_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
   seq_.looper.Init();
@@ -113,7 +112,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     }
     pressed_keys_.NoteOn(note, velocity);
   
-    if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range)
+    if (seq_.play_mode == PLAY_MODE_MANUAL
         || sent_from_step_editor) {
       InternalNoteOn(note, velocity);
     }
@@ -148,7 +147,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     if (off) {
       pressed_keys_.NoteOff(note);
     
-      if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range) ||
+      if (seq_.play_mode == PLAY_MODE_MANUAL ||
           sent_from_step_editor) {
         InternalNoteOff(note);
       }
@@ -303,9 +302,9 @@ void Part::Reset() {
 
 void Part::Clock() {
   if (!arp_seq_prescaler_) {
-    if (seq_.arp_range) {
+    if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       ClockArpeggiator();
-    } else if (seq_.num_steps && seq_running_) {
+    } else if (seq_.play_mode == PLAY_MODE_SEQUENCER) {
       ClockSequencer();
     }
   }
@@ -337,11 +336,10 @@ void Part::Clock() {
   ++lfo_counter_;
 }
 
-void Part::Start(bool started_by_keyboard) {
+void Part::Start() {
   arp_seq_prescaler_ = 0;
 
   seq_step_ = 0;
-  seq_running_ = !started_by_keyboard;
   
   release_latched_keys_on_next_note_on_ = false;
   ignore_note_off_messages_ = false;
@@ -357,7 +355,6 @@ void Part::Start(bool started_by_keyboard) {
 }
 
 void Part::Stop() {
-  seq_running_ = false;
   StopSequencerArpeggiatorNotes();
   AllNotesOff();
 }
@@ -368,15 +365,17 @@ void Part::StartRecording() {
   }
   seq_recording_ = true;
   seq_rec_step_ = 0;
-  seq_overdubbing_ = seq_.num_steps && seq_running_;
+  seq_overdubbing_ = seq_.num_steps > 0;
 }
 
 void Part::DeleteSequence() {
+  StopRecording();
   std::fill(
     &seq_.step[0],
     &seq_.step[kNumSteps],
     SequencerStep(SEQUENCER_STEP_REST, 0)
   );
+  seq_rec_step_ = 0;
   seq_.num_steps = 0;
 }
 
@@ -846,6 +845,7 @@ void Part::Set(uint8_t address, uint8_t value) {
         break;
 
       case PART_SEQUENCER_INPUT_RESPONSE:
+      case PART_SEQUENCER_PLAY_MODE:
         break;
     }
   }

@@ -82,6 +82,7 @@ void Multi::Init(bool reset_calibration) {
   midi->min_velocity = 0;
   midi->max_velocity = 127;
   midi->out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
+  midi->sustain_mode = SUSTAIN_MODE_NORMAL;
   
   VoicingSettings* voicing = part_[0].mutable_voicing_settings();
   voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
@@ -90,6 +91,8 @@ void Multi::Init(bool reset_calibration) {
   voicing->portamento = 0;
   voicing->pitch_bend_range = 2;
   voicing->vibrato_range = 1;
+  voicing->vibrato_initial = 0;
+  voicing->vibrato_control_source = VIBRATO_CONTROL_SOURCE_MODWHEEL;
   voicing->modulation_rate = 50;
   voicing->trigger_duration = 2;
   voicing->aux_cv = 1;
@@ -107,12 +110,10 @@ void Multi::Init(bool reset_calibration) {
   seq->arp_range = 0;
   seq->arp_direction = 0;
   seq->arp_pattern = 0;
+  seq->input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
+  seq->play_mode = PLAY_MODE_MANUAL;
   
-  fill(
-      &seq->step[0],
-      &seq->step[kNumSteps],
-      SequencerStep(SEQUENCER_STEP_REST, 0));
-  seq->num_steps = 0;
+  part_[0].DeleteSequence();
   // A test sequence...
   // seq->num_steps = 4;
   // seq->step[0].data[0] = 48;
@@ -249,7 +250,7 @@ void Multi::Start(bool started_by_keyboard) {
   fill(&swing_predelay_[0], &swing_predelay_[12], -1);
   
   for (uint8_t i = 0; i < num_active_parts_; ++i) {
-    part_[i].Start(started_by_keyboard);
+    part_[i].Start();
   }
   song_pointer_ = NULL;
   midi_clock_tick_duration_ = 0;

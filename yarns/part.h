@@ -99,6 +99,13 @@ enum SequencerInputResponse {
   SEQUENCER_INPUT_RESPONSE_OFF
 };
 
+enum PlayMode {
+  PLAY_MODE_MANUAL,
+  PLAY_MODE_ARPEGGIATOR,
+  PLAY_MODE_SEQUENCER,
+  PLAY_MODE_LAST
+};
+
 enum SustainMode {
   SUSTAIN_MODE_NORMAL,
   // SUSTAIN_MODE_SOSTENUTO,
@@ -181,6 +188,7 @@ enum PartSetting {
   PART_SEQUENCER_EUCLIDEAN_LENGTH,
   PART_SEQUENCER_EUCLIDEAN_FILL,
   PART_SEQUENCER_EUCLIDEAN_ROTATE,
+  PART_SEQUENCER_PLAY_MODE,
   PART_SEQUENCER_INPUT_RESPONSE
 };
 
@@ -193,11 +201,12 @@ struct SequencerSettings {
   uint8_t euclidean_length;
   uint8_t euclidean_fill;
   uint8_t euclidean_rotate;
+  uint8_t play_mode;
   uint8_t input_response;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
   looper::Recorder looper;
-  uint8_t padding[6]; //TODO
+  uint8_t padding[5]; //TODO
   
   int16_t first_note() {
     for (uint8_t i = 0; i < num_steps; ++i) {
@@ -235,7 +244,7 @@ class Part {
   void AllNotesOff();
   void Reset();
   void Clock();
-  void Start(bool started_by_keyboard);
+  void Start();
   void Stop();
   void StopRecording() {
     seq_recording_ = false;
@@ -415,7 +424,6 @@ class Part {
   int8_t arp_octave_;
   int8_t arp_direction_;
   
-  bool seq_running_;
   bool seq_recording_;
   bool seq_overdubbing_;
   uint8_t seq_step_;

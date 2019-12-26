@@ -40,7 +40,7 @@ const uint16_t kPinEnable = GPIO_Pin_8;
 const uint16_t kPinData = GPIO_Pin_9;
 
 const uint16_t kScrollingDelay = 180;
-const uint16_t kScrollingPreDelay = 1500;
+const uint16_t kScrollingPreDelay = 600;
 const uint16_t kBlinkMask = 128;
 
 const uint16_t kCharacterEnablePins[] = {

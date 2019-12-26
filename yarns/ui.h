@@ -54,14 +54,13 @@ enum UiMode {
   UI_MODE_CALIBRATION_SELECT_VOICE,
   UI_MODE_CALIBRATION_SELECT_NOTE,
   UI_MODE_CALIBRATION_ADJUST_LEVEL,
-  UI_MODE_SELECT_RECORDING_PART,
-  UI_MODE_DELETE_SEQUENCE,
   UI_MODE_RECORDING,
   UI_MODE_OVERDUBBING,
   UI_MODE_PUSH_IT_SELECT_NOTE,
   UI_MODE_LEARNING,
   UI_MODE_FACTORY_TESTING,
   UI_MODE_SPLASH,
+  UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
   UI_MODE_LAST
 };
 
@@ -145,10 +144,16 @@ class Ui {
   void RefreshDisplay();
   void TapTempo();
   inline Part* mutable_recording_part() {
-    return multi.mutable_part(recording_part_);
+    return mutable_active_part();
   }
   inline const Part& recording_part() const {
-    return multi.part(recording_part_);
+    return active_part();
+  }
+  inline Part* mutable_active_part() {
+    return multi.mutable_part(settings.Get(GLOBAL_ACTIVE_PART));
+  }
+  inline const Part& active_part() const {
+    return multi.part(settings.Get(GLOBAL_ACTIVE_PART));
   }
   
   // Generic Handler.
@@ -163,8 +168,6 @@ class Ui {
   void OnClickLoadSave(const stmlib::Event& e);
   void OnClickCalibrationSelectVoice(const stmlib::Event& e);
   void OnClickCalibrationSelectNote(const stmlib::Event& e);
-  void OnClickSelectRecordingPart(const stmlib::Event& e);
-  void OnClickDeleteSequence(const stmlib::Event& e);
   void OnClickRecording(const stmlib::Event& e);
   void OnClickOverdubbing(const stmlib::Event& e);
   void OnClickLearning(const stmlib::Event& event);
@@ -193,7 +196,12 @@ class Ui {
   void PrintLearning();
   void PrintFactoryTesting();
   void PrintVersionNumber();
+  void PrintRecordingStep(SequencerStep step);
+  void PrintArpeggiatorMovementStep(SequencerStep step);
+  void PrintActivePartAndPlayMode();
   
+  void ChangedActivePartOrPlayMode();
+
   void DoInitCommand();
   void DoDumpCommand();
   void DoLearnCommand();
@@ -225,10 +233,12 @@ class Ui {
   Switches switches_;
   char buffer_[32];
   
-  bool start_stop_long_press_event_sent_;
-  uint32_t start_stop_press_time_;
   bool rec_long_press_event_sent_;
   uint32_t rec_press_time_;
+  bool start_stop_long_press_event_sent_;
+  uint32_t start_stop_press_time_;
+  bool tap_tempo_long_press_event_sent_;
+  uint32_t tap_tempo_press_time_;
   bool encoder_long_press_event_sent_;
   uint32_t encoder_press_time_;
   
@@ -241,8 +251,6 @@ class Ui {
   int8_t calibration_note_;
   int8_t program_index_;
   int8_t active_program_;
-  int8_t recording_part_;
-  int8_t delete_sequence_part_;
   bool push_it_;
   int16_t push_it_note_;
   uint8_t displayed_recording_step_index_;
