@@ -103,6 +103,7 @@ enum PlayMode {
   PLAY_MODE_MANUAL,
   PLAY_MODE_ARPEGGIATOR,
   PLAY_MODE_SEQUENCER,
+  PLAY_MODE_LOOPER,
   PLAY_MODE_LAST
 };
 
@@ -189,7 +190,8 @@ enum PartSetting {
   PART_SEQUENCER_EUCLIDEAN_FILL,
   PART_SEQUENCER_EUCLIDEAN_ROTATE,
   PART_SEQUENCER_PLAY_MODE,
-  PART_SEQUENCER_INPUT_RESPONSE
+  PART_SEQUENCER_INPUT_RESPONSE,
+  // PART_SEQUENCER_LOOPER_CLOCK_DIVISION,
 };
 
 struct SequencerSettings {
@@ -203,6 +205,7 @@ struct SequencerSettings {
   uint8_t euclidean_rotate;
   uint8_t play_mode;
   uint8_t input_response;
+  // uint8_t looper_clock_division;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
   looper::Recorder looper;
@@ -245,6 +248,7 @@ class Part {
   void Reset();
   void Clock();
   void Start();
+  void StartLooper();
   void Stop();
   void StopRecording() {
     seq_recording_ = false;
@@ -345,14 +349,13 @@ class Part {
   inline uint8_t recording_step() const { return seq_rec_step_; }
   inline uint8_t playing_step() const {
     // correct for preemptive increment
-    return modulo(seq_step_ - 1, seq_.num_steps);
+    return stmlib::modulo(seq_step_ - 1, seq_.num_steps);
   }
   inline uint8_t num_steps() const { return seq_.num_steps; }
   inline void increment_recording_step_index(uint8_t n) {
     seq_rec_step_ += n;
-    seq_rec_step_ = modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
+    seq_rec_step_ = stmlib::modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
   }
-  inline uint8_t modulo(int8_t a, int8_t b) const { return (b + (a % b)) % b; }
   
   void Touch() {
     TouchVoices();

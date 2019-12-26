@@ -143,6 +143,12 @@ Ui::Mode Ui::modes_[] = {
     &Ui::PrintActivePartAndPlayMode,
     UI_MODE_PARAMETER_SELECT,
     NULL, 0, 0 },
+
+  // UI_MODE_LOOPER_RECORDING
+  { &Ui::OnIncrement, &Ui::OnClick,
+    &Ui::PrintLooperRecordingStatus,
+    UI_MODE_LOOPER_RECORDING,
+    NULL, 0, 0 },
 };
 
 void Ui::Init() {
@@ -198,7 +204,6 @@ void Ui::Poll() {
   if (increment != 0) {
     queue_.AddEvent(CONTROL_ENCODER, 0, increment);
   }
-
 
   // Switch press and long press.
   switches_.Debounce();
@@ -343,6 +348,10 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
     }
   }
   display_.Print(buffer_, buffer_);
+}
+
+void Ui::PrintLooperRecordingStatus() {
+  display_.Print("oo");
 }
 
 void Ui::PrintRecordingStatus() {
@@ -575,15 +584,24 @@ void Ui::OnSwitchPress(const Event& e) {
   switch (e.control_id) {
     case UI_SWITCH_REC:
       {
-        if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
+        if (
+          mode_ == UI_MODE_RECORDING ||
+          mode_ == UI_MODE_OVERDUBBING ||
+          mode_ == UI_MODE_LOOPER_RECORDING
+        ) {
           // Finish recording.
           multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
           mode_ = previous_mode_;
         } else {
           previous_mode_ = mode_;
           multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
-          mode_ = active_part().overdubbing() ?
-                UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
+          if (active_part().sequencer_settings().play_mode == PLAY_MODE_LOOPER) {
+            mode_ = UI_MODE_LOOPER_RECORDING;
+            multi.Start(false);
+          } else {
+            mode_ = active_part().overdubbing() ?
+                  UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
+          }
         }
       }
       break;
@@ -595,6 +613,8 @@ void Ui::OnSwitchPress(const Event& e) {
         }
         push_it_ = false;
         mutable_active_part()->RecordStep(SEQUENCER_STEP_TIE);
+      } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
+        mutable_active_part()->mutable_sequencer_settings()->looper.RemoveOldestNote();
       } else {
         if (push_it_) {
           multi.PushItNoteOff(push_it_note_);
@@ -626,6 +646,8 @@ void Ui::OnSwitchPress(const Event& e) {
         }
         push_it_ = false;
         mutable_active_part()->RecordStep(SEQUENCER_STEP_REST);
+      } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
+        mutable_active_part()->mutable_sequencer_settings()->looper.RemoveNewestNote();
       } else {
         TapTempo();
       }
@@ -640,6 +662,8 @@ void Ui::OnSwitchHeld(const Event& e) {
       if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
         mutable_active_part()->DeleteSequence();
         mode_ = UI_MODE_PARAMETER_SELECT;
+      } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
+        mutable_active_part()->mutable_sequencer_settings()->looper.RemoveAll();
       } else {
         settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
         ChangedActivePartOrPlayMode();
@@ -756,7 +780,9 @@ void Ui::DoEvents() {
     }
     display_.set_blink(
         mode_ == UI_MODE_CALIBRATION_ADJUST_LEVEL ||
-        mode_ == UI_MODE_LEARNING);
+        mode_ == UI_MODE_LEARNING ||
+        mode_ == UI_MODE_LOOPER_RECORDING
+    );
     if (mode_ == UI_MODE_MAIN_MENU) {
       display_.set_fade(160);
     } else if (mode_ == UI_MODE_PARAMETER_EDIT &&

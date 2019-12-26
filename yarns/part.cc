@@ -65,7 +65,7 @@ void Part::Init() {
   seq_recording_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
-  seq_.looper.Init();
+  seq_.looper.ResetHead();
   looper_synced_lfo_.Init();
 }
   
@@ -91,7 +91,7 @@ void Part::Refresh() {
   SequencerStep step;
 
   while (true) {
-    next_index = seq_.looper.PeekNextOffIndex();
+    next_index = seq_.looper.PeekNextOff();
     if (next_index == looper::kNullIndex || next_index == seen_index) {
       break;
     }
@@ -106,7 +106,7 @@ void Part::Refresh() {
   }
 
   while (true) {
-    next_index = seq_.looper.PeekNextOnIndex();
+    next_index = seq_.looper.PeekNextOn();
     if (next_index == looper::kNullIndex || next_index == seen_index) {
       break;
     }
@@ -128,7 +128,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   // velocity filtering can still have a full velocity range
   velocity = (128 * (velocity - midi_.min_velocity)) / (midi_.max_velocity - midi_.min_velocity + 1);
 
-  if (seq_recording_ && !sent_from_step_editor) {
+  if (seq_recording_ && !sent_from_step_editor && seq_.play_mode != PLAY_MODE_LOOPER) {
     RecordStep(SequencerStep(note, velocity));
   } else {
     if (release_latched_keys_on_next_note_on_) {
@@ -142,11 +142,15 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
       release_latched_keys_on_next_note_on_ = still_latched;
       ignore_note_off_messages_ = still_latched;
     }
-    pressed_keys_.NoteOn(note, velocity);
+    uint8_t pressed_key_index = pressed_keys_.NoteOn(note, velocity);
   
     if (seq_.play_mode == PLAY_MODE_MANUAL
         || sent_from_step_editor) {
       InternalNoteOn(note, velocity);
+    } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+      InternalNoteOn(note, velocity);
+      uint8_t looper_note_index = seq_.looper.RecordNoteOn(looper_synced_lfo_.GetPhase() >> 16, SequencerStep(note, velocity));
+      looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -177,11 +181,16 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     }
     */
     if (off) {
-      pressed_keys_.NoteOff(note);
+      uint8_t pressed_key_index = pressed_keys_.NoteOff(note);
     
       if (seq_.play_mode == PLAY_MODE_MANUAL ||
           sent_from_step_editor) {
         InternalNoteOff(note);
+      } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+        InternalNoteOff(note);
+        uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
+        seq_.looper.RecordNoteOff(looper_synced_lfo_.GetPhase() >> 16, looper_note_index);
+        looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
       }
     }
   }
@@ -362,7 +371,7 @@ void Part::Clock() {
       voice_[i]->TapLfo(expected_phase << 16);
     }
   }
-  num_ticks = clock_divisions[seq_.looper.clock_division];
+  num_ticks = clock_divisions[seq_.clock_division];
   expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
   looper_synced_lfo_.Tap(expected_phase << 16);
   ++lfo_counter_;
@@ -383,6 +392,12 @@ void Part::Start() {
   
   lfo_counter_ = 0;
   
+  StartLooper();
+
+  generated_notes_.Clear();
+}
+
+void Part::StartLooper() {
   looper_synced_lfo_.Init();
   seq_.looper.ResetHead();
   std::fill(
@@ -390,8 +405,6 @@ void Part::Start() {
     &looper_note_index_for_pressed_key_index_[kNoteStackSize],
     looper::kNullIndex
   );
-
-  generated_notes_.Clear();
 }
 
 void Part::Stop() {
@@ -404,8 +417,10 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  seq_rec_step_ = 0;
-  seq_overdubbing_ = seq_.num_steps > 0;
+  if (seq_.play_mode != PLAY_MODE_LOOPER) {
+    seq_rec_step_ = 0;
+    seq_overdubbing_ = seq_.num_steps > 0;
+  }
 }
 
 void Part::DeleteSequence() {
@@ -543,7 +558,7 @@ void Part::ArpeggiatorNoteOn() {
         } else {
           new_arp_note = step.black_key_value();
         }
-        arp_note_ = modulo(new_arp_note, num_notes);
+        arp_note_ = stmlib::modulo(new_arp_note, num_notes);
         if (arp_note_ != new_arp_note && seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST) {
           // if we moved out of bounds, rest this step
           return;

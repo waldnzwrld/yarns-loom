@@ -60,13 +60,8 @@ struct Note {
 class Recorder {
  public:
 
-  uint8_t clock_division;
-
   Recorder() { }
   ~Recorder() { }
-  void Init() {
-    ResetHead();
-  }
 
   void RemoveAll();
   bool IsEmpty() {
@@ -77,18 +72,18 @@ class Recorder {
   void RemoveOldestNote();
   void RemoveNewestNote();
 
-  uint8_t PeekNextOnIndex();
-  uint8_t PeekNextOffIndex();
+  uint8_t PeekNextOn();
+  uint8_t PeekNextOff();
   SequencerStep TryAdvanceOn(uint16_t old_pos, uint16_t new_pos);
   SequencerStep TryAdvanceOff(uint16_t old_pos, uint16_t new_pos);
   uint8_t RecordNoteOn(uint16_t pos, SequencerStep step);
-  uint8_t RecordNoteOff(uint16_t pos, SequencerStep step);
+  void RecordNoteOff(uint16_t pos, uint8_t index);
 
  private:
 
   bool Passed(uint16_t target, uint16_t before, uint16_t after);
-  void InsertOn(uint8_t index, uint16_t pos);
-  void InsertOff(uint8_t index, uint16_t pos);
+  void InsertOn(uint16_t pos, uint8_t index);
+  void InsertOff(uint16_t pos, uint8_t index);
   void RemoveNote(uint8_t index);
 
   Note notes_[kMaxNotes];

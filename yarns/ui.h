@@ -61,6 +61,7 @@ enum UiMode {
   UI_MODE_FACTORY_TESTING,
   UI_MODE_SPLASH,
   UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
+  UI_MODE_LOOPER_RECORDING,
   UI_MODE_LAST
 };
 
@@ -190,6 +191,7 @@ class Ui {
   void PrintCalibrationNote();
   void PrintRecordingPart();
   void PrintDeleteSequence();
+  void PrintLooperRecordingStatus();
   void PrintRecordingStatus();
   void PrintNote(int16_t note);
   void PrintPushItNote();
