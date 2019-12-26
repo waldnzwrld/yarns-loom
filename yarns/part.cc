@@ -83,10 +83,42 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
 }
 
 void Part::Refresh() {
-  uint32_t old_phase = looper_synced_lfo_.GetPhase();
-  uint32_t new_phase = looper_synced_lfo_.Refresh();
+  uint16_t old_phase = looper_synced_lfo_.GetPhase() >> 16;
+  uint16_t new_phase = looper_synced_lfo_.Refresh() >> 16;
 
-  uint8_t seen_index;
+  uint8_t seen_index = looper::kNullIndex;
+  uint8_t next_index;
+  SequencerStep step;
+
+  while (true) {
+    next_index = seq_.looper.PeekNextOffIndex();
+    if (next_index == looper::kNullIndex || next_index == seen_index) {
+      break;
+    }
+    if (seen_index == looper::kNullIndex) {
+      seen_index = next_index;
+    }
+    step = seq_.looper.TryAdvanceOff(old_phase, new_phase);
+    if (step.is_rest()) {
+      break;
+    }
+    InternalNoteOff(step.note());
+  }
+
+  while (true) {
+    next_index = seq_.looper.PeekNextOnIndex();
+    if (next_index == looper::kNullIndex || next_index == seen_index) {
+      break;
+    }
+    if (seen_index == looper::kNullIndex) {
+      seen_index = next_index;
+    }
+    step = seq_.looper.TryAdvanceOn(old_phase, new_phase);
+    if (step.is_rest()) {
+      break;
+    }
+    InternalNoteOn(step.note(), step.velocity());
+  }
 }
 
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
@@ -351,6 +383,14 @@ void Part::Start() {
   
   lfo_counter_ = 0;
   
+  looper_synced_lfo_.Init();
+  seq_.looper.ResetHead();
+  std::fill(
+    &looper_note_index_for_pressed_key_index_[0],
+    &looper_note_index_for_pressed_key_index_[kNoteStackSize],
+    looper::kNullIndex
+  );
+
   generated_notes_.Clear();
 }
 

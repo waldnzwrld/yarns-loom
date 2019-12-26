@@ -30,6 +30,7 @@
 #define YARNS_LOOPER_H_
 
 #include "stmlib/stmlib.h"
+#include <algorithm>
 
 #include "yarns/sequencer_step.h"
 
@@ -38,9 +39,12 @@ namespace yarns {
 namespace looper {
 
 const uint8_t kMaxNotes = 64;
+const uint8_t kNullIndex = UINT8_MAX;
 
 struct Link {
-  Link() { }
+  Link() {
+    on_index = off_index = kNullIndex;
+  }
   uint8_t on_index;
   uint8_t off_index;
 };
@@ -60,10 +64,14 @@ class Recorder {
 
   Recorder() { }
   ~Recorder() { }
-  void Init() { }
+  void Init() {
+    ResetHead();
+  }
 
   void RemoveAll();
-  bool IsEmpty();
+  bool IsEmpty() {
+    return (head_link_.on_index == kNullIndex);
+  }
   void ResetHead();
 
   void RemoveOldestNote();
@@ -71,8 +79,8 @@ class Recorder {
 
   uint8_t PeekNextOnIndex();
   uint8_t PeekNextOffIndex();
-  SequencerStep TryAdvanceOn();
-  SequencerStep TryAdvanceOff();
+  SequencerStep TryAdvanceOn(uint16_t old_pos, uint16_t new_pos);
+  SequencerStep TryAdvanceOff(uint16_t old_pos, uint16_t new_pos);
   uint8_t RecordNoteOn(uint16_t pos, SequencerStep step);
   uint8_t RecordNoteOff(uint16_t pos, SequencerStep step);
 
@@ -81,11 +89,12 @@ class Recorder {
   bool Passed(uint16_t target, uint16_t before, uint16_t after);
   void InsertOn(uint8_t index, uint16_t pos);
   void InsertOff(uint8_t index, uint16_t pos);
+  void RemoveNote(uint8_t index);
 
   Note notes_[kMaxNotes];
   Link head_link_;
-  uint8_t oldest_index;
-  uint8_t newest_index;
+  uint8_t oldest_index_;
+  uint8_t newest_index_;
 
   DISALLOW_COPY_AND_ASSIGN(Recorder);
 };
