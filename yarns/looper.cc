@@ -28,6 +28,8 @@
 
 #include "yarns/looper.h"
 
+#include "yarns/part.h"
+
 namespace yarns {
 
 namespace looper {
@@ -98,36 +100,55 @@ uint8_t Recorder::PeekNextOff() {
   return notes_[head_link_.off_index].next_link.off_index;
 }
 
-SequencerStep Recorder::TryAdvanceOn(uint16_t old_pos, uint16_t new_pos) {
-  uint8_t next_index = PeekNextOn();
-  const Note& next_note = notes_[next_index];
-  if (!Passed(next_note.on_pos, old_pos, new_pos)) {
-    return SequencerStep(SEQUENCER_STEP_REST, 0);
-  }
-  head_link_.on_index = next_index;
+void Recorder::Advance(Part& part, uint16_t old_pos, uint16_t new_pos) {
+  uint8_t seen_index;
+  uint8_t next_index;
 
-  // If this note doesn't yet have an off_pos, set one and leave it on
-  if (next_note.next_link.off_index == kNullIndex) {
-    // TODO should insert_off further back to let the gate go low?
-    InsertOff(next_note.on_pos, next_index);
-    return SequencerStep(SEQUENCER_STEP_REST, 0);
+  seen_index = looper::kNullIndex;
+  while (true) {
+    next_index = PeekNextOff();
+    if (next_index == kNullIndex || next_index == seen_index) {
+      break;
+    }
+    if (seen_index == kNullIndex) {
+      seen_index = next_index;
+    }
+    const Note& next_note = notes_[next_index];
+    if (!Passed(next_note.off_pos, old_pos, new_pos)) {
+      break;
+    }
+    head_link_.off_index = next_index;
+
+    part.InternalNoteOff(next_note.pitch);
   }
 
-  return next_note.step;
+  seen_index = looper::kNullIndex;
+  while (true) {
+    next_index = PeekNextOn();
+    if (next_index == kNullIndex || next_index == seen_index) {
+      break;
+    }
+    if (seen_index == kNullIndex) {
+      seen_index = next_index;
+    }
+    const Note& next_note = notes_[next_index];
+    if (!Passed(next_note.on_pos, old_pos, new_pos)) {
+      break;
+    }
+    head_link_.on_index = next_index;
+
+    if (next_note.next_link.off_index == kNullIndex) {
+      // If this note doesn't yet have an off_pos, set one and leave it on
+      // TODO should insert_off further back to let the gate go low next time?
+      InsertOff(next_note.on_pos, next_index);
+      continue;
+    }
+
+    part.InternalNoteOn(next_note.pitch, next_note.velocity);
+  }
 }
 
-SequencerStep Recorder::TryAdvanceOff(uint16_t old_pos, uint16_t new_pos) {
-  uint8_t next_index = PeekNextOff();
-  const Note& next_note = notes_[next_index];
-  if (!Passed(next_note.off_pos, old_pos, new_pos)) {
-    return SequencerStep(SEQUENCER_STEP_REST, 0);
-  }
-  head_link_.off_index = next_index;
-
-  return next_note.step;
-}
-
-uint8_t Recorder::RecordNoteOn(uint16_t pos, SequencerStep step) {
+uint8_t Recorder::RecordNoteOn(uint16_t pos, uint8_t pitch, uint8_t velocity) {
   if (!IsEmpty()) {
     newest_index_ = stmlib::modulo(1 + newest_index_, kMaxNotes);
   }
@@ -138,7 +159,8 @@ uint8_t Recorder::RecordNoteOn(uint16_t pos, SequencerStep step) {
   InsertOn(pos, newest_index_);
 
   Note& note = notes_[newest_index_];
-  note.step = step;
+  note.pitch = pitch;
+  note.velocity = velocity;
   note.off_pos = 0;
   note.next_link.off_index = kNullIndex;
 

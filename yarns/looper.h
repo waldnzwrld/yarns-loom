@@ -32,9 +32,9 @@
 #include "stmlib/stmlib.h"
 #include <algorithm>
 
-#include "yarns/sequencer_step.h"
-
 namespace yarns {
+
+class Part;
 
 namespace looper {
 
@@ -52,9 +52,10 @@ struct Link {
 struct Note {
   Note() { }
   Link next_link;
-  SequencerStep step;
   uint16_t on_pos;
   uint16_t off_pos;
+  uint8_t pitch;
+  uint8_t velocity;
 };
 
 class Recorder {
@@ -74,9 +75,8 @@ class Recorder {
 
   uint8_t PeekNextOn();
   uint8_t PeekNextOff();
-  SequencerStep TryAdvanceOn(uint16_t old_pos, uint16_t new_pos);
-  SequencerStep TryAdvanceOff(uint16_t old_pos, uint16_t new_pos);
-  uint8_t RecordNoteOn(uint16_t pos, SequencerStep step);
+  void Advance(Part& part, uint16_t old_pos, uint16_t new_pos);
+  uint8_t RecordNoteOn(uint16_t pos, uint8_t pitch, uint8_t velocity);
   void RecordNoteOff(uint16_t pos, uint8_t index);
 
  private:
