@@ -255,7 +255,7 @@ struct SequencerSettings {
   // uint8_t looper_clock_division;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
-  looper::Recorder looper;
+  looper::Recorder looper_recorder;
   uint8_t padding[5]; //TODO
   
   int16_t first_note() {

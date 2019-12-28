@@ -65,7 +65,7 @@ void Part::Init() {
   seq_recording_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
-  seq_.looper.ResetHead();
+  seq_.looper_recorder.ResetHead();
   looper_synced_lfo_.Init();
 }
   
@@ -85,7 +85,7 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
 void Part::Refresh() {
   uint16_t old_phase = looper_synced_lfo_.GetPhase() >> 16;
   uint16_t new_phase = looper_synced_lfo_.Refresh() >> 16;
-  seq_.looper.Advance(*this, old_phase, new_phase);
+  seq_.looper_recorder.Advance(*this, old_phase, new_phase);
 }
 
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
@@ -116,7 +116,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
       InternalNoteOn(note, velocity);
     } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
       InternalNoteOn(note, velocity);
-      uint8_t looper_note_index = seq_.looper.RecordNoteOn(looper_synced_lfo_.GetPhase() >> 16, note, velocity);
+      uint8_t looper_note_index = seq_.looper_recorder.RecordNoteOn(looper_synced_lfo_.GetPhase() >> 16, note, velocity);
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
     }
   }
@@ -156,7 +156,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
         InternalNoteOff(note);
         uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
-        seq_.looper.RecordNoteOff(looper_synced_lfo_.GetPhase() >> 16, looper_note_index);
+        seq_.looper_recorder.RecordNoteOff(looper_synced_lfo_.GetPhase() >> 16, looper_note_index);
         looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
       }
     }
@@ -366,7 +366,7 @@ void Part::Start() {
 
 void Part::StartLooper() {
   looper_synced_lfo_.Init();
-  seq_.looper.ResetHead();
+  seq_.looper_recorder.ResetHead();
   std::fill(
     &looper_note_index_for_pressed_key_index_[0],
     &looper_note_index_for_pressed_key_index_[kNoteStackSize],

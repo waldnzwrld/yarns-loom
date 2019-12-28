@@ -614,7 +614,7 @@ void Ui::OnSwitchPress(const Event& e) {
         push_it_ = false;
         mutable_active_part()->RecordStep(SEQUENCER_STEP_TIE);
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->mutable_sequencer_settings()->looper.RemoveOldestNote();
+        mutable_active_part()->mutable_sequencer_settings()->looper_recorder.RemoveOldestNote();
       } else {
         if (push_it_) {
           multi.PushItNoteOff(push_it_note_);
@@ -647,7 +647,7 @@ void Ui::OnSwitchPress(const Event& e) {
         push_it_ = false;
         mutable_active_part()->RecordStep(SEQUENCER_STEP_REST);
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->mutable_sequencer_settings()->looper.RemoveNewestNote();
+        mutable_active_part()->mutable_sequencer_settings()->looper_recorder.RemoveNewestNote();
       } else {
         TapTempo();
       }
@@ -663,7 +663,7 @@ void Ui::OnSwitchHeld(const Event& e) {
         mutable_active_part()->DeleteSequence();
         mode_ = UI_MODE_PARAMETER_SELECT;
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->mutable_sequencer_settings()->looper.RemoveAll();
+        mutable_active_part()->mutable_sequencer_settings()->looper_recorder.RemoveAll();
       } else {
         settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
         ChangedActivePartOrPlayMode();
