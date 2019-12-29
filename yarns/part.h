@@ -252,11 +252,10 @@ struct SequencerSettings {
   uint8_t euclidean_rotate;
   uint8_t play_mode;
   uint8_t input_response;
-  // uint8_t looper_clock_division;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
   looper::Recorder looper_recorder;
-  uint8_t padding[5]; //TODO
+  // no padding needed
   
   int16_t first_note() {
     for (uint8_t i = 0; i < num_steps; ++i) {
