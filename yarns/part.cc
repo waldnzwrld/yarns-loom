@@ -65,8 +65,8 @@ void Part::Init() {
   seq_recording_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
-  seq_.looper_recorder.ResetHead();
-  looper_synced_lfo_.Init();
+  seq_.looper_recorder.RemoveAll();
+  StartLooper();
 }
   
 void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
@@ -85,7 +85,7 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
 void Part::Refresh() {
   uint16_t old_phase = looper_synced_lfo_.GetPhase() >> 16;
   uint16_t new_phase = looper_synced_lfo_.Refresh() >> 16;
-  seq_.looper_recorder.Advance(*this, old_phase, new_phase);
+  seq_.looper_recorder.Advance(this, seq_.play_mode == PLAY_MODE_LOOPER, old_phase, new_phase);
 }
 
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
@@ -836,6 +836,8 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MIN_VELOCITY:
       case PART_MIDI_MAX_VELOCITY:
       case PART_MIDI_SUSTAIN_MODE:
+      case PART_SEQUENCER_INPUT_RESPONSE:
+      case PART_SEQUENCER_PLAY_MODE:
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();
@@ -864,10 +866,6 @@ void Part::Set(uint8_t address, uint8_t value) {
         
       case PART_SEQUENCER_ARP_DIRECTION:
         arp_direction_ = 1;
-        break;
-
-      case PART_SEQUENCER_INPUT_RESPONSE:
-      case PART_SEQUENCER_PLAY_MODE:
         break;
     }
   }

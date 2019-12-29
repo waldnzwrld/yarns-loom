@@ -149,6 +149,8 @@ Ui::Mode Ui::modes_[] = {
     &Ui::PrintLooperRecordingStatus,
     UI_MODE_LOOPER_RECORDING,
     NULL, 0, 0 },
+
+  // UI_MODE_SEQUENCE_DELETED
 };
 
 void Ui::Init() {
@@ -664,6 +666,7 @@ void Ui::OnSwitchHeld(const Event& e) {
         mode_ = UI_MODE_PARAMETER_SELECT;
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
         mutable_active_part()->mutable_sequencer_settings()->looper_recorder.RemoveAll();
+        mutable_active_part()->AllNotesOff();
       } else {
         settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
         ChangedActivePartOrPlayMode();
@@ -683,7 +686,11 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_TAP_TEMPO:
-      if (!(mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
+      if (!(
+        mode_ == UI_MODE_RECORDING ||
+        mode_ == UI_MODE_OVERDUBBING ||
+        mode_ == UI_MODE_LOOPER_RECORDING
+      )) {
         mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
         ChangedActivePartOrPlayMode();
       }

@@ -100,7 +100,7 @@ uint8_t Recorder::PeekNextOff() {
   return notes_[head_link_.off_index].next_link.off_index;
 }
 
-void Recorder::Advance(Part& part, uint16_t old_pos, uint16_t new_pos) {
+void Recorder::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
   uint8_t seen_index;
   uint8_t next_index;
 
@@ -119,7 +119,9 @@ void Recorder::Advance(Part& part, uint16_t old_pos, uint16_t new_pos) {
     }
     head_link_.off_index = next_index;
 
-    part.InternalNoteOff(next_note.pitch);
+    if (play) {
+      part->InternalNoteOff(next_note.pitch);
+    }
   }
 
   seen_index = looper::kNullIndex;
@@ -144,7 +146,9 @@ void Recorder::Advance(Part& part, uint16_t old_pos, uint16_t new_pos) {
       continue;
     }
 
-    part.InternalNoteOn(next_note.pitch, next_note.velocity);
+    if (play) {
+      part->InternalNoteOn(next_note.pitch, next_note.velocity);
+    }
   }
 }
 
@@ -211,6 +215,7 @@ void Recorder::RemoveNote(uint8_t index) {
   if (IsEmpty()) {
     return;
   }
+  //TODO InternalNoteOff if could be currently playing
 
   Note& note = notes_[index];
   uint8_t prev_note_index;

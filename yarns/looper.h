@@ -75,7 +75,7 @@ class Recorder {
 
   uint8_t PeekNextOn();
   uint8_t PeekNextOff();
-  void Advance(Part& part, uint16_t old_pos, uint16_t new_pos);
+  void Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos);
   uint8_t RecordNoteOn(uint16_t pos, uint8_t pitch, uint8_t velocity);
   void RecordNoteOff(uint16_t pos, uint8_t index);
 
