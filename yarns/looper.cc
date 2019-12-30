@@ -72,15 +72,15 @@ void Recorder::ResetHead() {
   }
 }
 
-void Recorder::RemoveOldestNote() {
-  RemoveNote(oldest_index_);
+void Recorder::RemoveOldestNote(Part* part, uint16_t current_pos) {
+  RemoveNote(part, current_pos, oldest_index_);
   if (!IsEmpty()) {
     oldest_index_ = stmlib::modulo(oldest_index_ + 1, kMaxNotes);
   }
 }
 
-void Recorder::RemoveNewestNote() {
-  RemoveNote(newest_index_);
+void Recorder::RemoveNewestNote(Part* part, uint16_t current_pos) {
+  RemoveNote(part, current_pos, newest_index_);
   if (!IsEmpty()) {
     newest_index_ = stmlib::modulo(newest_index_ - 1, kMaxNotes);
   }
@@ -152,12 +152,12 @@ void Recorder::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos
   }
 }
 
-uint8_t Recorder::RecordNoteOn(uint16_t pos, uint8_t pitch, uint8_t velocity) {
+uint8_t Recorder::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velocity) {
   if (!IsEmpty()) {
     newest_index_ = stmlib::modulo(1 + newest_index_, kMaxNotes);
   }
   if (newest_index_ == oldest_index_) {
-    RemoveOldestNote();
+    RemoveOldestNote(part, pos);
   }
 
   InsertOn(pos, newest_index_);
@@ -211,14 +211,16 @@ void Recorder::InsertOff(uint16_t pos, uint8_t index) {
   head_link_.off_index = index;
 }
 
-void Recorder::RemoveNote(uint8_t index) {
+void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t index) {
   if (IsEmpty()) {
     return;
   }
-  //TODO InternalNoteOff if could be currently playing
 
-  Note& note = notes_[index];
   uint8_t prev_note_index;
+  Note& note = notes_[index];
+  if (Passed(current_pos, note.on_pos, note.off_pos)) {
+    part->InternalNoteOff(note.pitch);
+  }
 
   prev_note_index = index;
   while (index != notes_[prev_note_index].next_link.on_index) {

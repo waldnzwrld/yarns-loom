@@ -273,7 +273,6 @@ class Part {
   ~Part() { }
   
   void Init();
-  void Refresh();
   
   // The return value indicates whether the message can be forwarded to the
   // MIDI out (soft-thru). For example, when the arpeggiator is on, NoteOn
@@ -296,13 +295,24 @@ class Part {
   void Reset();
   void Clock();
   void Start();
-  void StartLooper();
   void Stop();
   void StopRecording() {
     seq_recording_ = false;
   }
   void StartRecording();
   void DeleteSequence();
+
+  void LooperStart();
+  void LooperAdvance();
+  inline uint16_t LooperPhase() {
+    return looper_synced_lfo_.GetPhase() >> 16;
+  }
+  inline void LooperRemoveOldestNote() {
+    seq_.looper_recorder.RemoveOldestNote(this, LooperPhase());
+  }
+  inline void LooperRemoveNewestNote() {
+    seq_.looper_recorder.RemoveNewestNote(this, LooperPhase());
+  }
   
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {

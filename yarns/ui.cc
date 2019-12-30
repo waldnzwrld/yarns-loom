@@ -616,7 +616,7 @@ void Ui::OnSwitchPress(const Event& e) {
         push_it_ = false;
         mutable_active_part()->RecordStep(SEQUENCER_STEP_TIE);
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->mutable_sequencer_settings()->looper_recorder.RemoveOldestNote();
+        mutable_active_part()->LooperRemoveOldestNote();
       } else {
         if (push_it_) {
           multi.PushItNoteOff(push_it_note_);
@@ -649,7 +649,7 @@ void Ui::OnSwitchPress(const Event& e) {
         push_it_ = false;
         mutable_active_part()->RecordStep(SEQUENCER_STEP_REST);
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->mutable_sequencer_settings()->looper_recorder.RemoveNewestNote();
+        mutable_active_part()->LooperRemoveNewestNote();
       } else {
         TapTempo();
       }

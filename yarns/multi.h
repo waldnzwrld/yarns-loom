@@ -297,6 +297,15 @@ class Multi {
     }
   }
 
+  void AdvanceLoopers() {
+    if (!running()) {
+      return;
+    }
+    for (uint8_t j = 0; j < num_active_parts_; ++j) {
+      part_[j].LooperAdvance();
+    }
+  }
+
   inline void RenderAudio() {
     for (uint8_t i = 0; i < kNumVoices; ++i) {
       voice_[i].RenderAudio();

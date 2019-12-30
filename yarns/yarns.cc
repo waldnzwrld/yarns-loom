@@ -187,6 +187,7 @@ int main(void) {
     ui.DoEvents();
     midi_handler.ProcessInput();
     multi.ProcessInternalClockEvents();
+    multi.AdvanceLoopers();
     multi.RenderAudio();
     if (midi_handler.factory_testing_requested()) {
       midi_handler.AcknowledgeFactoryTestingRequest();
