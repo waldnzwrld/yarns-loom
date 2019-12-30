@@ -111,7 +111,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
       InternalNoteOn(note, velocity);
       uint8_t looper_note_index = seq_.looper_recorder.RecordNoteOn(
-        this, LooperPhase(), note, velocity
+        this, looper_pos_, note, velocity
       );
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
     }
@@ -152,7 +152,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
         InternalNoteOff(note);
         uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
-        seq_.looper_recorder.RecordNoteOff(LooperPhase(), looper_note_index);
+        seq_.looper_recorder.RecordNoteOff(looper_pos_, looper_note_index);
         looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
       }
     }
@@ -362,6 +362,7 @@ void Part::Start() {
 
 void Part::LooperStart() {
   looper_synced_lfo_.Init();
+  looper_pos_ = 0;
   seq_.looper_recorder.ResetHead();
   std::fill(
     &looper_note_index_for_pressed_key_index_[0],
@@ -371,11 +372,15 @@ void Part::LooperStart() {
 }
 
 void Part::LooperAdvance() {
-  uint16_t old_phase = LooperPhase();
-  uint16_t new_phase = looper_synced_lfo_.Refresh() >> 16;
+  if (!looper_needs_advance_) {
+    return;
+  }
+  uint16_t new_pos = looper_synced_lfo_.GetPhase() >> 16;
   seq_.looper_recorder.Advance(
-    this, seq_.play_mode == PLAY_MODE_LOOPER, old_phase, new_phase
+    this, seq_.play_mode == PLAY_MODE_LOOPER, looper_pos_, new_pos
   );
+  looper_pos_ = new_pos;
+  looper_needs_advance_ = false;
 }
 
 void Part::Stop() {

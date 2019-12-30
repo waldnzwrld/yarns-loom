@@ -302,16 +302,17 @@ class Part {
   void StartRecording();
   void DeleteSequence();
 
+  inline void Refresh() {
+    looper_synced_lfo_.Refresh();
+    looper_needs_advance_ = true;
+  }
   void LooperStart();
   void LooperAdvance();
-  inline uint16_t LooperPhase() {
-    return looper_synced_lfo_.GetPhase() >> 16;
-  }
   inline void LooperRemoveOldestNote() {
-    seq_.looper_recorder.RemoveOldestNote(this, LooperPhase());
+    seq_.looper_recorder.RemoveOldestNote(this, looper_pos_);
   }
   inline void LooperRemoveNewestNote() {
-    seq_.looper_recorder.RemoveNewestNote(this, LooperPhase());
+    seq_.looper_recorder.RemoveNewestNote(this, looper_pos_);
   }
   
   inline void RecordStep(const SequencerStep& step) {
@@ -489,6 +490,8 @@ class Part {
   uint8_t seq_rec_step_;
   
   SyncedLFO looper_synced_lfo_;
+  uint16_t looper_pos_;
+  bool looper_needs_advance_;
   uint8_t looper_note_index_for_pressed_key_index_[kNoteStackSize];
 
   uint16_t gate_length_counter_;
