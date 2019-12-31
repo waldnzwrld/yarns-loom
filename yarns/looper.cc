@@ -172,6 +172,9 @@ uint8_t Recorder::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t 
 }
 
 void Recorder::RecordNoteOff(uint16_t pos, uint8_t index) {
+  if (notes_[index].next_link.off_index != kNullIndex) {
+    return;
+  }
   return InsertOff(pos, index);
 }
 
@@ -231,7 +234,7 @@ void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t index) {
   note.next_link.on_index = kNullIndex;
   if (index == prev_note_index) {
     head_link_.on_index = kNullIndex;
-  } else {
+  } else if (index == head_link_.on_index) {
     head_link_.on_index = prev_note_index;
   }
 
@@ -239,12 +242,15 @@ void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t index) {
   while (index != notes_[prev_note_index].next_link.off_index) {
     // traverse to index - 1
     prev_note_index = notes_[prev_note_index].next_link.off_index;
+    if (prev_note_index == kNullIndex) {
+      return;
+    }
   }
   notes_[prev_note_index].next_link.off_index = note.next_link.off_index;
   note.next_link.off_index = kNullIndex;
   if (index == prev_note_index) {
     head_link_.off_index = kNullIndex;
-  } else {
+  } else if (index == head_link_.off_index) {
     head_link_.off_index = prev_note_index;
   }
 }
