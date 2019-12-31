@@ -171,11 +171,15 @@ uint8_t Recorder::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t 
   return newest_index_;
 }
 
-void Recorder::RecordNoteOff(uint16_t pos, uint8_t index) {
+// Returns whether the NoteOff should be sent
+bool Recorder::RecordNoteOff(uint16_t pos, uint8_t index) {
   if (notes_[index].next_link.off_index != kNullIndex) {
-    return;
+    // off_index was already set by Advance, so the note was held for >= 1 loop,
+    // so the note should play continuously and not be turned off now
+    return false;
   }
-  return InsertOff(pos, index);
+  InsertOff(pos, index);
+  return true;
 }
 
 bool Recorder::Passed(uint16_t target, uint16_t before, uint16_t after) {

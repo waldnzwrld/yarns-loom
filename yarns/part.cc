@@ -109,11 +109,11 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
         || sent_from_step_editor) {
       InternalNoteOn(note, velocity);
     } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
-      InternalNoteOn(note, velocity);
       uint8_t looper_note_index = seq_.looper_recorder.RecordNoteOn(
         this, looper_pos_, note, velocity
       );
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
+      InternalNoteOn(note, velocity);
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -150,10 +150,11 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
           sent_from_step_editor) {
         InternalNoteOff(note);
       } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
-        InternalNoteOff(note);
         uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
-        seq_.looper_recorder.RecordNoteOff(looper_pos_, looper_note_index);
         looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
+        if (seq_.looper_recorder.RecordNoteOff(looper_pos_, looper_note_index)) {
+          InternalNoteOff(note);
+        }
       }
     }
   }
