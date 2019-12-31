@@ -224,43 +224,59 @@ void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index
     return;
   }
 
-  uint8_t prev_note_index;
-  Note& note = notes_[target_index];
-  if (Passed(current_pos, note.on_pos, note.off_pos)) {
-    part->InternalNoteOff(note.pitch);
+  Note& target_note = notes_[target_index];
+  bool target_has_off = (target_note.next_link.off_index != kNullIndex)
+  uint8_t search_prev_index;
+  uint8_t search_next_index;
+
+  if (target_has_off && Passed(current_pos, target_note.on_pos, target_note.off_pos)) {
+    // If this note was completely recorded and the looper is currently playing
+    // the note, turn it off
+    part->InternalNoteOff(target_note.pitch);
   }
 
-  prev_note_index = target_index;
-  while (target_index != notes_[prev_note_index].next_link.on_index) {
-    // Traverse to previous note
-    prev_note_index = notes_[prev_note_index].next_link.on_index;
+  // general concern -- next index never matches target
+  // bc next index points into a separate cycle of notes
+  // most likely that cycle would be a single uninitialized note, e.g. if
+  // target_note has kNullIndex for its next index
+
+  search_prev_index = target_index;
+  while (true) {
+    search_next_index = notes_[search_prev_index].next_link.on_index;
+    if (search_next_index == target_index) {
+      break;
+    }
+    search_prev_index = search_next_index;
   }
-  notes_[prev_note_index].next_link.on_index = note.next_link.on_index;
-  note.next_link.on_index = kNullIndex;
-  if (target_index == prev_note_index) {
+  notes_[search_prev_index].next_link.on_index = target_note.next_link.on_index;
+  target_note.next_link.on_index = kNullIndex; // unneeded?
+  if (target_index == search_prev_index) {
     // If this was the last note
     head_link_.on_index = kNullIndex;
   } else if (target_index == head_link_.on_index) {
-    head_link_.on_index = prev_note_index;
+    head_link_.on_index = search_prev_index;
   }
 
-  prev_note_index = target_index;
-  while (target_index != notes_[prev_note_index].next_link.off_index) {
-    // Traverse to previous note
-    prev_note_index = notes_[prev_note_index].next_link.off_index;
-    if (prev_note_index == kNullIndex) {
-      // If the removed note doesn't have a next off_index, there's no need to
-      // relink any other off_index
-      return;
-    }
+  if (!target_has_off) {
+    // Don't try to relink off_index
+    return;
   }
-  notes_[prev_note_index].next_link.off_index = note.next_link.off_index;
-  note.next_link.off_index = kNullIndex;
-  if (target_index == prev_note_index) {
+
+  search_prev_index = target_index;
+  while (true) {
+    search_next_index = notes_[search_prev_index].next_link.off_index;
+    if (search_next_index == target_index) {
+      break;
+    }
+    search_prev_index = search_next_index;
+  }
+  notes_[search_prev_index].next_link.off_index = target_note.next_link.off_index;
+  target_note.next_link.off_index = kNullIndex;
+  if (target_index == search_prev_index) {
     // If this was the last note
     head_link_.off_index = kNullIndex;
   } else if (target_index == head_link_.off_index) {
-    head_link_.off_index = prev_note_index;
+    head_link_.off_index = search_prev_index;
   }
 }
 

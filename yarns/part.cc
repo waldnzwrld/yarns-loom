@@ -152,7 +152,10 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
         uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
         looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
-        if (seq_.looper_recorder.RecordNoteOff(looper_pos_, looper_note_index)) {
+        if (
+          looper_note_index != looper::kNullIndex &&
+          seq_.looper_recorder.RecordNoteOff(looper_pos_, looper_note_index)
+        ) {
           InternalNoteOff(note);
         }
       }
