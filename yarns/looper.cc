@@ -140,8 +140,8 @@ void Recorder::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos
     head_link_.on_index = next_index;
 
     if (next_note.next_link.off_index == kNullIndex) {
-      // If this note doesn't yet have an off_pos, set one and leave it on
-      // TODO should insert_off further back to let the gate go low next time?
+      // If this note has been held for an entire loop, set its off_pos instead
+      // of waiting for it to be released
       InsertOff(next_note.on_pos, next_index);
       continue;
     }
@@ -174,8 +174,8 @@ uint8_t Recorder::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t 
 // Returns whether the NoteOff should be sent
 bool Recorder::RecordNoteOff(uint16_t pos, uint8_t index) {
   if (notes_[index].next_link.off_index != kNullIndex) {
-    // off_index was already set by Advance, so the note was held for >= 1 loop,
-    // so the note should play continuously and not be turned off now
+    // off_pos was already set by Advance, so the note was held for an entire
+    // loop, so the note should play continuously and not be turned off now
     return false;
   }
   InsertOff(pos, index);
@@ -218,33 +218,34 @@ void Recorder::InsertOff(uint16_t pos, uint8_t index) {
   head_link_.off_index = index;
 }
 
-void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t index) {
+void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index) {
   if (IsEmpty()) {
     return;
   }
 
   uint8_t prev_note_index;
-  Note& note = notes_[index];
+  Note& note = notes_[target_index];
   if (Passed(current_pos, note.on_pos, note.off_pos)) {
     part->InternalNoteOff(note.pitch);
   }
 
-  prev_note_index = index;
-  while (index != notes_[prev_note_index].next_link.on_index) {
-    // traverse to index - 1
+  prev_note_index = target_index;
+  while (target_index != notes_[prev_note_index].next_link.on_index) {
+    // Traverse to previous note
     prev_note_index = notes_[prev_note_index].next_link.on_index;
   }
   notes_[prev_note_index].next_link.on_index = note.next_link.on_index;
   note.next_link.on_index = kNullIndex;
-  if (index == prev_note_index) {
+  if (target_index == prev_note_index) {
+    // If this was the last note
     head_link_.on_index = kNullIndex;
-  } else if (index == head_link_.on_index) {
+  } else if (target_index == head_link_.on_index) {
     head_link_.on_index = prev_note_index;
   }
 
-  prev_note_index = index;
-  while (index != notes_[prev_note_index].next_link.off_index) {
-    // traverse to index - 1
+  prev_note_index = target_index;
+  while (target_index != notes_[prev_note_index].next_link.off_index) {
+    // Traverse to previous note
     prev_note_index = notes_[prev_note_index].next_link.off_index;
     if (prev_note_index == kNullIndex) {
       return;
@@ -252,9 +253,10 @@ void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t index) {
   }
   notes_[prev_note_index].next_link.off_index = note.next_link.off_index;
   note.next_link.off_index = kNullIndex;
-  if (index == prev_note_index) {
+  if (target_index == prev_note_index) {
+    // If this was the last note
     head_link_.off_index = kNullIndex;
-  } else if (index == head_link_.off_index) {
+  } else if (target_index == head_link_.off_index) {
     head_link_.off_index = prev_note_index;
   }
 }
