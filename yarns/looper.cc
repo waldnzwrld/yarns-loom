@@ -140,8 +140,9 @@ void Recorder::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos
     head_link_.on_index = next_index;
 
     if (next_note.next_link.off_index == kNullIndex) {
-      // If this note has been held for an entire loop, set its off_pos instead
-      // of waiting for it to be released
+      // If the next 'on' note doesn't yet have an off_index, it's still held
+      // and has been for an entire loop -- instead of redundantly turning the
+      // note on, set an off_pos
       InsertOff(next_note.on_pos, next_index);
       continue;
     }
@@ -248,6 +249,8 @@ void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index
     // Traverse to previous note
     prev_note_index = notes_[prev_note_index].next_link.off_index;
     if (prev_note_index == kNullIndex) {
+      // If the removed note doesn't have a next off_index, there's no need to
+      // relink any other off_index
       return;
     }
   }
