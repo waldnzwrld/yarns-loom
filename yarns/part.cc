@@ -39,12 +39,9 @@
 #include "yarns/midi_handler.h"
 #include "yarns/resources.h"
 #include "yarns/voice.h"
+#include "yarns/clock_division.h"
 
 namespace yarns {
-
-const uint8_t clock_divisions[] = {
-  96, 48, 32, 24, 16, 12, 8, 6, 4, 3, 2, 1
-};
   
 using namespace stmlib;
 using namespace stmlib_midi;
@@ -324,21 +321,21 @@ void Part::Clock() {
   }
   
   ++arp_seq_prescaler_;
-  if (arp_seq_prescaler_ >= clock_divisions[seq_.clock_division]) {
+  if (arp_seq_prescaler_ >= clock_division::num_ticks[seq_.clock_division]) {
     arp_seq_prescaler_ = 0;
   }
   
   uint32_t num_ticks;
   uint32_t expected_phase;
   if (voicing_.modulation_rate >= 100) {
-    num_ticks = clock_divisions[voicing_.modulation_rate - 100];
+    num_ticks = clock_division::num_ticks[voicing_.modulation_rate - 100];
     // TODO decipher this math -- how much to add so that the voices are in quadrature?
     expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
     for (uint8_t i = 0; i < num_voices_; ++i) {
       voice_[i]->TapLfo(expected_phase << 16);
     }
   }
-  num_ticks = clock_divisions[seq_.clock_division];
+  num_ticks = clock_division::num_ticks[seq_.clock_division];
   expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
   looper_synced_lfo_.Tap(expected_phase << 16);
   ++lfo_counter_;
@@ -471,7 +468,7 @@ void Part::ClockSequencer() {
   if (seq_.step[seq_step_].is_tie() || seq_.step[seq_step_].is_slid()) {
     // The next step contains a "sustain" message; or a slid note. Extends
     // the duration of the current note.
-    gate_length_counter_ += clock_divisions[seq_.clock_division];
+    gate_length_counter_ += clock_division::num_ticks[seq_.clock_division];
   }
 }
 

@@ -109,7 +109,7 @@ class Multi {
   inline uint8_t paques() const {
     return settings_.clock_tempo == 49 && \
         settings_.clock_swing == 49 && \
-        settings_.clock_output_division == 3 && \
+        settings_.clock_output_division == 6 && \
         settings_.clock_bar_duration == 9;
   }
   
@@ -448,7 +448,7 @@ class Multi {
   uint8_t swing_counter_;
   
   uint8_t clock_input_prescaler_;
-  uint8_t clock_output_prescaler_;
+  uint16_t clock_output_prescaler_;
   uint16_t bar_position_;
   uint8_t stop_count_down_;
   

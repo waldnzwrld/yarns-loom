@@ -28,6 +28,7 @@
 
 #include "yarns/settings.h"
 #include "yarns/resources.h"
+#include "yarns/clock_division.h"
 
 #include <algorithm>
 #include <cstring>
@@ -36,10 +37,6 @@ namespace yarns {
 
 const char* const layout_values[] = {
   "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "3+1", "22", "21"
-};
-
-const char* const clock_division_values[] = {
-  "/1", "/2", "/3", "/4", "/6", "/8", "12", "16", "24", "32", "48", "96"
 };
 
 const char* const midi_out_mode_values[] = {
@@ -206,7 +203,7 @@ const Setting Settings::settings_[] = {
   {
     "O/", "OUTPUT CLK DIV",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 11, clock_division_values,
+    SETTING_UNIT_ENUMERATION, 0, 11, clock_division::display,
     0, 0,
   },
   {
@@ -400,7 +397,7 @@ const Setting Settings::settings_[] = {
   {
     "C/", "CLOCK DIV",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 11, clock_division_values,
+    SETTING_UNIT_ENUMERATION, 0, 11, clock_division::display,
     102, 24,
   },
   {
@@ -1159,7 +1156,7 @@ void Settings::Print(const Setting& setting, char* buffer) const {
       if (value < 100) {
         PrintInteger(buffer, value);
       } else {
-        strcpy(buffer, clock_division_values[value - 100]);
+        strcpy(buffer, clock_division::display[value - 100]);
       }
       break;
       

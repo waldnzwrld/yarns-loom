@@ -477,7 +477,7 @@ class Part {
   uint8_t active_note_[kMaxNumVoices];
   uint8_t cyclic_allocation_note_counter_;
   
-  uint8_t arp_seq_prescaler_;
+  uint16_t arp_seq_prescaler_;
   
   uint8_t arp_step_;
   int8_t arp_note_;
