@@ -38,7 +38,7 @@ class Part;
 
 namespace looper {
 
-const uint8_t kMaxNotes = 64;
+const uint8_t kMaxNotes = 16;
 const uint8_t kNullIndex = UINT8_MAX;
 
 struct Link {

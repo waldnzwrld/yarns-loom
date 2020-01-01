@@ -42,7 +42,7 @@ namespace yarns {
 
 class Voice;
 
-const uint8_t kNumSteps = 64;
+const uint8_t kNumSteps = 16;
 const uint8_t kMaxNumVoices = 4;
 const uint8_t kNoteStackSize = 12;
 

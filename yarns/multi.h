@@ -371,11 +371,12 @@ class Multi {
 
   template<typename T>
   void Serialize(T* stream_buffer) {
-    stream_buffer->Write(settings());
+    // 32 bytes + (4 voices x (16 + 32 + 178 bytes)) = 936 bytes
+    stream_buffer->Write(settings()); // 32 bytes
     for (uint8_t i = 0; i < kNumParts; ++i) {
-      stream_buffer->Write(part_[i].midi_settings());
-      stream_buffer->Write(part_[i].voicing_settings());
-      stream_buffer->Write(part_[i].sequencer_settings());
+      stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
+      stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
+      stream_buffer->Write(part_[i].sequencer_settings()); // 178 bytes
     }
   };
   
@@ -393,9 +394,10 @@ class Multi {
   
   template<typename T>
   void SerializeCalibration(T* stream_buffer) {
+    // 4 voices x 11 octaves x 2 bytes = 88 bytes
     for (uint8_t i = 0; i < kNumVoices; ++i) {
       for (uint8_t j = 0; j < kNumOctaves; ++j) {
-        stream_buffer->Write(voice_[i].calibration_dac_code(j));
+        stream_buffer->Write(voice_[i].calibration_dac_code(j)); // 2 bytes
       }
     }
   };
