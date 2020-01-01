@@ -34,7 +34,7 @@ namespace yarns {
 
 namespace looper {
 
-void Recorder::RemoveAll() {
+void Tape::RemoveAll() {
   std::fill(
     &notes_[0],
     &notes_[kMaxNotes],
@@ -46,7 +46,7 @@ void Recorder::RemoveAll() {
   newest_index_ = 0;
 }
 
-void Recorder::ResetHead() {
+void Tape::ResetHead() {
   uint8_t next_index;
 
   while (true) {
@@ -72,35 +72,35 @@ void Recorder::ResetHead() {
   }
 }
 
-void Recorder::RemoveOldestNote(Part* part, uint16_t current_pos) {
+void Tape::RemoveOldestNote(Part* part, uint16_t current_pos) {
   RemoveNote(part, current_pos, oldest_index_);
   if (!IsEmpty()) {
     oldest_index_ = stmlib::modulo(oldest_index_ + 1, kMaxNotes);
   }
 }
 
-void Recorder::RemoveNewestNote(Part* part, uint16_t current_pos) {
+void Tape::RemoveNewestNote(Part* part, uint16_t current_pos) {
   RemoveNote(part, current_pos, newest_index_);
   if (!IsEmpty()) {
     newest_index_ = stmlib::modulo(newest_index_ - 1, kMaxNotes);
   }
 }
 
-uint8_t Recorder::PeekNextOn() {
+uint8_t Tape::PeekNextOn() {
   if (head_link_.on_index == kNullIndex) {
     return kNullIndex;
   }
   return notes_[head_link_.on_index].next_link.on_index;
 }
 
-uint8_t Recorder::PeekNextOff() {
+uint8_t Tape::PeekNextOff() {
   if (head_link_.off_index == kNullIndex) {
     return kNullIndex;
   }
   return notes_[head_link_.off_index].next_link.off_index;
 }
 
-void Recorder::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
+void Tape::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
   uint8_t seen_index;
   uint8_t next_index;
 
@@ -153,7 +153,7 @@ void Recorder::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos
   }
 }
 
-uint8_t Recorder::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velocity) {
+uint8_t Tape::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velocity) {
   if (!IsEmpty()) {
     newest_index_ = stmlib::modulo(1 + newest_index_, kMaxNotes);
   }
@@ -173,7 +173,7 @@ uint8_t Recorder::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t 
 }
 
 // Returns whether the NoteOff should be sent
-bool Recorder::RecordNoteOff(uint16_t pos, uint8_t index) {
+bool Tape::RecordNoteOff(uint16_t pos, uint8_t index) {
   if (notes_[index].next_link.off_index != kNullIndex) {
     // off_pos was already set by Advance, so the note was held for an entire
     // loop, so the note should play continuously and not be turned off now
@@ -183,7 +183,7 @@ bool Recorder::RecordNoteOff(uint16_t pos, uint8_t index) {
   return true;
 }
 
-bool Recorder::Passed(uint16_t target, uint16_t before, uint16_t after) {
+bool Tape::Passed(uint16_t target, uint16_t before, uint16_t after) {
   if (before < after) {
     return (target > before and target <= after);
   } else {
@@ -191,7 +191,7 @@ bool Recorder::Passed(uint16_t target, uint16_t before, uint16_t after) {
   }
 }
 
-void Recorder::InsertOn(uint16_t pos, uint8_t index) {
+void Tape::InsertOn(uint16_t pos, uint8_t index) {
   Note& note = notes_[index];
   note.on_pos = pos;
   if (head_link_.on_index == kNullIndex) {
@@ -205,7 +205,7 @@ void Recorder::InsertOn(uint16_t pos, uint8_t index) {
   head_link_.on_index = index;
 }
 
-void Recorder::InsertOff(uint16_t pos, uint8_t index) {
+void Tape::InsertOff(uint16_t pos, uint8_t index) {
   Note& note = notes_[index];
   note.off_pos = pos;
   if (head_link_.off_index == kNullIndex) {
@@ -219,7 +219,7 @@ void Recorder::InsertOff(uint16_t pos, uint8_t index) {
   head_link_.off_index = index;
 }
 
-void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index) {
+void Tape::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index) {
   if (IsEmpty()) {
     return;
   }

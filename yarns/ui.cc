@@ -665,7 +665,7 @@ void Ui::OnSwitchHeld(const Event& e) {
         mutable_active_part()->DeleteSequence();
         mode_ = UI_MODE_PARAMETER_SELECT;
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->mutable_sequencer_settings()->looper_recorder.RemoveAll();
+        mutable_active_part()->mutable_sequencer_settings()->looper_tape.RemoveAll();
         mutable_active_part()->AllNotesOff();
       } else {
         settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());

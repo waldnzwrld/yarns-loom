@@ -58,11 +58,11 @@ struct Note {
   uint8_t velocity;
 };
 
-class Recorder {
+class Tape {
  public:
 
-  Recorder() { }
-  ~Recorder() { }
+  Tape() { }
+  ~Tape() { }
 
   void RemoveAll();
   bool IsEmpty() {
@@ -95,7 +95,7 @@ class Recorder {
   uint8_t oldest_index_;
   uint8_t newest_index_;
 
-  DISALLOW_COPY_AND_ASSIGN(Recorder);
+  DISALLOW_COPY_AND_ASSIGN(Tape);
 };
 
 } // namespace looper

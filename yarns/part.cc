@@ -62,8 +62,8 @@ void Part::Init() {
   seq_recording_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
-  seq_.looper_recorder.RemoveAll();
-  LooperStart();
+  seq_.looper_tape.RemoveAll();
+  LooperRewind();
 }
   
 void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
@@ -106,7 +106,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
         || sent_from_step_editor) {
       InternalNoteOn(note, velocity);
     } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
-      uint8_t looper_note_index = seq_.looper_recorder.RecordNoteOn(
+      uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
         this, looper_pos_, note, velocity
       );
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
@@ -151,7 +151,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
         looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
         if (
           looper_note_index != looper::kNullIndex &&
-          seq_.looper_recorder.RecordNoteOff(looper_pos_, looper_note_index)
+          seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
         ) {
           InternalNoteOff(note);
         }
@@ -356,15 +356,16 @@ void Part::Start() {
   
   lfo_counter_ = 0;
   
-  LooperStart();
+  LooperRewind();
 
   generated_notes_.Clear();
 }
 
-void Part::LooperStart() {
+void Part::LooperRewind() {
   looper_synced_lfo_.Init();
   looper_pos_ = 0;
-  seq_.looper_recorder.ResetHead();
+  looper_needs_advance_ = false;
+  seq_.looper_tape.ResetHead();
   std::fill(
     &looper_note_index_for_pressed_key_index_[0],
     &looper_note_index_for_pressed_key_index_[kNoteStackSize],
@@ -377,7 +378,7 @@ void Part::LooperAdvance() {
     return;
   }
   uint16_t new_pos = looper_synced_lfo_.GetPhase() >> 16;
-  seq_.looper_recorder.Advance(
+  seq_.looper_tape.Advance(
     this, seq_.play_mode == PLAY_MODE_LOOPER, looper_pos_, new_pos
   );
   looper_pos_ = new_pos;

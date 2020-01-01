@@ -254,7 +254,7 @@ struct SequencerSettings {
   uint8_t input_response;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
-  looper::Recorder looper_recorder;
+  looper::Tape looper_tape;
   // no padding needed
   
   int16_t first_note() {
@@ -306,13 +306,13 @@ class Part {
     looper_synced_lfo_.Refresh();
     looper_needs_advance_ = true;
   }
-  void LooperStart();
+  void LooperRewind();
   void LooperAdvance();
   inline void LooperRemoveOldestNote() {
-    seq_.looper_recorder.RemoveOldestNote(this, looper_pos_);
+    seq_.looper_tape.RemoveOldestNote(this, looper_pos_);
   }
   inline void LooperRemoveNewestNote() {
-    seq_.looper_recorder.RemoveNewestNote(this, looper_pos_);
+    seq_.looper_tape.RemoveNewestNote(this, looper_pos_);
   }
   
   inline void RecordStep(const SequencerStep& step) {
