@@ -594,6 +594,7 @@ void Ui::OnSwitchPress(const Event& e) {
           // Finish recording.
           multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
           mode_ = previous_mode_;
+          ChangedActivePartOrPlayMode();
         } else {
           previous_mode_ = mode_;
           multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));

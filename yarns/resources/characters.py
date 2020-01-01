@@ -96,7 +96,7 @@ characters = {
   'i': 'mpkd',
   'j': 'kcd',
   'k': 'hmjl',
-  'l': 'hm',
+  'l': 'jm',
   'm': 'epkmc',
   'n': 'mkc',
   'o': 'pkecd',
