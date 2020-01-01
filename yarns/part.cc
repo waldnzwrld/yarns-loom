@@ -40,6 +40,7 @@
 #include "yarns/resources.h"
 #include "yarns/voice.h"
 #include "yarns/clock_division.h"
+#include "yarns/multi.h"
 
 namespace yarns {
   
@@ -327,6 +328,7 @@ void Part::Clock() {
   
   uint32_t num_ticks;
   uint32_t expected_phase;
+
   if (voicing_.modulation_rate >= 100) {
     num_ticks = clock_division::num_ticks[voicing_.modulation_rate - 100];
     // TODO decipher this math -- how much to add so that the voices are in quadrature?
@@ -335,9 +337,14 @@ void Part::Clock() {
       voice_[i]->TapLfo(expected_phase << 16);
     }
   }
+
+  // looper
   num_ticks = clock_division::num_ticks[seq_.clock_division];
+  uint8_t bar_duration = multi.settings().clock_bar_duration;
+  num_ticks = num_ticks * (bar_duration ? bar_duration : 1);
   expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
   looper_synced_lfo_.Tap(expected_phase << 16);
+
   ++lfo_counter_;
 }
 
