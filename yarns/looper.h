@@ -70,13 +70,16 @@ class Recorder {
   }
   void ResetHead();
 
-  //TODO removals and changing clock div fucks everything up
+  //TODO glitches caused by:
+  // remove -- occasionally causes eternal hang -- try lowering kMaxNotes to see if wrapping issue?
+  // dramatically slowing tap tempo
+  // adjusting clock div either way
 
   void RemoveOldestNote(Part* part, uint16_t current_pos);
   void RemoveNewestNote(Part* part, uint16_t current_pos);
   void Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos);
   uint8_t RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velocity);
-  void RecordNoteOff(uint16_t pos, uint8_t index);
+  bool RecordNoteOff(uint16_t pos, uint8_t index);
 
  private:
 

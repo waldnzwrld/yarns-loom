@@ -225,7 +225,7 @@ void Recorder::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index
   }
 
   Note& target_note = notes_[target_index];
-  bool target_has_off = (target_note.next_link.off_index != kNullIndex)
+  bool target_has_off = (target_note.next_link.off_index != kNullIndex);
   uint8_t search_prev_index;
   uint8_t search_next_index;
 
