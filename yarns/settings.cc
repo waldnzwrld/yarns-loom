@@ -203,7 +203,7 @@ const Setting Settings::settings_[] = {
   {
     "O/", "OUTPUT CLK DIV",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 11, clock_division::display,
+    SETTING_UNIT_ENUMERATION, 0, clock_division::count - 1, clock_division::display,
     0, 0,
   },
   {
@@ -312,7 +312,7 @@ const Setting Settings::settings_[] = {
   {
     "VS", "VIBRATO SPEED",
     SETTING_DOMAIN_PART, { PART_VOICING_MODULATION_RATE, 0 },
-    SETTING_UNIT_VIBRATO_SPEED, 0, 109, NULL,
+    SETTING_UNIT_VIBRATO_SPEED, 0, 100 + clock_division::count - 1, NULL,
     23, 14,
   },
   {
@@ -397,7 +397,7 @@ const Setting Settings::settings_[] = {
   {
     "C/", "CLOCK DIV",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 11, clock_division::display,
+    SETTING_UNIT_ENUMERATION, 0, clock_division::count - 1, clock_division::display,
     102, 24,
   },
   {

@@ -32,6 +32,8 @@
 namespace yarns {
 namespace clock_division {
 
+const uint8_t count = 15;
+
 const char* const display[] = {
   "x4",
   "x3",
