@@ -64,7 +64,7 @@ class SyncedLFO {
 
     int32_t d_error = target_increment - (phase_ - previous_phase_);
     int32_t p_error = target_phase - phase_;
-    int32_t error = (d_error + (p_error >> 1)) >> 11;
+    int32_t error = (d_error + (p_error >> 1)) >> 13;
 
     if (error < 0 && abs(error) > phase_increment_) {
       // underflow
