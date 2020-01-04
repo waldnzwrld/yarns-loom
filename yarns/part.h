@@ -303,8 +303,15 @@ class Part {
   void DeleteSequence();
 
   inline void Refresh() {
-    looper_synced_lfo_.Refresh();
-    looper_needs_advance_ = true;
+    uint16_t new_pos = looper_synced_lfo_.Refresh() >> 16;
+    if (
+      // phase has definitely changed, or
+      looper_pos_ != new_pos ||
+      // phase has wrapped exactly around
+      looper_synced_lfo_.GetPhaseIncrement() > UINT16_MAX
+    ) {
+      looper_needs_advance_ = true;
+    }
   }
   void LooperRewind();
   void LooperAdvance();

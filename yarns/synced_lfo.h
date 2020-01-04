@@ -46,6 +46,10 @@ class SyncedLFO {
     return phase_;
   }
 
+  uint32_t GetPhaseIncrement() {
+    return phase_increment_;
+  }
+
   uint32_t Increment(uint32_t increment) {
     phase_ += increment;
     return GetPhase();
@@ -60,9 +64,17 @@ class SyncedLFO {
 
     int32_t d_error = target_increment - (phase_ - previous_phase_);
     int32_t p_error = target_phase - phase_;
-    int32_t error = d_error + (p_error >> 1);
+    int32_t error = (d_error + (p_error >> 1)) >> 11;
 
-    phase_increment_ += error >> 11;
+    if (error < 0 && abs(error) > phase_increment_) {
+      // underflow
+      phase_increment_ = 0;
+    } else if (error > 0 && (UINT32_MAX - error) < phase_increment_) {
+      // overflow
+      phase_increment_ = UINT32_MAX;
+    } else {
+      phase_increment_ += error;
+    }
 
     previous_phase_ = phase_;
     previous_target_phase_ = target_phase;
