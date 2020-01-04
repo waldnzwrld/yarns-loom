@@ -109,7 +109,7 @@ class Multi {
   inline uint8_t paques() const {
     return settings_.clock_tempo == 49 && \
         settings_.clock_swing == 49 && \
-        settings_.clock_output_division == 3 && \
+        settings_.clock_output_division == 6 && \
         settings_.clock_bar_duration == 9;
   }
   
@@ -210,6 +210,7 @@ class Multi {
   void StartRecording(uint8_t part) {
     if (!recording_) {
       part_[part].StartRecording();
+      /*
       uint8_t channel = part_[part].midi_settings().channel;
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
         if (part_[i].midi_settings().channel == channel || \
@@ -218,6 +219,7 @@ class Multi {
           part_[i].set_transposable(false);
         }
       }
+      */
       recording_ = true;
     }
   }
@@ -225,9 +227,11 @@ class Multi {
   void StopRecording(uint8_t part) {
     if (recording_) {
       part_[part].StopRecording();
+      /*
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
         part_[i].set_transposable(true);
       }
+      */
       recording_ = false;
     }
   }
@@ -297,6 +301,15 @@ class Multi {
     }
   }
 
+  void AdvanceLoopers() {
+    if (!running()) {
+      return;
+    }
+    for (uint8_t j = 0; j < num_active_parts_; ++j) {
+      part_[j].LooperAdvance();
+    }
+  }
+
   inline void RenderAudio() {
     for (uint8_t i = 0; i < kNumVoices; ++i) {
       voice_[i].RenderAudio();
@@ -362,11 +375,12 @@ class Multi {
 
   template<typename T>
   void Serialize(T* stream_buffer) {
-    stream_buffer->Write(settings());
+    // 32 bytes + (4 voices x (16 + 32 + 178 bytes)) = 936 bytes
+    stream_buffer->Write(settings()); // 32 bytes
     for (uint8_t i = 0; i < kNumParts; ++i) {
-      stream_buffer->Write(part_[i].midi_settings());
-      stream_buffer->Write(part_[i].voicing_settings());
-      stream_buffer->Write(part_[i].sequencer_settings());
+      stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
+      stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
+      stream_buffer->Write(part_[i].sequencer_settings()); // 178 bytes
     }
   };
   
@@ -384,9 +398,10 @@ class Multi {
   
   template<typename T>
   void SerializeCalibration(T* stream_buffer) {
+    // 4 voices x 11 octaves x 2 bytes = 88 bytes
     for (uint8_t i = 0; i < kNumVoices; ++i) {
       for (uint8_t j = 0; j < kNumOctaves; ++j) {
-        stream_buffer->Write(voice_[i].calibration_dac_code(j));
+        stream_buffer->Write(voice_[i].calibration_dac_code(j)); // 2 bytes
       }
     }
   };
@@ -437,7 +452,7 @@ class Multi {
   uint8_t swing_counter_;
   
   uint8_t clock_input_prescaler_;
-  uint8_t clock_output_prescaler_;
+  uint16_t clock_output_prescaler_;
   uint16_t bar_position_;
   uint8_t stop_count_down_;
   

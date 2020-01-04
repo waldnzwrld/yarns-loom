@@ -35,15 +35,12 @@
 #include "yarns/just_intonation_processor.h"
 #include "yarns/midi_handler.h"
 #include "yarns/settings.h"
+#include "yarns/clock_division.h"
 
 namespace yarns {
   
 using namespace std;
 using namespace stmlib;
-
-const uint8_t clock_divisions[] = {
-  96, 48, 32, 24, 16, 12, 8, 6, 4, 3, 2, 1
-};
 
 void Multi::Init(bool reset_calibration) {
   just_intonation_processor.Init();
@@ -69,7 +66,7 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_tempo = 120;
   settings_.clock_swing = 0;
   settings_.clock_input_division = 1;
-  settings_.clock_output_division = 7;
+  settings_.clock_output_division = 6; // /4
   settings_.clock_bar_duration = 4;
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
@@ -105,7 +102,7 @@ void Multi::Init(bool reset_calibration) {
   voicing->audio_mode = 0;
 
   SequencerSettings* seq = part_[0].mutable_sequencer_settings();
-  seq->clock_division = 7;
+  seq->clock_division = 6; // /4
   seq->gate_length = 3;
   seq->arp_range = 0;
   seq->arp_direction = 0;
@@ -138,7 +135,7 @@ void Multi::Clock() {
     return;
   }
   
-  uint16_t output_division = clock_divisions[settings_.clock_output_division];
+  uint16_t output_division = clock_division::num_ticks[settings_.clock_output_division];
   uint16_t input_division = settings_.clock_input_division;
   
   if (previous_output_division_ &&
@@ -291,6 +288,10 @@ void Multi::Refresh() {
     if (swing_predelay_[i] >= 0) {
       --swing_predelay_[i];
     }
+  }
+
+  for (uint8_t j = 0; j < num_active_parts_; ++j) {
+    part_[j].Refresh();
   }
 
   for (uint8_t i = 0; i < kNumVoices; ++i) {
