@@ -356,8 +356,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
     case LAYOUT_QUAD_MONO:
     case LAYOUT_QUAD_POLY:
     case LAYOUT_OCTAL_POLYCHAINED:
-    case LAYOUT_THREE_ONE:
-    case LAYOUT_TWO_TWO:
       cv[0] = voice_[0].note_dac_code();
       cv[1] = voice_[1].note_dac_code();
       cv[2] = voice_[2].note_dac_code();
@@ -369,6 +367,22 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
         gate[3] = reset_or_playing_flag();
       } else {
         gate[2] = voice_[2].gate();
+        gate[3] = voice_[3].gate();
+      }
+      break;
+
+    case LAYOUT_THREE_ONE:
+    case LAYOUT_TWO_TWO:
+      cv[0] = voice_[0].note_dac_code();
+      cv[1] = voice_[1].note_dac_code();
+      cv[2] = voice_[2].note_dac_code();
+      cv[3] = voice_[3].note_dac_code();
+      gate[0] = voice_[0].gate();
+      gate[1] = voice_[1].gate();
+      gate[2] = voice_[2].gate();
+      if (settings_.clock_override) {
+        gate[3] = clock();
+      } else {
         gate[3] = voice_[3].gate();
       }
       break;
