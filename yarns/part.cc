@@ -62,7 +62,7 @@ void Part::Init() {
   ignore_note_off_messages_ = false;
   seq_recording_ = false;
   release_latched_keys_on_next_note_on_ = false;
-  transposable_ = true;
+  // transposable_ = true;
   seq_.looper_tape.RemoveAll();
   LooperRewind();
 }
@@ -432,7 +432,7 @@ void Part::ClockSequencer() {
 
   if (step.has_note()) {
     int16_t note = step.note();
-    if (pressed_keys_.size() && transposable_) {
+    if (pressed_keys_.size() && !seq_recording_) {
       switch (seq_.input_response) {
         case SEQUENCER_INPUT_RESPONSE_TRANSPOSE:
           {
