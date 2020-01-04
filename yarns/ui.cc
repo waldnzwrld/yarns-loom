@@ -577,6 +577,7 @@ void Ui::OnSwitchPress(const Event& e) {
       {
         if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
           // Finish recording.
+          push_it_ = false;
           multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
           mode_ = previous_mode_;
         } else {
