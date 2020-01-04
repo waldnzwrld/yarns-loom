@@ -108,7 +108,9 @@ enum TuningSystem {
 enum SequencerInputResponse {
   SEQUENCER_INPUT_RESPONSE_TRANSPOSE,
   SEQUENCER_INPUT_RESPONSE_OVERRIDE,
-  SEQUENCER_INPUT_RESPONSE_OFF
+  SEQUENCER_INPUT_RESPONSE_DIRECT,
+  SEQUENCER_INPUT_RESPONSE_OFF,
+  SEQUENCER_INPUT_RESPONSE_LAST,
 };
 
 enum PlayMode {
@@ -349,6 +351,16 @@ class Part {
     RecordStep(SequencerStep(flag, 0));
   }
   
+  inline bool SequencerDirectResponse() {
+    return (
+      !seq_recording_ &&
+      seq_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT && (
+        seq_.play_mode == PLAY_MODE_SEQUENCER ||
+        seq_.play_mode == PLAY_MODE_LOOPER
+      )
+    );
+  }
+
   inline bool accepts(uint8_t channel) const {
     /*
     if (!(transposable_ || seq_recording_)) {

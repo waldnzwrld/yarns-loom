@@ -103,8 +103,11 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     }
     uint8_t pressed_key_index = pressed_keys_.NoteOn(note, velocity);
   
-    if (seq_.play_mode == PLAY_MODE_MANUAL
-        || sent_from_step_editor) {
+    if (
+      seq_.play_mode == PLAY_MODE_MANUAL ||
+      sent_from_step_editor ||
+      SequencerDirectResponse()
+    ) {
       InternalNoteOn(note, velocity);
     } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
       uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
@@ -144,8 +147,11 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     if (off) {
       uint8_t pressed_key_index = pressed_keys_.NoteOff(note);
     
-      if (seq_.play_mode == PLAY_MODE_MANUAL ||
-          sent_from_step_editor) {
+      if (
+        seq_.play_mode == PLAY_MODE_MANUAL ||
+        sent_from_step_editor ||
+        SequencerDirectResponse()
+      ) {
         InternalNoteOff(note);
       } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
         uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
@@ -455,6 +461,7 @@ void Part::ClockSequencer() {
           note = pressed_keys_.most_recent_note().note;
           break;
 
+        case SEQUENCER_INPUT_RESPONSE_DIRECT:
         case SEQUENCER_INPUT_RESPONSE_OFF:
           break;
       }

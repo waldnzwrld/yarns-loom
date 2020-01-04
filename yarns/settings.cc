@@ -125,7 +125,7 @@ const char* const sequencer_play_mode_values[] = {
 };
 
 const char* const sequencer_input_response_values[] = {
-  "TRANSPOSE", "OVERRIDE", "OFF"
+  "TRANSPOSE", "REPLACE", "DIRECT", "OFF"
 };
 
 const char* const sustain_mode_values[] = {
@@ -466,7 +466,7 @@ const Setting Settings::settings_[] = {
   {
     "SI", "SEQUENCER INPUT RESPONSE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_INPUT_RESPONSE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 2, sequencer_input_response_values,
+    SETTING_UNIT_ENUMERATION, 0, SEQUENCER_INPUT_RESPONSE_LAST - 1, sequencer_input_response_values,
     0, 0,
   },
   {
