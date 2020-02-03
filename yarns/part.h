@@ -323,6 +323,9 @@ class Part {
   inline void LooperRemoveNewestNote() {
     seq_.looper_tape.RemoveNewestNote(this, looper_pos_);
   }
+  inline uint32_t LooperPhase() const {
+    return looper_synced_lfo_.GetPhase();
+  }
   
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {

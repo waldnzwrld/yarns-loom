@@ -213,12 +213,6 @@ void Ui::Poll() {
   PollSwitch(UI_SWITCH_START_STOP , start_stop_press_time_, start_stop_long_press_event_sent_ );
   PollSwitch(UI_SWITCH_TAP_TEMPO  , tap_tempo_press_time_ , tap_tempo_long_press_event_sent_  );
 
-  if ((mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) &&
-      recording_part().recording_step() != recording_part().playing_step()) {
-    display_.set_brightness(3);
-  } else {
-    display_.set_brightness(6);
-  }
   display_.RefreshSlow();
   
   // Read LED brightness from multi and copy to LEDs driver.
@@ -354,6 +348,9 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
 
 void Ui::PrintLooperRecordingStatus() {
   display_.Print("oo");
+  display_.set_brightness(
+    kDisplayBrightnessLevels - 1 - (active_part().LooperPhase() >> (32 - kDisplayBrightnessBits))
+  );
 }
 
 void Ui::PrintRecordingStatus() {
@@ -764,17 +761,27 @@ void Ui::DoEvents() {
   }
 
   uint8_t recording_step_index = recording_part().recording_step();
+  bool seq_recording = (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING);
   if (queue_.idle_time() > 600) {
-    if (!push_it_ && (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
+    if (!push_it_ && seq_recording) {
       PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
     } else if (!display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT) {
       PrintActivePartAndPlayMode();
     }
   }
-  if (displayed_recording_step_index_ != recording_step_index &&
-      (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING)) {
+  if (displayed_recording_step_index_ != recording_step_index && seq_recording) {
     refresh_display = true;
     displayed_recording_step_index_ = recording_step_index;
+  }
+
+  if (seq_recording && recording_step_index != recording_part().playing_step()) {
+    // If playing a sequencer step other than the selected one, half brightness
+    display_.set_brightness((kDisplayBrightnessLevels >> 1) - 1);
+  } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
+    refresh_display = true;
+  } else {
+    // Full brightness
+    display_.set_brightness(kDisplayBrightnessLevels - 1);
   }
 
   if (mode_ == UI_MODE_LEARNING && !multi.learning()) {
@@ -789,8 +796,7 @@ void Ui::DoEvents() {
     }
     display_.set_blink(
         mode_ == UI_MODE_CALIBRATION_ADJUST_LEVEL ||
-        mode_ == UI_MODE_LEARNING ||
-        mode_ == UI_MODE_LOOPER_RECORDING
+        mode_ == UI_MODE_LEARNING
     );
     if (mode_ == UI_MODE_MAIN_MENU) {
       display_.set_fade(160);

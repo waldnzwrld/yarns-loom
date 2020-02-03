@@ -42,11 +42,11 @@ class SyncedLFO {
     phase_ = 0;
   }
 
-  uint32_t GetPhase() {
+  uint32_t GetPhase() const {
     return phase_;
   }
 
-  uint32_t GetPhaseIncrement() {
+  uint32_t GetPhaseIncrement() const {
     return phase_increment_;
   }
 
