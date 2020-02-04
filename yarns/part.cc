@@ -114,7 +114,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
         this, looper_pos_, note, velocity
       );
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
-      InternalNoteOn(note, velocity);
+      LooperNoteOn(looper_note_index, note, velocity);
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -160,7 +160,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
           looper_note_index != looper::kNullIndex &&
           seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
         ) {
-          InternalNoteOff(note);
+          LooperNoteOff(looper_note_index, note);
         }
       }
     }
@@ -633,6 +633,8 @@ void Part::AllNotesOff() {
   poly_allocator_.ClearNotes();
   mono_allocator_.Clear();
   pressed_keys_.Clear();
+  generated_notes_.Clear();
+  looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()] = looper::kNullIndex;
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->NoteOff();
   }

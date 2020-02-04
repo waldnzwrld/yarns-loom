@@ -86,14 +86,14 @@ void Tape::RemoveNewestNote(Part* part, uint16_t current_pos) {
   }
 }
 
-uint8_t Tape::PeekNextOn() {
+uint8_t Tape::PeekNextOn() const {
   if (head_link_.on_index == kNullIndex) {
     return kNullIndex;
   }
   return notes_[head_link_.on_index].next_link.on_index;
 }
 
-uint8_t Tape::PeekNextOff() {
+uint8_t Tape::PeekNextOff() const {
   if (head_link_.off_index == kNullIndex) {
     return kNullIndex;
   }
@@ -120,7 +120,7 @@ void Tape::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
     head_link_.off_index = next_index;
 
     if (play) {
-      part->InternalNoteOff(next_note.pitch);
+      part->LooperNoteOff(next_index, next_note.pitch);
     }
   }
 
@@ -148,7 +148,7 @@ void Tape::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
     }
 
     if (play) {
-      part->InternalNoteOn(next_note.pitch, next_note.velocity);
+      part->LooperNoteOn(next_index, next_note.pitch, next_note.velocity);
     }
   }
 }
@@ -166,7 +166,7 @@ uint8_t Tape::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velo
   Note& note = notes_[newest_index_];
   note.pitch = pitch;
   note.velocity = velocity;
-  note.off_pos = 0;
+  note.off_pos = pos - 1;
   note.next_link.off_index = kNullIndex;
 
   return newest_index_;
@@ -183,7 +183,30 @@ bool Tape::RecordNoteOff(uint16_t pos, uint8_t index) {
   return true;
 }
 
-bool Tape::Passed(uint16_t target, uint16_t before, uint16_t after) {
+bool Tape::NoteIsPlaying(uint8_t index, uint16_t pos) const {
+  const Note& note = notes_[index];
+  if (note.next_link.off_index == kNullIndex) { return false; }
+  return Passed(pos, note.on_pos, note.off_pos);
+}
+
+uint16_t Tape::NoteFractionCompleted(uint8_t index, uint16_t pos) const {
+  const Note& note = notes_[index];
+  uint16_t completed = pos - note.on_pos;
+  uint16_t length = note.off_pos - note.on_pos;
+  return (static_cast<uint32_t>(completed) << 16) / length;
+}
+
+uint8_t Tape::NotePitch(uint8_t index) const {
+  const Note& note = notes_[index];
+  if (note.next_link.off_index == kNullIndex) { return kNullIndex; }
+  return note.pitch;
+}
+
+uint8_t Tape::NoteAgeOrdinal(uint8_t index) const {
+  return stmlib::modulo(index - oldest_index_, kMaxNotes);
+}
+
+bool Tape::Passed(uint16_t target, uint16_t before, uint16_t after) const {
   if (before < after) {
     return (target > before and target <= after);
   } else {
@@ -225,20 +248,12 @@ void Tape::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index) {
   }
 
   Note& target_note = notes_[target_index];
-  bool target_has_off = (target_note.next_link.off_index != kNullIndex);
   uint8_t search_prev_index;
   uint8_t search_next_index;
 
-  if (target_has_off && Passed(current_pos, target_note.on_pos, target_note.off_pos)) {
-    // If this note was completely recorded and the looper is currently playing
-    // the note, turn it off
-    part->InternalNoteOff(target_note.pitch);
+  if (NoteIsPlaying(target_index, current_pos)) {
+    part->LooperNoteOff(target_index, target_note.pitch);
   }
-
-  // general concern -- next index never matches target
-  // bc next index points into a separate cycle of notes
-  // most likely that cycle would be a single uninitialized note, e.g. if
-  // target_note has kNullIndex for its next index
 
   search_prev_index = target_index;
   while (true) {
@@ -257,7 +272,7 @@ void Tape::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index) {
     head_link_.on_index = search_prev_index;
   }
 
-  if (!target_has_off) {
+  if (target_note.next_link.off_index == kNullIndex) {
     // Don't try to relink off_index
     return;
   }

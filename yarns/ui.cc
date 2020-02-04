@@ -347,10 +347,22 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
 }
 
 void Ui::PrintLooperRecordingStatus() {
-  display_.Print("oo");
+  uint8_t note_index = active_part().LooperCurrentNoteIndex();
+  uint32_t pos = active_part().LooperPhase();
+  if (note_index == looper::kNullIndex) {
+    display_.set_brightness(
+      kDisplayBrightnessLevels - 1 - (pos >> (32 - kDisplayBrightnessBits))
+    );
+    display_.Print("__");
+    return;
+  }
+  const looper::Tape& looper_tape = active_part().sequencer_settings().looper_tape;
+  uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index, pos >> 16);
   display_.set_brightness(
-    kDisplayBrightnessLevels - 1 - (active_part().LooperPhase() >> (32 - kDisplayBrightnessBits))
+    kDisplayBrightnessLevels - 1 - (note_fraction_completed >> (16 - kDisplayBrightnessBits))
   );
+  Settings::PrintInteger(buffer_, looper_tape.NoteAgeOrdinal(note_index) + 1);
+  display_.Print(buffer_);
 }
 
 void Ui::PrintRecordingStatus() {
@@ -778,6 +790,7 @@ void Ui::DoEvents() {
     // If playing a sequencer step other than the selected one, half brightness
     display_.set_brightness((kDisplayBrightnessLevels >> 1) - 1);
   } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
+    // Brightness set in PrintLooperRecordingStatus
     refresh_display = true;
   } else {
     // Full brightness

@@ -326,6 +326,17 @@ class Part {
   inline uint32_t LooperPhase() const {
     return looper_synced_lfo_.GetPhase();
   }
+  inline uint8_t LooperCurrentNoteIndex() const {
+    return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
+  }
+  inline void LooperNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
+    looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
+    InternalNoteOn(pitch, velocity);
+  }
+  inline void LooperNoteOff(uint8_t looper_note_index, uint8_t pitch) {
+    looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
+    InternalNoteOff(pitch);
+  }
   
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
@@ -519,6 +530,7 @@ class Part {
   uint16_t looper_pos_;
   bool looper_needs_advance_;
   uint8_t looper_note_index_for_pressed_key_index_[kNoteStackSize];
+  uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
 
   uint16_t gate_length_counter_;
   uint16_t lfo_counter_;

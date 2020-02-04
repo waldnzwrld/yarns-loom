@@ -65,27 +65,27 @@ class Tape {
   ~Tape() { }
 
   void RemoveAll();
-  bool IsEmpty() {
+  bool IsEmpty() const {
     return (head_link_.on_index == kNullIndex);
   }
   void ResetHead();
-
-  //TODO glitches caused by:
-  // remove -- occasionally causes eternal hang -- try lowering kMaxNotes to see if wrapping issue?
-  // dramatically slowing tap tempo
-  // adjusting clock div either way
 
   void RemoveOldestNote(Part* part, uint16_t current_pos);
   void RemoveNewestNote(Part* part, uint16_t current_pos);
   void Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos);
   uint8_t RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velocity);
   bool RecordNoteOff(uint16_t pos, uint8_t index);
+  uint8_t PeekNextOn() const;
+  uint8_t PeekNextOff() const;
+
+  bool NoteIsPlaying(uint8_t index, uint16_t pos) const;
+  uint16_t NoteFractionCompleted(uint8_t index, uint16_t pos) const;
+  uint8_t NotePitch(uint8_t index) const;
+  uint8_t NoteAgeOrdinal(uint8_t index) const;
 
  private:
 
-  bool Passed(uint16_t target, uint16_t before, uint16_t after);
-  uint8_t PeekNextOn();
-  uint8_t PeekNextOff();
+  bool Passed(uint16_t target, uint16_t before, uint16_t after) const;
   void InsertOn(uint16_t pos, uint8_t index);
   void InsertOff(uint16_t pos, uint8_t index);
   void RemoveNote(Part* part, uint16_t current_pos, uint8_t index);
