@@ -32,6 +32,8 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/utils/ring_buffer.h"
 
+#include "yarns/synced_lfo.h"
+
 namespace yarns {
 
 const uint16_t kNumOctaves = 11;
@@ -221,16 +223,7 @@ class Voice {
   }
   
   void TapLfo(uint32_t target_phase) {
-    uint32_t target_increment = target_phase - lfo_pll_previous_target_phase_;
-    
-    int32_t d_error = target_increment - (lfo_phase_ - lfo_pll_previous_phase_);
-    int32_t p_error = target_phase - lfo_phase_;
-    int32_t error = d_error + (p_error >> 1);
-    
-    lfo_pll_phase_increment_ += error >> 11;
-    
-    lfo_pll_previous_phase_ = lfo_phase_;
-    lfo_pll_previous_target_phase_ = target_phase;
+    synced_lfo_.Tap(target_phase);
   }
   
  private:
@@ -265,7 +258,6 @@ class Voice {
   uint8_t aux_cv_source_;
   uint8_t aux_cv_source_2_;
   
-  uint32_t lfo_phase_;
   uint32_t portamento_phase_;
   uint32_t portamento_phase_increment_;
   bool portamento_exponential_shape_;
@@ -280,10 +272,8 @@ class Voice {
   uint32_t trigger_phase_increment_;
   uint32_t trigger_phase_;
   
-  // PLL for clock-synced LFO.
-  uint32_t lfo_pll_phase_increment_;
-  uint32_t lfo_pll_previous_target_phase_;
-  uint32_t lfo_pll_previous_phase_;
+  // Clock-synced LFO.
+  SyncedLFO synced_lfo_;
   
   uint8_t audio_mode_;
   Oscillator oscillator_;

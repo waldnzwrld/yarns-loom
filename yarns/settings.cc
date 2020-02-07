@@ -28,6 +28,7 @@
 
 #include "yarns/settings.h"
 #include "yarns/resources.h"
+#include "yarns/clock_division.h"
 
 #include <algorithm>
 #include <cstring>
@@ -36,10 +37,6 @@ namespace yarns {
 
 const char* const layout_values[] = {
   "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "3+1", "22", "21"
-};
-
-const char* const clock_division_values[] = {
-  "/1", "/2", "/3", "/4", "/6", "/8", "12", "16", "24", "32", "48", "96"
 };
 
 const char* const midi_out_mode_values[] = {
@@ -120,8 +117,15 @@ const char* const tuning_system_values[] = {
   "CUSTOM"
 };
 
+const char* const sequencer_play_mode_values[] = {
+  "m",
+  "r",
+  "s",
+  "l",
+};
+
 const char* const sequencer_input_response_values[] = {
-  "TRANSPOSE", "OVERRIDE", "OFF"
+  "TRANSPOSE", "REPLACE", "DIRECT", "OFF"
 };
 
 const char* const sustain_mode_values[] = {
@@ -199,7 +203,7 @@ const Setting Settings::settings_[] = {
   {
     "O/", "OUTPUT CLK DIV",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 11, clock_division_values,
+    SETTING_UNIT_ENUMERATION, 0, clock_division::count - 1, clock_division::display,
     0, 0,
   },
   {
@@ -308,7 +312,7 @@ const Setting Settings::settings_[] = {
   {
     "VS", "VIBRATO SPEED",
     SETTING_DOMAIN_PART, { PART_VOICING_MODULATION_RATE, 0 },
-    SETTING_UNIT_VIBRATO_SPEED, 0, 109, NULL,
+    SETTING_UNIT_VIBRATO_SPEED, 0, 100 + clock_division::count - 1, NULL,
     23, 14,
   },
   {
@@ -393,7 +397,7 @@ const Setting Settings::settings_[] = {
   {
     "C/", "CLOCK DIV",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 11, clock_division_values,
+    SETTING_UNIT_ENUMERATION, 0, clock_division::count - 1, clock_division::display,
     102, 24,
   },
   {
@@ -405,14 +409,8 @@ const Setting Settings::settings_[] = {
   {
     "AR", "ARP RANGE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_RANGE, 0 },
-    SETTING_UNIT_UINT8, 0, 4, NULL,
+    SETTING_UNIT_UINT8, 1, 4, NULL,
     104, 26,
-  },
-  {
-    "RG", "RHYTHMIC GENERATOR",
-    SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_RANGE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 1, boolean_values,
-    0, 0,
   },
   {
     "AD", "ARP DIRECTION",
@@ -460,15 +458,21 @@ const Setting Settings::settings_[] = {
     109, 31,
   },
   {
+    "SP", "SEQUENCER PLAY MODE",
+    SETTING_DOMAIN_PART, { PART_SEQUENCER_PLAY_MODE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
+    0, 0,
+  },
+  {
     "SI", "SEQUENCER INPUT RESPONSE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_INPUT_RESPONSE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 2, sequencer_input_response_values,
+    SETTING_UNIT_ENUMERATION, 0, SEQUENCER_INPUT_RESPONSE_LAST - 1, sequencer_input_response_values,
     0, 0,
   },
   {
     "SU", "SUSTAIN MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 3, sustain_mode_values,
+    SETTING_UNIT_ENUMERATION, 0, SUSTAIN_MODE_LAST - 1, sustain_mode_values,
     0, 0,
   },
   {
@@ -539,7 +543,6 @@ const SettingIndex dual_mono_menu[] = {
   SETTING_CLOCK_BAR_DURATION,
   SETTING_CLOCK_NUDGE_FIRST_TICK,
   SETTING_CLOCK_MANUAL_START,
-  SETTING_ACTIVE_PART_2,
   SETTING_MIDI_CHANNEL,
   SETTING_MIDI_MIN_VELOCITY,
   SETTING_MIDI_MAX_VELOCITY,
@@ -583,7 +586,6 @@ const SettingIndex quad_mono_menu[] = {
   SETTING_CLOCK_BAR_DURATION,
   SETTING_CLOCK_NUDGE_FIRST_TICK,
   SETTING_CLOCK_MANUAL_START,
-  SETTING_ACTIVE_PART_4,
   SETTING_MIDI_CHANNEL,
   SETTING_MIDI_MIN_VELOCITY,
   SETTING_MIDI_MAX_VELOCITY,
@@ -835,7 +837,6 @@ const SettingIndex quad_triggers_menu[] = {
   SETTING_CLOCK_BAR_DURATION,
   SETTING_CLOCK_NUDGE_FIRST_TICK,
   SETTING_CLOCK_MANUAL_START,
-  SETTING_ACTIVE_PART_4,
   SETTING_MIDI_CHANNEL,
   SETTING_MIDI_MIN_VELOCITY,
   SETTING_MIDI_MAX_VELOCITY,
@@ -846,7 +847,6 @@ const SettingIndex quad_triggers_menu[] = {
   SETTING_VOICING_TRIGGER_SCALE,
   SETTING_VOICING_TRIGGER_SHAPE,
   SETTING_SEQUENCER_CLOCK_DIVISION,
-  SETTING_SEQUENCER_RHYTHM_GENERATOR,
   SETTING_SEQUENCER_RHYTHM_PATTERN,
   SETTING_SEQUENCER_EUCLIDEAN_LENGTH,
   SETTING_SEQUENCER_EUCLIDEAN_FILL,
@@ -861,11 +861,11 @@ const SettingIndex three_one_menu[] = {
   SETTING_CLOCK_TEMPO,
   SETTING_CLOCK_SWING,
   SETTING_CLOCK_INPUT_DIVISION,
+  SETTING_CLOCK_OVERRIDE,
   SETTING_CLOCK_OUTPUT_DIVISION,
   SETTING_CLOCK_BAR_DURATION,
   SETTING_CLOCK_NUDGE_FIRST_TICK,
   SETTING_CLOCK_MANUAL_START,
-  SETTING_ACTIVE_PART_2,
   SETTING_MIDI_CHANNEL,
   SETTING_MIDI_MIN_VELOCITY,
   SETTING_MIDI_MAX_VELOCITY,
@@ -904,11 +904,11 @@ const SettingIndex two_two_menu[] = {
   SETTING_CLOCK_TEMPO,
   SETTING_CLOCK_SWING,
   SETTING_CLOCK_INPUT_DIVISION,
+  SETTING_CLOCK_OVERRIDE,
   SETTING_CLOCK_OUTPUT_DIVISION,
   SETTING_CLOCK_BAR_DURATION,
   SETTING_CLOCK_NUDGE_FIRST_TICK,
   SETTING_CLOCK_MANUAL_START,
-  SETTING_ACTIVE_PART_3,
   SETTING_MIDI_CHANNEL,
   SETTING_MIDI_MIN_VELOCITY,
   SETTING_MIDI_MAX_VELOCITY,
@@ -951,7 +951,6 @@ const SettingIndex two_one_menu[] = {
   SETTING_CLOCK_BAR_DURATION,
   SETTING_CLOCK_NUDGE_FIRST_TICK,
   SETTING_CLOCK_MANUAL_START,
-  SETTING_ACTIVE_PART_2,
   SETTING_MIDI_CHANNEL,
   SETTING_MIDI_MIN_VELOCITY,
   SETTING_MIDI_MAX_VELOCITY,
@@ -988,7 +987,6 @@ const SettingIndex two_one_menu[] = {
 
 const SettingIndex quad_voltages_menu[] = {
   SETTING_LAYOUT,
-  SETTING_ACTIVE_PART_4,
   SETTING_MIDI_CHANNEL,
   SETTING_VOICING_CV_OUT,
   SETTING_CLOCK_TEMPO,
@@ -1160,7 +1158,7 @@ void Settings::Print(const Setting& setting, char* buffer) const {
       if (value < 100) {
         PrintInteger(buffer, value);
       } else {
-        strcpy(buffer, clock_division_values[value - 100]);
+        strcpy(buffer, clock_division::display[value - 100]);
       }
       break;
       

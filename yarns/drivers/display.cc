@@ -40,7 +40,7 @@ const uint16_t kPinEnable = GPIO_Pin_8;
 const uint16_t kPinData = GPIO_Pin_9;
 
 const uint16_t kScrollingDelay = 180;
-const uint16_t kScrollingPreDelay = 1500;
+const uint16_t kScrollingPreDelay = 600;
 const uint16_t kBlinkMask = 128;
 
 const uint16_t kCharacterEnablePins[] = {
@@ -106,19 +106,17 @@ void Display::RefreshSlow() {
     fading_counter_ += fading_increment_;
   }
   
-  uint8_t brightness = brightness_;
   if (fading_increment_) {
-    brightness = fading_counter_ < 0x8000
-        ? fading_counter_ >> 12
-        : 15 - (fading_counter_ >> 12);
+    actual_brightness_ = kDisplayBrightnessLevels - 1 - (fading_counter_ >> (16 - kDisplayBrightnessBits));
+  } else {
+    actual_brightness_ = brightness_;
   }
-  actual_brightness_ = brightness >> 1;
   blink_counter_ = (blink_counter_ + 1) % (kBlinkMask * 2);
 
 #else
 
   displayed_buffer_ = short_buffer_;
-  actual_brightness_ = 3;
+  actual_brightness_ = kDisplayBrightnessLevels - 1;
 
 #endif  // APPLICATION
 }
@@ -134,7 +132,7 @@ void Display::RefreshFast() {
   } else {
     GPIOB->BRR = kCharacterEnablePins[active_position_];
   }
-  brightness_pwm_cycle_ = (brightness_pwm_cycle_ + 1) % kBrightnessLevels;
+  brightness_pwm_cycle_ = (brightness_pwm_cycle_ + 1) % kDisplayBrightnessLevels;
 }
 
 void Display::Print(const char* short_buffer, const char* long_buffer) {

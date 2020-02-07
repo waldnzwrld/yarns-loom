@@ -37,7 +37,7 @@ LFO and portamento increments.
 lookup_tables_32 = []
 
 sample_rate = 4000
-min_frequency = 1.0 / 2.0  # Hertz
+min_frequency = 1.0 / 16.0  # Hertz
 max_frequency = 16.0  # Hertz
 
 excursion = 1 << 32

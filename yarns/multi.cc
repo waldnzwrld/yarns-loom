@@ -35,15 +35,12 @@
 #include "yarns/just_intonation_processor.h"
 #include "yarns/midi_handler.h"
 #include "yarns/settings.h"
+#include "yarns/clock_division.h"
 
 namespace yarns {
   
 using namespace std;
 using namespace stmlib;
-
-const uint8_t clock_divisions[] = {
-  96, 48, 32, 24, 16, 12, 8, 6, 4, 3, 2, 1
-};
 
 void Multi::Init(bool reset_calibration) {
   just_intonation_processor.Init();
@@ -69,7 +66,7 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_tempo = 120;
   settings_.clock_swing = 0;
   settings_.clock_input_division = 1;
-  settings_.clock_output_division = 7;
+  settings_.clock_output_division = 6; // /4
   settings_.clock_bar_duration = 4;
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
@@ -82,6 +79,7 @@ void Multi::Init(bool reset_calibration) {
   midi->min_velocity = 0;
   midi->max_velocity = 127;
   midi->out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
+  midi->sustain_mode = SUSTAIN_MODE_NORMAL;
   
   VoicingSettings* voicing = part_[0].mutable_voicing_settings();
   voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
@@ -90,6 +88,8 @@ void Multi::Init(bool reset_calibration) {
   voicing->portamento = 0;
   voicing->pitch_bend_range = 2;
   voicing->vibrato_range = 1;
+  voicing->vibrato_initial = 0;
+  voicing->vibrato_control_source = VIBRATO_CONTROL_SOURCE_MODWHEEL;
   voicing->modulation_rate = 50;
   voicing->trigger_duration = 2;
   voicing->aux_cv = 1;
@@ -102,17 +102,15 @@ void Multi::Init(bool reset_calibration) {
   voicing->audio_mode = 0;
 
   SequencerSettings* seq = part_[0].mutable_sequencer_settings();
-  seq->clock_division = 7;
+  seq->clock_division = 6; // /4
   seq->gate_length = 3;
   seq->arp_range = 0;
   seq->arp_direction = 0;
   seq->arp_pattern = 0;
+  seq->input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
+  seq->play_mode = PLAY_MODE_MANUAL;
   
-  fill(
-      &seq->step[0],
-      &seq->step[kNumSteps],
-      SequencerStep(SEQUENCER_STEP_REST, 0));
-  seq->num_steps = 0;
+  part_[0].DeleteSequence();
   // A test sequence...
   // seq->num_steps = 4;
   // seq->step[0].data[0] = 48;
@@ -137,7 +135,7 @@ void Multi::Clock() {
     return;
   }
   
-  uint16_t output_division = clock_divisions[settings_.clock_output_division];
+  uint16_t output_division = clock_division::num_ticks[settings_.clock_output_division];
   uint16_t input_division = settings_.clock_input_division;
   
   if (previous_output_division_ &&
@@ -249,7 +247,7 @@ void Multi::Start(bool started_by_keyboard) {
   fill(&swing_predelay_[0], &swing_predelay_[12], -1);
   
   for (uint8_t i = 0; i < num_active_parts_; ++i) {
-    part_[i].Start(started_by_keyboard);
+    part_[i].Start();
   }
   song_pointer_ = NULL;
   midi_clock_tick_duration_ = 0;
@@ -290,6 +288,10 @@ void Multi::Refresh() {
     if (swing_predelay_[i] >= 0) {
       --swing_predelay_[i];
     }
+  }
+
+  for (uint8_t j = 0; j < num_active_parts_; ++j) {
+    part_[j].Refresh();
   }
 
   for (uint8_t i = 0; i < kNumVoices; ++i) {
@@ -355,8 +357,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
     case LAYOUT_QUAD_MONO:
     case LAYOUT_QUAD_POLY:
     case LAYOUT_OCTAL_POLYCHAINED:
-    case LAYOUT_THREE_ONE:
-    case LAYOUT_TWO_TWO:
       cv[0] = voice_[0].note_dac_code();
       cv[1] = voice_[1].note_dac_code();
       cv[2] = voice_[2].note_dac_code();
@@ -368,6 +368,22 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
         gate[3] = reset_or_playing_flag();
       } else {
         gate[2] = voice_[2].gate();
+        gate[3] = voice_[3].gate();
+      }
+      break;
+
+    case LAYOUT_THREE_ONE:
+    case LAYOUT_TWO_TWO:
+      cv[0] = voice_[0].note_dac_code();
+      cv[1] = voice_[1].note_dac_code();
+      cv[2] = voice_[2].note_dac_code();
+      cv[3] = voice_[3].note_dac_code();
+      gate[0] = voice_[0].gate();
+      gate[1] = voice_[1].gate();
+      gate[2] = voice_[2].gate();
+      if (settings_.clock_override) {
+        gate[3] = clock();
+      } else {
         gate[3] = voice_[3].gate();
       }
       break;

@@ -35,12 +35,16 @@
 #include "stmlib/algorithms/voice_allocator.h"
 #include "stmlib/algorithms/note_stack.h"
 
+#include "yarns/looper.h"
+#include "yarns/synced_lfo.h"
+
 namespace yarns {
 
 class Voice;
 
-const uint8_t kNumSteps = 64;
+const uint8_t kNumSteps = 16;
 const uint8_t kMaxNumVoices = 4;
+const uint8_t kNoteStackSize = 12;
 
 const uint8_t whiteKeyValues[] = {
   0,    0x7f, 1,    0x7f,
@@ -54,7 +58,6 @@ const uint8_t blackKeyValues[] = {
 };
 const uint8_t kNumBlackKeys = 5;
 const uint8_t kNumWhiteKeys = 7;
-
 
 enum ArpeggiatorDirection {
   ARPEGGIATOR_DIRECTION_LINEAR,
@@ -106,7 +109,17 @@ enum TuningSystem {
 enum SequencerInputResponse {
   SEQUENCER_INPUT_RESPONSE_TRANSPOSE,
   SEQUENCER_INPUT_RESPONSE_OVERRIDE,
-  SEQUENCER_INPUT_RESPONSE_OFF
+  SEQUENCER_INPUT_RESPONSE_DIRECT,
+  SEQUENCER_INPUT_RESPONSE_OFF,
+  SEQUENCER_INPUT_RESPONSE_LAST,
+};
+
+enum PlayMode {
+  PLAY_MODE_MANUAL,
+  PLAY_MODE_ARPEGGIATOR,
+  PLAY_MODE_SEQUENCER,
+  PLAY_MODE_LOOPER,
+  PLAY_MODE_LAST
 };
 
 enum SustainMode {
@@ -114,6 +127,7 @@ enum SustainMode {
   // SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
   SUSTAIN_MODE_OFF,
+  SUSTAIN_MODE_LAST,
 };
 
 struct MidiSettings {
@@ -190,7 +204,9 @@ enum PartSetting {
   PART_SEQUENCER_EUCLIDEAN_LENGTH,
   PART_SEQUENCER_EUCLIDEAN_FILL,
   PART_SEQUENCER_EUCLIDEAN_ROTATE,
-  PART_SEQUENCER_INPUT_RESPONSE
+  PART_SEQUENCER_PLAY_MODE,
+  PART_SEQUENCER_INPUT_RESPONSE,
+  // PART_SEQUENCER_LOOPER_CLOCK_DIVISION,
 };
 
 enum SequencerStepFlags {
@@ -211,14 +227,14 @@ struct SequencerStep {
     data[0] = data_0;
     data[1] = data_1;
   }
-  
+
   uint8_t data[2];
-  
+
   inline bool has_note() const { return !(data[0] & 0x80); }
   inline bool is_rest() const { return data[0] == SEQUENCER_STEP_REST; }
   inline bool is_tie() const { return data[0] == SEQUENCER_STEP_TIE; }
   inline uint8_t note() const { return data[0] & 0x7f; }
-  
+
   inline bool is_slid() const { return data[1] & 0x80; }
   inline uint8_t velocity() const { return data[1] & 0x7f; }
 
@@ -244,10 +260,12 @@ struct SequencerSettings {
   uint8_t euclidean_length;
   uint8_t euclidean_fill;
   uint8_t euclidean_rotate;
+  uint8_t play_mode;
   uint8_t input_response;
   uint8_t num_steps;
   SequencerStep step[kNumSteps];
-  uint8_t padding[6];
+  looper::Tape looper_tape;
+  // no padding needed
   
   int16_t first_note() {
     for (uint8_t i = 0; i < num_steps; ++i) {
@@ -277,6 +295,8 @@ class Part {
   // whether the message should be sent to the part.
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
   bool NoteOff(uint8_t channel, uint8_t note);
+  void InternalNoteOn(uint8_t note, uint8_t velocity);
+  void InternalNoteOff(uint8_t note);
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
   bool PitchBend(uint8_t channel, uint16_t pitch_bend);
   bool Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity);
@@ -284,13 +304,47 @@ class Part {
   void AllNotesOff();
   void Reset();
   void Clock();
-  void Start(bool started_by_keyboard);
+  void Start();
   void Stop();
   void StopRecording() {
     seq_recording_ = false;
   }
   void StartRecording();
   void DeleteSequence();
+
+  inline void Refresh() {
+    uint16_t new_pos = looper_synced_lfo_.Refresh() >> 16;
+    if (
+      // phase has definitely changed, or
+      looper_pos_ != new_pos ||
+      // phase has wrapped exactly around
+      looper_synced_lfo_.GetPhaseIncrement() > UINT16_MAX
+    ) {
+      looper_needs_advance_ = true;
+    }
+  }
+  void LooperRewind();
+  void LooperAdvance();
+  inline void LooperRemoveOldestNote() {
+    seq_.looper_tape.RemoveOldestNote(this, looper_pos_);
+  }
+  inline void LooperRemoveNewestNote() {
+    seq_.looper_tape.RemoveNewestNote(this, looper_pos_);
+  }
+  inline uint32_t LooperPhase() const {
+    return looper_synced_lfo_.GetPhase();
+  }
+  inline uint8_t LooperCurrentNoteIndex() const {
+    return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
+  }
+  inline void LooperNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
+    looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
+    InternalNoteOn(pitch, velocity);
+  }
+  inline void LooperNoteOff(uint8_t looper_note_index, uint8_t pitch) {
+    looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
+    InternalNoteOff(pitch);
+  }
   
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
@@ -319,6 +373,16 @@ class Part {
     RecordStep(SequencerStep(flag, 0));
   }
   
+  inline bool SequencerDirectResponse() {
+    return (
+      !seq_recording_ &&
+      seq_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT && (
+        seq_.play_mode == PLAY_MODE_SEQUENCER ||
+        seq_.play_mode == PLAY_MODE_LOOPER
+      )
+    );
+  }
+
   inline bool accepts(uint8_t channel) const {
     if (!(transposable_ || seq_recording_)) {
       return false;
@@ -355,6 +419,10 @@ class Part {
     return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
   }
   
+  inline bool has_velocity_filtering() {
+    return midi_.min_velocity != 0 || midi_.max_velocity != 127;
+  }
+
   inline uint8_t FindVoiceForNote(uint8_t note) const {
     for (uint8_t i = 0; i < num_voices_; ++i) {
       if (active_note_[i] == note) {
@@ -385,14 +453,13 @@ class Part {
   inline uint8_t recording_step() const { return seq_rec_step_; }
   inline uint8_t playing_step() const {
     // correct for preemptive increment
-    return modulo(seq_step_ - 1, seq_.num_steps);
+    return stmlib::modulo(seq_step_ - 1, seq_.num_steps);
   }
   inline uint8_t num_steps() const { return seq_.num_steps; }
   inline void increment_recording_step_index(uint8_t n) {
     seq_rec_step_ += n;
-    seq_rec_step_ = modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
+    seq_rec_step_ = stmlib::modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
   }
-  inline uint8_t modulo(int8_t a, int8_t b) const { return (b + (a % b)) % b; }
   
   void Touch() {
     TouchVoices();
@@ -426,8 +493,6 @@ class Part {
   void ResetAllControllers();
   void TouchVoiceAllocation();
   void TouchVoices();
-  void InternalNoteOn(uint8_t note, uint8_t velocity);
-  void InternalNoteOff(uint8_t note);
   
   void ReleaseLatchedNotes();
   void DispatchSortedNotes(bool unison);
@@ -450,26 +515,31 @@ class Part {
   bool ignore_note_off_messages_;
   bool release_latched_keys_on_next_note_on_;
   
-  stmlib::NoteStack<12> pressed_keys_;
-  stmlib::NoteStack<12> generated_notes_;  // by sequencer or arpeggiator.
-  stmlib::NoteStack<12> mono_allocator_;
+  stmlib::NoteStack<kNoteStackSize> pressed_keys_;
+  stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
+  stmlib::NoteStack<kNoteStackSize> mono_allocator_;
   stmlib::VoiceAllocator<kMaxNumVoices * 2> poly_allocator_;
   uint8_t active_note_[kMaxNumVoices];
   uint8_t cyclic_allocation_note_counter_;
   
-  uint8_t arp_seq_prescaler_;
+  uint16_t arp_seq_prescaler_;
   
   uint8_t arp_step_;
   int8_t arp_note_;
   int8_t arp_octave_;
   int8_t arp_direction_;
   
-  bool seq_running_;
   bool seq_recording_;
   bool seq_overdubbing_;
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
   
+  SyncedLFO looper_synced_lfo_;
+  uint16_t looper_pos_;
+  bool looper_needs_advance_;
+  uint8_t looper_note_index_for_pressed_key_index_[kNoteStackSize];
+  uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
+
   uint16_t gate_length_counter_;
   uint16_t lfo_counter_;
   

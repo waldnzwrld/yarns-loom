@@ -27,9 +27,18 @@
 # -----------------------------------------------------------------------------
 #
 # Characters definitions.
+#
+#  --a----
+# |\  |  /|
+# f g h j b
+# |  \|/  |
+#  -p- -k-
+# |  /|\  |
+# e n m l c
+# |/  |  \|
+#  ----d--
 
 characters = []
-
 
 MASKS = {
   'a': 0x8000,
@@ -87,14 +96,14 @@ characters = {
   'i': 'mpkd',
   'j': 'kcd',
   'k': 'hmjl',
-  'l': 'hm',
+  'l': 'jm',
   'm': 'epkmc',
   'n': 'mkc',
   'o': 'pkecd',
   'p': 'afpje',
   'q': 'afpkbl',
   'r': 'mk',
-  's': 'agkcd',
+  's': 'kld',
   't': 'fedp',
   'u': 'edc',
   'v': 'en',
@@ -103,14 +112,14 @@ characters = {
   'y': 'gkbcd',
   'z': 'pnd',
   
-  '0': 'abcdef',
-  '1': 'bc',
-  '2': 'abpked',
-  '3': 'abcdkp',
-  '4': 'fpkbc',
-  '5': 'afpkcd',
+  '0': 'abcdefjn',
+  '1': 'bcj',
+  '2': 'abknd',
+  '3': 'abcdk',
+  '4': 'fpkhm',
+  '5': 'afpld',
   '6': 'afpkcde',
-  '7': 'abc',
+  '7': 'ajm',
   '8': 'abcdefpk',
   '9': 'abcpkfd',
 

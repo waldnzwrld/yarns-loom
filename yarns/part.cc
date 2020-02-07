@@ -39,12 +39,10 @@
 #include "yarns/midi_handler.h"
 #include "yarns/resources.h"
 #include "yarns/voice.h"
+#include "yarns/clock_division.h"
+#include "yarns/multi.h"
 
 namespace yarns {
-
-const uint8_t clock_divisions[] = {
-  96, 48, 32, 24, 16, 12, 8, 6, 4, 3, 2, 1
-};
   
 using namespace stmlib;
 using namespace stmlib_midi;
@@ -63,9 +61,10 @@ void Part::Init() {
   polychained_ = false;
   ignore_note_off_messages_ = false;
   seq_recording_ = false;
-  seq_running_ = false;
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
+  seq_.looper_tape.RemoveAll();
+  LooperRewind();
 }
   
 void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
@@ -88,7 +87,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   // velocity filtering can still have a full velocity range
   velocity = (128 * (velocity - midi_.min_velocity)) / (midi_.max_velocity - midi_.min_velocity + 1);
 
-  if (seq_recording_ && !sent_from_step_editor) {
+  if (seq_recording_ && !sent_from_step_editor && seq_.play_mode != PLAY_MODE_LOOPER) {
     RecordStep(SequencerStep(note, velocity));
   } else {
     if (release_latched_keys_on_next_note_on_) {
@@ -102,11 +101,20 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
       release_latched_keys_on_next_note_on_ = still_latched;
       ignore_note_off_messages_ = still_latched;
     }
-    pressed_keys_.NoteOn(note, velocity);
+    uint8_t pressed_key_index = pressed_keys_.NoteOn(note, velocity);
   
-    if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range)
-        || sent_from_step_editor) {
+    if (
+      seq_.play_mode == PLAY_MODE_MANUAL ||
+      sent_from_step_editor ||
+      SequencerDirectResponse()
+    ) {
       InternalNoteOn(note, velocity);
+    } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+      uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
+        this, looper_pos_, note, velocity
+      );
+      looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
+      LooperNoteOn(looper_note_index, note, velocity);
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -137,11 +145,23 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     }
     */
     if (off) {
-      pressed_keys_.NoteOff(note);
+      uint8_t pressed_key_index = pressed_keys_.NoteOff(note);
     
-      if ((!(seq_.num_steps && seq_running_) && !seq_.arp_range) ||
-          sent_from_step_editor) {
+      if (
+        seq_.play_mode == PLAY_MODE_MANUAL ||
+        sent_from_step_editor ||
+        SequencerDirectResponse()
+      ) {
         InternalNoteOff(note);
+      } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+        uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
+        looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
+        if (
+          looper_note_index != looper::kNullIndex &&
+          seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
+        ) {
+          LooperNoteOff(looper_note_index, note);
+        }
       }
     }
   }
@@ -294,9 +314,9 @@ void Part::Reset() {
 
 void Part::Clock() {
   if (!arp_seq_prescaler_) {
-    if (seq_.arp_range) {
+    if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       ClockArpeggiator();
-    } else if (seq_.num_steps && seq_running_) {
+    } else if (seq_.play_mode == PLAY_MODE_SEQUENCER) {
       ClockSequencer();
     }
   }
@@ -308,26 +328,36 @@ void Part::Clock() {
   }
   
   ++arp_seq_prescaler_;
-  if (arp_seq_prescaler_ >= clock_divisions[seq_.clock_division]) {
+  if (arp_seq_prescaler_ >= clock_division::num_ticks[seq_.clock_division]) {
     arp_seq_prescaler_ = 0;
   }
   
+  uint32_t num_ticks;
+  uint32_t expected_phase;
+
   if (voicing_.modulation_rate >= 100) {
-    uint32_t num_ticks = clock_divisions[voicing_.modulation_rate - 100];
+    num_ticks = clock_division::num_ticks[voicing_.modulation_rate - 100];
     // TODO decipher this math -- how much to add so that the voices are in quadrature?
-    uint32_t expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
+    expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
     for (uint8_t i = 0; i < num_voices_; ++i) {
       voice_[i]->TapLfo(expected_phase << 16);
     }
   }
+
+  // looper
+  num_ticks = clock_division::num_ticks[seq_.clock_division];
+  uint8_t bar_duration = multi.settings().clock_bar_duration;
+  num_ticks = num_ticks * (bar_duration ? bar_duration : 1);
+  expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
+  looper_synced_lfo_.Tap(expected_phase << 16);
+
   ++lfo_counter_;
 }
 
-void Part::Start(bool started_by_keyboard) {
+void Part::Start() {
   arp_seq_prescaler_ = 0;
 
   seq_step_ = 0;
-  seq_running_ = !started_by_keyboard;
   
   release_latched_keys_on_next_note_on_ = false;
   ignore_note_off_messages_ = false;
@@ -339,11 +369,36 @@ void Part::Start(bool started_by_keyboard) {
   
   lfo_counter_ = 0;
   
+  LooperRewind();
+
   generated_notes_.Clear();
 }
 
+void Part::LooperRewind() {
+  looper_synced_lfo_.Init();
+  looper_pos_ = 0;
+  looper_needs_advance_ = false;
+  seq_.looper_tape.ResetHead();
+  std::fill(
+    &looper_note_index_for_pressed_key_index_[0],
+    &looper_note_index_for_pressed_key_index_[kNoteStackSize],
+    looper::kNullIndex
+  );
+}
+
+void Part::LooperAdvance() {
+  if (!looper_needs_advance_) {
+    return;
+  }
+  uint16_t new_pos = looper_synced_lfo_.GetPhase() >> 16;
+  seq_.looper_tape.Advance(
+    this, seq_.play_mode == PLAY_MODE_LOOPER, looper_pos_, new_pos
+  );
+  looper_pos_ = new_pos;
+  looper_needs_advance_ = false;
+}
+
 void Part::Stop() {
-  seq_running_ = false;
   StopSequencerArpeggiatorNotes();
   AllNotesOff();
 }
@@ -353,16 +408,20 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  seq_rec_step_ = 0;
-  seq_overdubbing_ = seq_.num_steps && seq_running_;
+  if (seq_.play_mode != PLAY_MODE_LOOPER) {
+    seq_rec_step_ = 0;
+    seq_overdubbing_ = seq_.num_steps > 0;
+  }
 }
 
 void Part::DeleteSequence() {
+  StopRecording();
   std::fill(
     &seq_.step[0],
     &seq_.step[kNumSteps],
     SequencerStep(SEQUENCER_STEP_REST, 0)
   );
+  seq_rec_step_ = 0;
   seq_.num_steps = 0;
 }
 
@@ -402,6 +461,7 @@ void Part::ClockSequencer() {
           note = pressed_keys_.most_recent_note().note;
           break;
 
+        case SEQUENCER_INPUT_RESPONSE_DIRECT:
         case SEQUENCER_INPUT_RESPONSE_OFF:
           break;
       }
@@ -423,7 +483,7 @@ void Part::ClockSequencer() {
   if (seq_.step[seq_step_].is_tie() || seq_.step[seq_step_].is_slid()) {
     // The next step contains a "sustain" message; or a slid note. Extends
     // the duration of the current note.
-    gate_length_counter_ += clock_divisions[seq_.clock_division];
+    gate_length_counter_ += clock_division::num_ticks[seq_.clock_division];
   }
 }
 
@@ -513,7 +573,7 @@ void Part::ArpeggiatorNoteOn() {
           } else {
             new_arp_note = step.black_key_distance_from_middle_c();
           }
-          arp_note_ = modulo(new_arp_note, num_notes);
+          arp_note_ = stmlib::modulo(new_arp_note, num_notes);
           if (arp_note_ != new_arp_note && seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST) {
             // if we moved out of bounds, rest this step
             return;
@@ -597,6 +657,8 @@ void Part::AllNotesOff() {
   poly_allocator_.ClearNotes();
   mono_allocator_.Clear();
   pressed_keys_.Clear();
+  generated_notes_.Clear();
+  looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()] = looper::kNullIndex;
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->NoteOff();
   }
@@ -825,6 +887,8 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MIN_VELOCITY:
       case PART_MIDI_MAX_VELOCITY:
       case PART_MIDI_SUSTAIN_MODE:
+      case PART_SEQUENCER_INPUT_RESPONSE:
+      case PART_SEQUENCER_PLAY_MODE:
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();
@@ -853,9 +917,6 @@ void Part::Set(uint8_t address, uint8_t value) {
         
       case PART_SEQUENCER_ARP_DIRECTION:
         arp_direction_ = 1;
-        break;
-
-      case PART_SEQUENCER_INPUT_RESPONSE:
         break;
     }
   }
