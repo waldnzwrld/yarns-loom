@@ -376,11 +376,9 @@ class Part {
   }
 
   inline bool accepts(uint8_t channel) const {
-    /*
     if (!(transposable_ || seq_recording_)) {
       return false;
     }
-    */
     return midi_.channel == 0x10 || midi_.channel == channel;
   }
   
@@ -413,6 +411,10 @@ class Part {
     return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
   }
   
+  inline bool has_velocity_filtering() {
+    return midi_.min_velocity != 0 || midi_.max_velocity != 127;
+  }
+
   inline uint8_t FindVoiceForNote(uint8_t note) const {
     for (uint8_t i = 0; i < num_voices_; ++i) {
       if (active_note_[i] == note) {
@@ -474,11 +476,9 @@ class Part {
     has_siblings_ = has_siblings;
   }
   
-  /*
   void set_transposable(bool transposable) {
     transposable_ = transposable;
   }
-  */
   
  private:
   int16_t Tune(int16_t note);
@@ -536,7 +536,7 @@ class Part {
   uint16_t lfo_counter_;
   
   bool has_siblings_;
-  // bool transposable_;
+  bool transposable_;
   
   bool multi_is_recording_;
 

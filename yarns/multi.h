@@ -210,16 +210,22 @@ class Multi {
   void StartRecording(uint8_t part) {
     if (!recording_) {
       part_[part].StartRecording();
-      /*
       uint8_t channel = part_[part].midi_settings().channel;
+      bool has_velocity_filtering = part_[part].has_velocity_filtering();
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        if (part_[i].midi_settings().channel == channel || \
-            channel == 0x10 || \
-            part_[i].midi_settings().channel == 0x10) {
+        bool same_channel = (
+          part_[i].midi_settings().channel == channel ||
+          channel == 0x10 ||
+          part_[i].midi_settings().channel == 0x10
+        );
+        bool both_velocity_filtering = (
+          has_velocity_filtering &&
+          part_[i].has_velocity_filtering()
+        );
+        if (same_channel && !both_velocity_filtering) {
           part_[i].set_transposable(false);
         }
       }
-      */
       recording_ = true;
     }
   }
@@ -227,11 +233,9 @@ class Multi {
   void StopRecording(uint8_t part) {
     if (recording_) {
       part_[part].StopRecording();
-      /*
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
         part_[i].set_transposable(true);
       }
-      */
       recording_ = false;
     }
   }
