@@ -669,6 +669,11 @@ void Ui::OnSwitchPress(const Event& e) {
 }
 
 void Ui::OnSwitchHeld(const Event& e) {
+  bool recording_any = (
+    mode_ == UI_MODE_RECORDING ||
+    mode_ == UI_MODE_OVERDUBBING ||
+    mode_ == UI_MODE_LOOPER_RECORDING
+  );
   switch (e.control_id) {
 
     case UI_SWITCH_REC:
@@ -679,29 +684,27 @@ void Ui::OnSwitchHeld(const Event& e) {
         mutable_active_part()->mutable_sequencer_settings()->looper_tape.RemoveAll();
         mutable_active_part()->AllNotesOff();
       } else {
+        if (!push_it_ && !multi.latched()) {
+          if (multi.running()) {
+            multi.Latch();
+          } else {
+            mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
+            push_it_ = true;
+            multi.PushItNoteOn(push_it_note_);
+          }
+        }
+      }
+      break;
+
+    case UI_SWITCH_START_STOP:
+      if (!recording_any) {
         settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
         ChangedActivePartOrPlayMode();
       }
       break;
 
-    case UI_SWITCH_START_STOP:
-      if (!push_it_ && !multi.latched()) {
-        if (multi.running()) {
-          multi.Latch();
-        } else {
-          mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
-          push_it_ = true;
-          multi.PushItNoteOn(push_it_note_);
-        }
-      }
-      break;
-
     case UI_SWITCH_TAP_TEMPO:
-      if (!(
-        mode_ == UI_MODE_RECORDING ||
-        mode_ == UI_MODE_OVERDUBBING ||
-        mode_ == UI_MODE_LOOPER_RECORDING
-      )) {
+      if (!recording_any) {
         mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
         ChangedActivePartOrPlayMode();
       }
