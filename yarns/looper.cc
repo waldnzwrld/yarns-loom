@@ -197,9 +197,7 @@ uint16_t Tape::NoteFractionCompleted(uint8_t index, uint16_t pos) const {
 }
 
 uint8_t Tape::NotePitch(uint8_t index) const {
-  const Note& note = notes_[index];
-  if (note.next_link.off_index == kNullIndex) { return kNullIndex; }
-  return note.pitch;
+  return notes_[index].pitch;
 }
 
 uint8_t Tape::NoteAgeOrdinal(uint8_t index) const {

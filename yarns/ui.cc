@@ -314,7 +314,8 @@ void Ui::PrintActivePartAndPlayMode() {
   display_.Print(buffer_);
 }
 
-void Ui::PrintRecordingStep(SequencerStep step) {
+void Ui::PrintRecordingStep() {
+  SequencerStep step = recording_part().sequencer_settings().step[recording_part().recording_step()];
   if (step.is_rest()) {
     display_.Print("RS");
     return;
@@ -361,16 +362,24 @@ void Ui::PrintLooperRecordingStatus() {
   display_.set_brightness(
     kDisplayBrightnessLevels - 1 - (note_fraction_completed >> (16 - kDisplayBrightnessBits))
   );
-  Settings::PrintInteger(buffer_, looper_tape.NoteAgeOrdinal(note_index) + 1);
-  display_.Print(buffer_);
+  if (recording_mode_is_displaying_pitch_) {
+    PrintNote(looper_tape.NotePitch(note_index));
+  } else {
+    Settings::PrintInteger(buffer_, looper_tape.NoteAgeOrdinal(note_index) + 1);
+    display_.Print(buffer_);
+  }
 }
 
 void Ui::PrintRecordingStatus() {
   if (push_it_) {
     PrintPushItNote();
   } else {
-    Settings::PrintInteger(buffer_, recording_part().recording_step() + 1);
-    display_.Print(buffer_);
+    if (recording_mode_is_displaying_pitch_) {
+      PrintRecordingStep();
+    } else {
+      Settings::PrintInteger(buffer_, recording_part().recording_step() + 1);
+      display_.Print(buffer_);
+    }
   }
 }
 
@@ -600,13 +609,19 @@ void Ui::OnSwitchPress(const Event& e) {
           mode_ == UI_MODE_OVERDUBBING ||
           mode_ == UI_MODE_LOOPER_RECORDING
         ) {
-          // Finish recording.
-          push_it_ = false;
-          multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
-          mode_ = previous_mode_;
-          ChangedActivePartOrPlayMode();
+          if (recording_mode_is_displaying_pitch_) {
+            // Finish recording.
+            push_it_ = false;
+            multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
+            mode_ = previous_mode_;
+            ChangedActivePartOrPlayMode();
+          } else {
+            // Toggle pitch display on
+            recording_mode_is_displaying_pitch_ = true;
+          }
         } else {
           previous_mode_ = mode_;
+          recording_mode_is_displaying_pitch_ = false;
           multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
           if (active_part().sequencer_settings().play_mode == PLAY_MODE_LOOPER) {
             mode_ = UI_MODE_LOOPER_RECORDING;
@@ -777,12 +792,8 @@ void Ui::DoEvents() {
 
   uint8_t recording_step_index = recording_part().recording_step();
   bool seq_recording = (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING);
-  if (queue_.idle_time() > 600) {
-    if (!push_it_ && seq_recording) {
-      PrintRecordingStep(recording_part().sequencer_settings().step[recording_step_index]);
-    } else if (!display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT) {
-      PrintActivePartAndPlayMode();
-    }
+  if (queue_.idle_time() > 600 && !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT) {
+    PrintActivePartAndPlayMode();
   }
   if (displayed_recording_step_index_ != recording_step_index && seq_recording) {
     refresh_display = true;
