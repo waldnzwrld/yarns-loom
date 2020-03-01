@@ -166,7 +166,7 @@ uint8_t Tape::RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velo
   Note& note = notes_[newest_index_];
   note.pitch = pitch;
   note.velocity = velocity;
-  note.off_pos = pos - 1;
+  note.off_pos = pos;
   note.next_link.off_index = kNullIndex;
 
   return newest_index_;
@@ -192,7 +192,7 @@ bool Tape::NoteIsPlaying(uint8_t index, uint16_t pos) const {
 uint16_t Tape::NoteFractionCompleted(uint8_t index, uint16_t pos) const {
   const Note& note = notes_[index];
   uint16_t completed = pos - note.on_pos;
-  uint16_t length = note.off_pos - note.on_pos;
+  uint16_t length = note.off_pos - 1 - note.on_pos;
   return (static_cast<uint32_t>(completed) << 16) / length;
 }
 
