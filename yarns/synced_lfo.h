@@ -39,6 +39,7 @@ class SyncedLFO {
   SyncedLFO() { }
   ~SyncedLFO() { }
   void Init() {
+    counter_ = 0;
     phase_ = 0;
   }
 
@@ -59,7 +60,8 @@ class SyncedLFO {
     return Increment(phase_increment_);
   }
 
-  void Tap(uint32_t target_phase) {
+  void Tap(uint16_t num_ticks) {
+    uint32_t target_phase = ((counter_ % num_ticks) * 65536 / num_ticks) << 16;
     uint32_t target_increment = target_phase - previous_target_phase_;
 
     int32_t d_error = target_increment - (phase_ - previous_phase_);
@@ -78,10 +80,12 @@ class SyncedLFO {
 
     previous_phase_ = phase_;
     previous_target_phase_ = target_phase;
+    counter_ = (counter_ + 1) % num_ticks;
   }
 
  private:
 
+  uint16_t counter_;
   uint32_t phase_;
   uint32_t phase_increment_;
   uint32_t previous_target_phase_;

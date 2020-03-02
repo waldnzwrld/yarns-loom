@@ -111,6 +111,9 @@ class Voice {
   Voice() { }
   ~Voice() { }
   
+  // Clock-synced LFO.
+  SyncedLFO synced_lfo_;
+
   void Init(bool reset_calibration);
   void ResetAllControllers();
 
@@ -222,10 +225,6 @@ class Voice {
     return oscillator_.ReadSample();
   }
   
-  void TapLfo(uint32_t target_phase) {
-    synced_lfo_.Tap(target_phase);
-  }
-  
  private:
   uint16_t NoteToDacCode(int32_t note) const;
   void FillAudioBuffer();
@@ -271,9 +270,6 @@ class Voice {
   uint16_t trigger_pulse_;
   uint32_t trigger_phase_increment_;
   uint32_t trigger_phase_;
-  
-  // Clock-synced LFO.
-  SyncedLFO synced_lfo_;
   
   uint8_t audio_mode_;
   Oscillator oscillator_;

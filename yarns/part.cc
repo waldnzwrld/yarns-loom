@@ -332,26 +332,20 @@ void Part::Clock() {
     arp_seq_prescaler_ = 0;
   }
   
-  uint32_t num_ticks;
-  uint32_t expected_phase;
+  uint16_t num_ticks;
 
   if (voicing_.modulation_rate >= 100) {
     num_ticks = clock_division::num_ticks[voicing_.modulation_rate - 100];
     // TODO decipher this math -- how much to add so that the voices are in quadrature?
-    expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
     for (uint8_t i = 0; i < num_voices_; ++i) {
-      voice_[i]->TapLfo(expected_phase << 16);
+      voice_[i]->synced_lfo_.Tap(num_ticks);
     }
   }
 
   // looper
   num_ticks = clock_division::num_ticks[seq_.clock_division];
   uint8_t bar_duration = multi.settings().clock_bar_duration;
-  num_ticks = num_ticks * (bar_duration ? bar_duration : 1);
-  expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
-  looper_synced_lfo_.Tap(expected_phase << 16);
-
-  ++lfo_counter_;
+  looper_synced_lfo_.Tap(num_ticks * (bar_duration ? bar_duration : 1));
 }
 
 void Part::Start() {
@@ -366,8 +360,6 @@ void Part::Start() {
   arp_octave_ = 0;
   arp_direction_ = 1;
   arp_step_ = 0;
-  
-  lfo_counter_ = 0;
   
   LooperRewind();
 

@@ -533,7 +533,6 @@ class Part {
   uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
 
   uint16_t gate_length_counter_;
-  uint16_t lfo_counter_;
   
   bool has_siblings_;
   bool transposable_;
