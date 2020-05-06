@@ -125,7 +125,7 @@ class Ui {
   }
   
   inline const Setting& setting() {
-    return settings.setting(settings.menu()[setting_index_]);
+    return settings.setting(settings.menu()[multi.settings().ui_setting_index]);
   }
   inline bool calibrating() const {
     return mode_ == UI_MODE_CALIBRATION_SELECT_NOTE ||
@@ -247,7 +247,6 @@ class Ui {
   UiMode mode_;
   UiMode previous_mode_;
   
-  int8_t setting_index_;
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;

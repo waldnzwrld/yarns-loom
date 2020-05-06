@@ -162,7 +162,6 @@ void Ui::Init() {
   
   previous_mode_ = UI_MODE_PARAMETER_SELECT;
   mode_ = UI_MODE_SPLASH;
-  setting_index_ = 0;
   previous_tap_time_ = 0;
   tap_tempo_count_ = 0;
   
@@ -541,12 +540,10 @@ void Ui::OnClickFactoryTesting(const Event& e) {
 }
 
 void Ui::OnIncrementParameterSelect(const Event& e) {
-  setting_index_ += e.data;
-  if (setting_index_ < 0) {
-    setting_index_ = 0;
-  } else if (settings.menu()[setting_index_] == SETTING_LAST) {
-    --setting_index_;
-  }
+  multi.mutable_settings()->ui_setting_index = stmlib::modulo(
+    multi.settings().ui_setting_index + e.data,
+    SETTING_LAST
+  );
 }
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
