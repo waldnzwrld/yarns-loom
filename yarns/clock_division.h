@@ -1,4 +1,4 @@
-// Copyright 2017 Emilie Gillet.
+// Copyright 2013 Emilie Gillet.
 //
 // Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
@@ -24,60 +24,53 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Driver for the 3 front panel switches.
+// Clock division definitions.
 
-#ifndef TIDES_DRIVERS_SWITCHES_H_
-#define TIDES_DRIVERS_SWITCHES_H_
+#ifndef YARNS_CLOCK_DIVISION_H_
+#define YARNS_CLOCK_DIVISION_H_
 
-#include "stmlib/stmlib.h"
+namespace yarns {
+namespace clock_division {
 
-#include <stm32f37x_conf.h>
+const uint8_t count = 15;
 
-namespace tides {
-
-enum Switch {
-  SWITCH_RANGE,
-  SWITCH_MODE,
-  SWITCH_SHIFT,
-  SWITCH_LAST
-};
-  
-class Switches {
- public:
-  Switches() { }
-  ~Switches() { }
-  
-  void Init();
-  void Debounce();
-  
-  inline bool released(Switch s) const {
-    return switch_state_[s] == 0x7f;
-  }
-  
-  inline bool just_pressed(Switch s) const {
-    return switch_state_[s] == 0x80;
-  }
-
-  inline bool pressed(Switch s) const {
-    return switch_state_[s] == 0x00;
-  }
-  
-  inline bool pressed_immediate(Switch s) const {
-    if (s == SWITCH_RANGE) {
-      return !GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_2);
-    } else if (s == SWITCH_SHIFT) {
-      return !GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13);
-    } else {
-      return false;
-    }
-  }
-  
- private:
-  uint8_t switch_state_[SWITCH_LAST];
-  
-  DISALLOW_COPY_AND_ASSIGN(Switches);
+const char* const display[] = {
+  "x4",
+  "x3",
+  "x2",
+  "/1",
+  "/2",
+  "/3",
+  "/4",
+  "/6",
+  "/8",
+  "12",
+  "16",
+  "24",
+  "32",
+  "48",
+  "96",
 };
 
-}  // namespace tides
+const uint16_t num_ticks[] = {
+  96 * 4,
+  96 * 3,
+  96 * 2, 
+  96,
+  48,
+  32,
+  24,
+  16,
+  12,
+  8,
+  6,
+  4,
+  3,
+  2,
+  1,
+};
 
-#endif  // TIDES_DRIVERS_SWITCHES_H_
+}  // namespace clock_division
+}  // namespace yarns
+
+#endif // YARNS_CLOCK_DIVISIONS_H_

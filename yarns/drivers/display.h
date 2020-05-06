@@ -34,7 +34,8 @@
 namespace yarns {
 
 const uint8_t kDisplayWidth = 2;
-const uint8_t kBrightnessLevels = 4;
+const uint8_t kDisplayBrightnessBits = 7;
+const uint8_t kDisplayBrightnessLevels = 1 << kDisplayBrightnessBits;
 const uint8_t kScrollBufferSize = 32;
 
 class Display {
@@ -57,7 +58,10 @@ class Display {
   
   inline bool scrolling() const { return scrolling_; }
   inline void set_blink(bool blinking) { blinking_ = blinking; }
-  inline void set_fade(uint16_t increment) { fading_increment_ = increment; }
+  inline void set_fade(uint16_t increment) {
+    fading_increment_ = increment;
+    fading_counter_ = 0;
+  }
  
  private:
   void Shift14SegmentsWord(uint16_t data);
