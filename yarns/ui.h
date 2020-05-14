@@ -204,6 +204,8 @@ class Ui {
   void PrintActivePartAndPlayMode();
   
   void ChangedActivePartOrPlayMode();
+  void StartRecording();
+  void StopRecording();
 
   void DoInitCommand();
   void DoDumpCommand();
