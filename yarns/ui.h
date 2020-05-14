@@ -248,7 +248,9 @@ class Ui {
   uint32_t encoder_press_time_;
   
   UiMode mode_;
-  UiMode previous_mode_;
+  UiMode mode_before_main_menu_;
+  UiMode mode_before_splash_;
+  UiMode mode_before_record_;
   
   int8_t command_index_;
   int8_t calibration_voice_;
