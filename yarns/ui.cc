@@ -594,6 +594,26 @@ void Ui::OnIncrementFactoryTesting(const Event& e) {
   OnIncrement(e);
 }
 
+void Ui::StartRecording() {
+  previous_mode_ = mode_;
+  recording_mode_is_displaying_pitch_ = false;
+  multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
+  if (active_part().sequencer_settings().play_mode == PLAY_MODE_LOOPER) {
+    mode_ = UI_MODE_LOOPER_RECORDING;
+    multi.Start(false);
+  } else {
+    mode_ = active_part().overdubbing() ?
+          UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
+  }
+}
+
+void Ui::StopRecording() {
+  push_it_ = false;
+  multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
+  mode_ = previous_mode_;
+  ChangedActivePartOrPlayMode();
+}
+
 void Ui::OnSwitchPress(const Event& e) {
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     factory_testing_display_ = static_cast<UiFactoryTestingDisplay>(
@@ -610,26 +630,13 @@ void Ui::OnSwitchPress(const Event& e) {
           mode_ == UI_MODE_LOOPER_RECORDING
         ) {
           if (recording_mode_is_displaying_pitch_) {
-            // Finish recording.
-            push_it_ = false;
-            multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
-            mode_ = previous_mode_;
-            ChangedActivePartOrPlayMode();
+            StopRecording();
           } else {
             // Toggle pitch display on
             recording_mode_is_displaying_pitch_ = true;
           }
         } else {
-          previous_mode_ = mode_;
-          recording_mode_is_displaying_pitch_ = false;
-          multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
-          if (active_part().sequencer_settings().play_mode == PLAY_MODE_LOOPER) {
-            mode_ = UI_MODE_LOOPER_RECORDING;
-            multi.Start(false);
-          } else {
-            mode_ = active_part().overdubbing() ?
-                  UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
-          }
+          StartRecording();
         }
       }
       break;
@@ -712,9 +719,13 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_START_STOP:
-      if (!recording_any) {
-        settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
-        ChangedActivePartOrPlayMode();
+      if (recording_any) {
+        StopRecording();
+      }
+      settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
+      ChangedActivePartOrPlayMode();
+      if (recording_any) {
+        StartRecording();
       }
       break;
 
