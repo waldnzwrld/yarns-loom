@@ -29,6 +29,7 @@
 #ifndef YARNS_DRIVERS_DISPLAY_H_
 #define YARNS_DRIVERS_DISPLAY_H_
 
+#include <cmath>
 #include "stmlib/stmlib.h"
 
 namespace yarns {
@@ -36,6 +37,7 @@ namespace yarns {
 const uint8_t kDisplayWidth = 2;
 const uint8_t kDisplayBrightnessBits = 7;
 const uint8_t kDisplayBrightnessLevels = 1 << kDisplayBrightnessBits;
+const uint8_t kDisplayBrightnessMax = kDisplayBrightnessLevels - 1;
 const uint8_t kScrollBufferSize = 32;
 
 class Display {
@@ -54,6 +56,11 @@ class Display {
   
   char* mutable_buffer() { return short_buffer_; }
   void set_brightness(uint16_t brightness) { brightness_ = brightness; }
+  void set_linear_brightness(uint16_t fraction) {
+    uint16_t linear = pow(fraction >> 8, 2);
+    uint8_t min_brightness_bits = 1;
+    set_brightness((linear >> (16 - (kDisplayBrightnessBits - min_brightness_bits)) << min_brightness_bits) + (1 << min_brightness_bits));
+  }
   void Scroll();
   
   inline bool scrolling() const { return scrolling_; }

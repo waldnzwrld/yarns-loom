@@ -352,9 +352,7 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
 }
 
 void Ui::SetBrightnessFromLooperPhase() {
-  display_.set_brightness(
-    kDisplayBrightnessLevels - 1 - (active_part().LooperPhase() >> (32 - kDisplayBrightnessBits))
-  );
+  display_.set_linear_brightness(UINT16_MAX - (active_part().LooperPhase() >> 16));
 }
 
 void Ui::PrintLooperRecordingStatus() {
@@ -367,9 +365,7 @@ void Ui::PrintLooperRecordingStatus() {
   }
   const looper::Tape& looper_tape = active_part().sequencer_settings().looper_tape;
   uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index, pos >> 16);
-  display_.set_brightness(
-    kDisplayBrightnessLevels - 1 - (note_fraction_completed >> (16 - kDisplayBrightnessBits))
-  );
+  display_.set_linear_brightness(UINT16_MAX - note_fraction_completed);
   if (recording_mode_is_displaying_pitch_) {
     PrintNote(looper_tape.NotePitch(note_index));
   } else {
@@ -440,7 +436,7 @@ void Ui::PrintFactoryTesting() {
 
 void Ui::PrintVersionNumber() {
   display_.Print("L2"); // Loom v1.2.0
-  display_.set_brightness(kDisplayBrightnessLevels - 1);
+  display_.set_brightness(kDisplayBrightnessMax);
 }
 
 void Ui::ChangedActivePartOrPlayMode() {
@@ -836,12 +832,11 @@ void Ui::DoEvents() {
     (this->*modes_[mode_].refresh_display)();
     if (seq_recording && recording_step_index != recording_part().playing_step()) {
       // If playing a sequencer step other than the selected one, half brightness
-      display_.set_brightness((kDisplayBrightnessLevels >> 1) - 1);
+      display_.set_brightness((1 << (kDisplayBrightnessBits - 1)) - 1);
     } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
       // Brightness set in PrintLooperRecordingStatus
     } else {
-      // Full brightness
-      display_.set_brightness(kDisplayBrightnessLevels - 1);
+      display_.set_brightness(kDisplayBrightnessMax);
     }
     if (scroll_display) {
       display_.Scroll();
