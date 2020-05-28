@@ -69,7 +69,7 @@ void Display::Init() {
   fading_increment_ = 0;
   
   blinking_ = false;
-  brightness_ = 6;
+  brightness_ = UINT16_MAX;
 }
 
 void Display::Scroll() {
@@ -107,18 +107,22 @@ void Display::RefreshSlow() {
   }
   
   if (fading_increment_) {
-    actual_brightness_ = kDisplayBrightnessLevels - 1 - (fading_counter_ >> (16 - kDisplayBrightnessBits));
+    actual_brightness_ = UINT16_MAX - fading_counter_;
   } else {
     actual_brightness_ = brightness_;
   }
+  // E.g.: actual_brightness_ = 1/8 + 7/8 * actual_brightness_
+  actual_brightness_ = (1 << (16 - kDisplayBrightnessRatioBits)) + ((1 << kDisplayBrightnessRatioBits) - 1) * (actual_brightness_ >> kDisplayBrightnessRatioBits);
   blink_counter_ = (blink_counter_ + 1) % (kBlinkMask * 2);
 
 #else
 
   displayed_buffer_ = short_buffer_;
-  actual_brightness_ = kDisplayBrightnessLevels - 1;
+  actual_brightness_ = UINT16_MAX;
 
 #endif  // APPLICATION
+  // Pre-scale for PWM comparator
+  actual_brightness_ = actual_brightness_ >> (16 - kDisplayBrightnessPWMBits);
 }
 
 void Display::RefreshFast() {
@@ -132,7 +136,7 @@ void Display::RefreshFast() {
   } else {
     GPIOB->BRR = kCharacterEnablePins[active_position_];
   }
-  brightness_pwm_cycle_ = (brightness_pwm_cycle_ + 1) % kDisplayBrightnessLevels;
+  brightness_pwm_cycle_ = (brightness_pwm_cycle_ + 1) % (1 << kDisplayBrightnessPWMBits);
 }
 
 void Display::Print(const char* short_buffer, const char* long_buffer) {

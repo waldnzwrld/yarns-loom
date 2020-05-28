@@ -35,10 +35,11 @@
 namespace yarns {
 
 const uint8_t kDisplayWidth = 2;
-const uint8_t kDisplayBrightnessBits = 7;
-const uint8_t kDisplayBrightnessLevels = 1 << kDisplayBrightnessBits;
-const uint8_t kDisplayBrightnessMax = kDisplayBrightnessLevels - 1;
 const uint8_t kScrollBufferSize = 32;
+
+const uint8_t kDisplayBrightnessRatioBits = 5;
+// PWM >7 bits causes visible flickering due to over-long PWM cycle at 8kHz
+const uint8_t kDisplayBrightnessPWMBits = 7;
 
 class Display {
  public:
@@ -55,11 +56,9 @@ class Display {
   void Print(const char* short_string, const char* long_string);
   
   char* mutable_buffer() { return short_buffer_; }
-  void set_brightness(uint16_t brightness) { brightness_ = brightness; }
-  void set_linear_brightness(uint16_t fraction) {
-    uint16_t linear = pow(fraction >> 8, 2);
-    uint8_t min_brightness_bits = 1;
-    set_brightness((linear >> (16 - (kDisplayBrightnessBits - min_brightness_bits)) << min_brightness_bits) + (1 << min_brightness_bits));
+  void set_brightness(uint16_t fraction) {
+    // Square the fraction to bias toward darkness
+    brightness_ = pow(fraction >> 8, 2);
   }
   void Scroll();
   
@@ -77,7 +76,7 @@ class Display {
   char long_buffer_[kScrollBufferSize];
   char* displayed_buffer_;
   uint8_t long_buffer_size_;
-  uint8_t actual_brightness_;
+  uint16_t actual_brightness_;
 
   bool scrolling_;
   bool blinking_;
