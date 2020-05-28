@@ -308,7 +308,7 @@ void Ui::PrintCalibrationNote() {
 
 void Ui::PrintActivePartAndPlayMode() {
   uint8_t play_mode = active_part().sequencer_settings().play_mode;
-  if (play_mode == PLAY_MODE_LOOPER) {
+  if (multi.running()) {
     SetBrightnessFromBarPhase();
   }
   strcpy(buffer_, "1x");
