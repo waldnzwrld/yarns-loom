@@ -309,7 +309,7 @@ void Ui::PrintCalibrationNote() {
 void Ui::PrintActivePartAndPlayMode() {
   uint8_t play_mode = active_part().sequencer_settings().play_mode;
   if (play_mode == PLAY_MODE_LOOPER) {
-    SetBrightnessFromLooperPhase();
+    SetBrightnessFromBarPhase();
   }
   strcpy(buffer_, "1x");
   buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
@@ -351,15 +351,15 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
   display_.Print(buffer_, buffer_);
 }
 
-void Ui::SetBrightnessFromLooperPhase() {
-  display_.set_brightness(UINT16_MAX - (active_part().LooperPhase() >> 16));
+void Ui::SetBrightnessFromBarPhase() {
+  display_.set_brightness(UINT16_MAX - (active_part().BarPhase() >> 16));
 }
 
 void Ui::PrintLooperRecordingStatus() {
   uint8_t note_index = active_part().LooperCurrentNoteIndex();
-  uint32_t pos = active_part().LooperPhase();
+  uint32_t pos = active_part().BarPhase();
   if (note_index == looper::kNullIndex) {
-    SetBrightnessFromLooperPhase();
+    SetBrightnessFromBarPhase();
     display_.Print("__");
     return;
   }

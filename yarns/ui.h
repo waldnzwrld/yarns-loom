@@ -191,7 +191,7 @@ class Ui {
   void PrintCalibrationNote();
   void PrintRecordingPart();
   void PrintDeleteSequence();
-  void SetBrightnessFromLooperPhase();
+  void SetBrightnessFromBarPhase();
   void PrintLooperRecordingStatus();
   void PrintRecordingStatus();
   void PrintNote(int16_t note);

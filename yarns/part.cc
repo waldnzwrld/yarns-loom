@@ -64,6 +64,7 @@ void Part::Init() {
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
   seq_.looper_tape.RemoveAll();
+  bar_lfo_.Init();
   LooperRewind();
 }
   
@@ -345,7 +346,7 @@ void Part::Clock() {
   // looper
   num_ticks = clock_division::num_ticks[seq_.clock_division];
   uint8_t bar_duration = multi.settings().clock_bar_duration;
-  looper_synced_lfo_.Tap(num_ticks * (bar_duration ? bar_duration : 1));
+  bar_lfo_.Tap(num_ticks * (bar_duration ? bar_duration : 1));
 }
 
 void Part::Start() {
@@ -361,13 +362,13 @@ void Part::Start() {
   arp_direction_ = 1;
   arp_step_ = 0;
   
+  bar_lfo_.Init();
   LooperRewind();
 
   generated_notes_.Clear();
 }
 
 void Part::LooperRewind() {
-  looper_synced_lfo_.Init();
   looper_pos_ = 0;
   looper_needs_advance_ = false;
   seq_.looper_tape.ResetHead();
@@ -382,7 +383,7 @@ void Part::LooperAdvance() {
   if (!looper_needs_advance_) {
     return;
   }
-  uint16_t new_pos = looper_synced_lfo_.GetPhase() >> 16;
+  uint16_t new_pos = bar_lfo_.GetPhase() >> 16;
   seq_.looper_tape.Advance(
     this, seq_.play_mode == PLAY_MODE_LOOPER, looper_pos_, new_pos
   );
