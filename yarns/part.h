@@ -144,7 +144,8 @@ struct MidiSettings {
   uint8_t max_velocity;
   uint8_t out_mode;
   uint8_t sustain_mode;
-  uint8_t padding[9];
+  int8_t transpose_octaves;
+  uint8_t padding[8];
 };
 
 struct VoicingSettings {
@@ -180,6 +181,7 @@ enum PartSetting {
   PART_MIDI_MAX_VELOCITY,
   PART_MIDI_OUT_MODE,
   PART_MIDI_SUSTAIN_MODE,
+  PART_MIDI_TRANSPOSE_OCTAVES,
   PART_MIDI_LAST = PART_MIDI_CHANNEL + sizeof(MidiSettings) - 1,
   PART_VOICING_ALLOCATION_MODE,
   PART_VOICING_ALLOCATION_PRIORITY,
@@ -294,6 +296,11 @@ class Part {
   // whether the message should be sent to the part.
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
   bool NoteOff(uint8_t channel, uint8_t note);
+  uint8_t TransposeInputPitch(uint8_t pitch) {
+    int8_t transpose_octaves = midi_.transpose_octaves;
+    CONSTRAIN(transpose_octaves, (0 - pitch) / 12, (127 - pitch) / 12);
+    return pitch + 12 * transpose_octaves;
+  }
   void InternalNoteOn(uint8_t note, uint8_t velocity);
   void InternalNoteOff(uint8_t note);
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);

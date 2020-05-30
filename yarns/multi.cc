@@ -81,6 +81,7 @@ void Multi::Init(bool reset_calibration) {
   midi->max_velocity = 127;
   midi->out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
   midi->sustain_mode = SUSTAIN_MODE_NORMAL;
+  midi->transpose_octaves = 0;
   
   VoicingSettings* voicing = part_[0].mutable_voicing_settings();
   voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
