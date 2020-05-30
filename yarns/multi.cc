@@ -85,7 +85,7 @@ void Multi::Init(bool reset_calibration) {
   VoicingSettings* voicing = part_[0].mutable_voicing_settings();
   voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
   voicing->allocation_mode = VOICE_ALLOCATION_MODE_MONO;
-  voicing->legato_mode = false;
+  voicing->legato_mode = LEGATO_MODE_OFF;
   voicing->portamento = 0;
   voicing->pitch_bend_range = 2;
   voicing->vibrato_range = 1;
@@ -700,7 +700,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
         voicing->allocation_mode = VOICE_ALLOCATION_MODE_POLY;
         voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
         voicing->portamento = 0;
-        voicing->legato_mode = 0;
+        voicing->legato_mode = LEGATO_MODE_OFF;
         
         part_[0].AllocateVoices(
             &voice_[0],
@@ -727,7 +727,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
           voicing->allocation_mode = VOICE_ALLOCATION_MODE_MONO;
           voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
           voicing->portamento = 0;
-          voicing->legato_mode = 0;
+          voicing->legato_mode = LEGATO_MODE_OFF;
         }
         
         // Duplicate sequencer settings.
@@ -766,7 +766,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
         voicing->allocation_mode = VOICE_ALLOCATION_MODE_POLY;
         voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
         voicing->portamento = 0;
-        voicing->legato_mode = 0;
+        voicing->legato_mode = LEGATO_MODE_OFF;
         part_[0].AllocateVoices(&voice_[0], num_poly_voices, false);
 
         midi = part_[1].mutable_midi_settings();
@@ -781,7 +781,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
         voicing->allocation_mode = VOICE_ALLOCATION_MODE_MONO;
         voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
         voicing->portamento = 0;
-        voicing->legato_mode = 0;
+        voicing->legato_mode = LEGATO_MODE_OFF;
         part_[1].AllocateVoices(&voice_[num_poly_voices], 1, false);
 
         num_active_parts_ = 2;
@@ -802,7 +802,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
         voicing->allocation_mode = VOICE_ALLOCATION_MODE_POLY;
         voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
         voicing->portamento = 0;
-        voicing->legato_mode = 0;
+        voicing->legato_mode = LEGATO_MODE_OFF;
         part_[0].AllocateVoices(&voice_[0], 2, false);
 
         for (uint8_t i = 1; i < 3; ++i) {
@@ -818,7 +818,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
           voicing->allocation_mode = VOICE_ALLOCATION_MODE_MONO;
           voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
           voicing->portamento = 0;
-          voicing->legato_mode = 0;
+          voicing->legato_mode = LEGATO_MODE_OFF;
           part_[i].AllocateVoices(&voice_[i + 1], 1, false);
         }
 

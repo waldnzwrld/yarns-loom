@@ -694,8 +694,8 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
         voice_[i]->NoteOn(
             Tune(after.note),
             after.velocity,
-            (voicing_.legato_mode == 1) && !legato ? 0 : voicing_.portamento,
-            (voicing_.legato_mode == 0) || !legato);
+            (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
+            (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato);
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
@@ -791,7 +791,7 @@ void Part::InternalNoteOff(uint8_t note) {
             Tune(after.note),
             after.velocity,
             voicing_.portamento,
-            voicing_.legato_mode == 0);
+            voicing_.legato_mode == LEGATO_MODE_OFF);
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||

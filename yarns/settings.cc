@@ -294,7 +294,7 @@ const Setting Settings::settings_[] = {
   {
     "LG", "LEGATO MODE",
     SETTING_DOMAIN_PART, { PART_VOICING_LEGATO_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 2, legato_mode_values,
+    SETTING_UNIT_ENUMERATION, 0, LEGATO_MODE_LAST - 1, legato_mode_values,
     20, 11,
   },
   {

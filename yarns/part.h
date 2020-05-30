@@ -129,6 +129,13 @@ enum SustainMode {
   SUSTAIN_MODE_LAST,
 };
 
+enum LegatoMode {
+  LEGATO_MODE_OFF,
+  LEGATO_MODE_AUTO_PORTAMENTO,
+  LEGATO_MODE_ON,
+  LEGATO_MODE_LAST
+};
+
 struct MidiSettings {
   uint8_t channel;
   uint8_t min_note;
