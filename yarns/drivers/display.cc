@@ -43,6 +43,11 @@ const uint16_t kScrollingDelay = 180;
 const uint16_t kScrollingPreDelay = 600;
 const uint16_t kBlinkMask = 128;
 
+// Sets max:min brightness ratio. Here, 2^5 results in brightness floor of 1/32
+const uint8_t kDisplayBrightnessRatioBits = 5;
+// PWM >7 bits causes visible flickering due to over-long PWM cycle at 8kHz
+const uint8_t kDisplayBrightnessPWMBits = 7;
+
 const uint16_t kCharacterEnablePins[] = {
   GPIO_Pin_6,
   GPIO_Pin_5
