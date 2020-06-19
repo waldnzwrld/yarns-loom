@@ -381,11 +381,11 @@ class Multi {
 
   template<typename T>
   void Serialize(T* stream_buffer) {
-    stream_buffer->Write(settings()); // 32 bytes
+    stream_buffer->Write(settings());
     for (uint8_t i = 0; i < kNumParts; ++i) {
       STATIC_ASSERT(kStreamBufferSize >= (
-        sizeof(settings()) +
-        kNumParts * (
+        sizeof(settings()) + // 32 bytes
+        kNumParts * ( // Max 248 bytes
           sizeof(part_[i].midi_settings()) +
           sizeof(part_[i].voicing_settings()) +
           sizeof(part_[i].sequencer_settings())
