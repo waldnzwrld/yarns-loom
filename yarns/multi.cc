@@ -101,7 +101,7 @@ void Multi::Init(bool reset_calibration) {
   voicing->tuning_root = 0;
   voicing->tuning_system = 0;
   voicing->tuning_factor = 0;
-  voicing->audio_mode = 0;
+  voicing->audio_mode = AUDIO_MODE_OFF;
 
   SequencerSettings* seq = part_[0].mutable_sequencer_settings();
   seq->clock_division = 6; // /4

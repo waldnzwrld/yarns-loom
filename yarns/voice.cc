@@ -388,33 +388,33 @@ void Oscillator::RenderSquare(
 }
 
 void Oscillator::Render(uint8_t mode, int16_t note, bool gate) {
-  if (mode == 0 || audio_buffer_.writable() < kAudioBlockSize) {
+  if (mode == AUDIO_MODE_OFF || audio_buffer_.writable() < kAudioBlockSize) {
     return;
   }
   
-  if ((mode & 0x80) && !gate) {
+  if ((mode & 0x80) && !gate) { // See 'paques'
     RenderSilence();
     return;
   }
   
   uint32_t phase_increment = ComputePhaseIncrement(note);
-  switch ((mode & 0x0f) - 1) {
-    case 0:
+  switch (mode & 0x0f) {
+    case AUDIO_MODE_SAW:
       RenderSaw(phase_increment);
       break;
-    case 1:
+    case AUDIO_MODE_PULSE_25:
       RenderSquare(phase_increment, 0x40000000, false);
       break;
-    case 2:
+    case AUDIO_MODE_PULSE_50:
       RenderSquare(phase_increment, 0x80000000, false);
       break;
-    case 3:
+    case AUDIO_MODE_TRIANGLE:
       RenderSquare(phase_increment, 0x80000000, true);
       break;
-    case 4:
+    case AUDIO_MODE_SINE:
       RenderSine(phase_increment);
       break;
-    default:
+    case AUDIO_MODE_NOISE:
       RenderNoise();
       break;
   }
