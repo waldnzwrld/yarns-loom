@@ -150,7 +150,9 @@ void Voice::Refresh() {
       vibrato_control_value = mod_aux_[2];
       break;
   }
-  note += lfo * (vibrato_control_value + vibrato_initial_) * vibrato_range_ >> 15;
+  vibrato_control_value += vibrato_initial_;
+  CONSTRAIN(vibrato_control_value, 0, 127);
+  note += lfo * vibrato_control_value * vibrato_range_ >> 15;
   mod_aux_[0] = mod_velocity_ << 9;
   mod_aux_[1] = mod_wheel_ << 9;
   mod_aux_[5] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
@@ -387,7 +389,7 @@ void Oscillator::RenderSquare(
   phase_ = phase;
 }
 
-void Oscillator::Render(uint8_t mode, int16_t note, bool gate) {
+void Oscillator::Render(uint8_t mode, int16_t note, bool gate, uint32_t pulse_width) {
   if (mode == AUDIO_MODE_OFF || audio_buffer_.writable() < kAudioBlockSize) {
     return;
   }
@@ -402,8 +404,8 @@ void Oscillator::Render(uint8_t mode, int16_t note, bool gate) {
     case AUDIO_MODE_SAW:
       RenderSaw(phase_increment);
       break;
-    case AUDIO_MODE_PULSE_25:
-      RenderSquare(phase_increment, 0x40000000, false);
+    case AUDIO_MODE_PULSE_VARIABLE:
+      RenderSquare(phase_increment, pulse_width, false);
       break;
     case AUDIO_MODE_PULSE_50:
       RenderSquare(phase_increment, 0x80000000, false);

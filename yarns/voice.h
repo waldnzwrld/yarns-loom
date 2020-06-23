@@ -51,7 +51,7 @@ enum TriggerShape {
 enum AudioMode {
   AUDIO_MODE_OFF,
   AUDIO_MODE_SAW,
-  AUDIO_MODE_PULSE_25,
+  AUDIO_MODE_PULSE_VARIABLE,
   AUDIO_MODE_PULSE_50,
   AUDIO_MODE_TRIANGLE,
   AUDIO_MODE_SINE,
@@ -69,7 +69,7 @@ class Oscillator {
   Oscillator() { }
   ~Oscillator() { }
   void Init(int32_t scale, int32_t offset);
-  void Render(uint8_t mode, int16_t note, bool gate);
+  void Render(uint8_t mode, int16_t note, bool gate, uint32_t pulse_width);
   inline uint16_t ReadSample() {
     return audio_buffer_.ImmediateRead();
   }
@@ -222,7 +222,7 @@ class Voice {
     return audio_mode_;
   }
   inline void RenderAudio() {
-    oscillator_.Render(audio_mode_, note_, gate_);
+    oscillator_.Render(audio_mode_, note_, gate_, mod_aux_[6] << 16);
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
