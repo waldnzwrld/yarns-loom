@@ -324,13 +324,13 @@ const Setting Settings::settings_[] = {
   {
     "VI", "VIBRATO INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_INITIAL, 0 },
-    SETTING_UNIT_UINT8, 0, 100, NULL,
+    SETTING_UNIT_UINT8, 0, 127, NULL,
     0, 0,
   },
   {
     "VC", "VIBRATO CONTROL SOURCE",
-    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_INITIAL, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 1, vibrato_control_source_values,
+    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_CONTROL_SOURCE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, VIBRATO_CONTROL_SOURCE_LAST - 1, vibrato_control_source_values,
     0, 0,
   },
   {
