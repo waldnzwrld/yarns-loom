@@ -132,15 +132,12 @@ void Voice::Refresh() {
   note += tuning_;
   
   // Add vibrato.
-  uint32_t lfo_phase;
   if (modulation_rate_ < 100) {
-    lfo_phase = synced_lfo_.Increment(lut_lfo_increments[modulation_rate_]);
+    synced_lfo_.Increment(lut_lfo_increments[modulation_rate_]);
   } else {
-    lfo_phase = synced_lfo_.Refresh();
+    synced_lfo_.Refresh();
   }
-  int32_t lfo = lfo_phase < 1UL << 31
-      ?  -32768 + (lfo_phase >> 15)
-      : 0x17fff - (lfo_phase >> 15);
+  int32_t lfo = synced_lfo_.Triangle(synced_lfo_.GetPhase());
   uint16_t vibrato_control_value = 0;
   switch (vibrato_control_source_) {
     case VIBRATO_CONTROL_SOURCE_MODWHEEL:
@@ -159,6 +156,8 @@ void Voice::Refresh() {
   mod_aux_[6] = (lfo * vibrato_control_value >> 7) + 32768;
   mod_aux_[7] = lfo + 32768;
   
+  // Use quadrature phase for PWM LFO
+  lfo = synced_lfo_.Triangle(synced_lfo_.GetPhase() + 0x40000000);
   // Initial and mod each have a full sweep of the PWM range
   uint32_t pw_21bit = lfo * oscillator_pw_mod_ + (oscillator_pw_initial_ << (21 - 7));
   // But clip combined modulation at 0-1
