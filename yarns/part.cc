@@ -843,6 +843,8 @@ void Part::TouchVoices() {
     voice_[i]->set_aux_cv_2(voicing_.aux_cv_2);
     voice_[i]->set_audio_mode(voicing_.audio_mode);
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
+    voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
+    voice_[i]->set_oscillator_pw_mod(voicing_.oscillator_pw_mod);
   }
 }
 
@@ -883,6 +885,8 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_VOICING_AUX_CV:
       case PART_VOICING_AUX_CV_2:
       case PART_VOICING_AUDIO_MODE:
+      case PART_VOICING_OSCILLATOR_PW_INITIAL:
+      case PART_VOICING_OSCILLATOR_PW_MOD:
       case PART_VOICING_TUNING_TRANSPOSE:
       case PART_VOICING_TUNING_FINE:
         TouchVoices();

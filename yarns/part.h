@@ -169,7 +169,9 @@ struct VoicingSettings {
   uint8_t audio_mode;
   uint8_t aux_cv_2;
   uint8_t tuning_factor;
-  uint8_t padding[12];
+  uint8_t oscillator_pw_initial;
+  uint8_t oscillator_pw_mod;
+  uint8_t padding[10];
 };
 
 
@@ -203,6 +205,8 @@ enum PartSetting {
   PART_VOICING_AUDIO_MODE,
   PART_VOICING_AUX_CV_2,
   PART_VOICING_TUNING_FACTOR,
+  PART_VOICING_OSCILLATOR_PW_INITIAL,
+  PART_VOICING_OSCILLATOR_PW_MOD,
   PART_VOICING_LAST = PART_VOICING_ALLOCATION_MODE + sizeof(VoicingSettings) - 1,
   PART_SEQUENCER_CLOCK_DIVISION,
   PART_SEQUENCER_GATE_LENGTH,

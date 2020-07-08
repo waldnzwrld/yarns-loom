@@ -159,6 +159,12 @@ void Voice::Refresh() {
   mod_aux_[6] = (lfo * vibrato_control_value >> 7) + 32768;
   mod_aux_[7] = lfo + 32768;
   
+  // Initial and mod each have a full sweep of the PWM range
+  uint32_t pw_21bit = lfo * oscillator_pw_mod_ + (oscillator_pw_initial_ << (21 - 7));
+  // But clip combined modulation at 0-1
+  CONSTRAIN(pw_21bit, 0, (1 << 21) - 1);
+  oscillator_.SetPulseWidth(pw_21bit << (32 - 21));
+
   if (retrigger_delay_) {
     --retrigger_delay_;
   }
@@ -277,6 +283,7 @@ void Oscillator::Init(int32_t scale, int32_t offset) {
   scale_ = scale;
   offset_ = offset;
   integrator_state_ = 0;
+  pulse_width_ = 0x80000000;
 }
 
 uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) {
@@ -389,7 +396,7 @@ void Oscillator::RenderSquare(
   phase_ = phase;
 }
 
-void Oscillator::Render(uint8_t mode, int16_t note, bool gate, uint32_t pulse_width) {
+void Oscillator::Render(uint8_t mode, int16_t note, bool gate) {
   if (mode == AUDIO_MODE_OFF || audio_buffer_.writable() < kAudioBlockSize) {
     return;
   }
@@ -405,7 +412,7 @@ void Oscillator::Render(uint8_t mode, int16_t note, bool gate, uint32_t pulse_wi
       RenderSaw(phase_increment);
       break;
     case AUDIO_MODE_PULSE_VARIABLE:
-      RenderSquare(phase_increment, pulse_width, false);
+      RenderSquare(phase_increment, pulse_width_, false);
       break;
     case AUDIO_MODE_PULSE_50:
       RenderSquare(phase_increment, 0x80000000, false);

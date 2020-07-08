@@ -69,10 +69,11 @@ class Oscillator {
   Oscillator() { }
   ~Oscillator() { }
   void Init(int32_t scale, int32_t offset);
-  void Render(uint8_t mode, int16_t note, bool gate, uint32_t pulse_width);
+  void Render(uint8_t mode, int16_t note, bool gate);
   inline uint16_t ReadSample() {
     return audio_buffer_.ImmediateRead();
   }
+  inline void SetPulseWidth(uint32_t pw) { pulse_width_ = pw; }
 
  private:
   uint32_t ComputePhaseIncrement(int16_t pitch);
@@ -103,6 +104,7 @@ class Oscillator {
   uint32_t phase_;
   int32_t next_sample_;
   int32_t integrator_state_;
+  uint32_t pulse_width_;
   bool high_;
   stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;
   
@@ -213,6 +215,12 @@ class Voice {
   inline void set_audio_mode(uint8_t audio_mode) {
     audio_mode_ = audio_mode;
   }
+  inline void set_oscillator_pw_initial(uint8_t pw) {
+    oscillator_pw_initial_ = pw;
+  }
+  inline void set_oscillator_pw_mod(uint8_t pwm) {
+    oscillator_pw_mod_ = pwm;
+  }
   
   inline void set_tuning(int8_t coarse, int8_t fine) {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
@@ -222,7 +230,7 @@ class Voice {
     return audio_mode_;
   }
   inline void RenderAudio() {
-    oscillator_.Render(audio_mode_, note_, gate_, mod_aux_[6] << 16);
+    oscillator_.Render(audio_mode_, note_, gate_);
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -275,6 +283,8 @@ class Voice {
   uint32_t trigger_phase_;
   
   uint8_t audio_mode_;
+  uint8_t oscillator_pw_initial_;
+  uint8_t oscillator_pw_mod_;
   Oscillator oscillator_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
