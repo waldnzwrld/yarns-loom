@@ -170,7 +170,7 @@ struct VoicingSettings {
   uint8_t aux_cv_2;
   uint8_t tuning_factor;
   uint8_t oscillator_pw_initial;
-  uint8_t oscillator_pw_mod;
+  int8_t oscillator_pw_mod;
   uint8_t padding[10];
 };
 

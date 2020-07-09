@@ -218,7 +218,7 @@ class Voice {
   inline void set_oscillator_pw_initial(uint8_t pw) {
     oscillator_pw_initial_ = pw;
   }
-  inline void set_oscillator_pw_mod(uint8_t pwm) {
+  inline void set_oscillator_pw_mod(int8_t pwm) {
     oscillator_pw_mod_ = pwm;
   }
   
@@ -284,7 +284,7 @@ class Voice {
   
   uint8_t audio_mode_;
   uint8_t oscillator_pw_initial_;
-  uint8_t oscillator_pw_mod_;
+  int8_t oscillator_pw_mod_;
   Oscillator oscillator_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
