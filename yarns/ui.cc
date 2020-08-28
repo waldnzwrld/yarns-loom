@@ -546,10 +546,13 @@ void Ui::OnClickFactoryTesting(const Event& e) {
 }
 
 void Ui::OnIncrementParameterSelect(const Event& e) {
-  multi.mutable_settings()->ui_setting_index = stmlib::modulo(
-    multi.settings().ui_setting_index + e.data,
-    SETTING_LAST
-  );
+  MultiSettings* s = multi.mutable_settings();
+  s->ui_setting_index += e.data;
+  if (s->ui_setting_index < 0) {
+    s->ui_setting_index = 0;
+  } else if (settings.menu()[s->ui_setting_index] == SETTING_LAST) {
+    --s->ui_setting_index;
+  }
 }
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
