@@ -71,7 +71,6 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
   settings_.clock_manual_start = 0;
-  settings_.ui_setting_index = 0;
   
   MidiSettings* midi = part_[0].mutable_midi_settings();
   midi->channel = 0;

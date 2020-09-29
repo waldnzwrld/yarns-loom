@@ -55,8 +55,7 @@ struct MultiSettings {
   uint8_t remote_control_channel;
   uint8_t nudge_first_tick;
   uint8_t clock_manual_start;
-  uint8_t ui_setting_index;
-  uint8_t padding[9];
+  uint8_t padding[10];
 };
 
 enum MultiSetting {

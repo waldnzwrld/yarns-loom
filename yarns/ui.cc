@@ -163,6 +163,7 @@ void Ui::Init() {
   mode_ = UI_MODE_PARAMETER_SELECT;
   splash_mode_ = UI_MODE_SPLASH;
   show_splash_ = true;
+  setting_index_ = 0;
   previous_tap_time_ = 0;
   tap_tempo_count_ = 0;
   
@@ -546,12 +547,11 @@ void Ui::OnClickFactoryTesting(const Event& e) {
 }
 
 void Ui::OnIncrementParameterSelect(const Event& e) {
-  MultiSettings* s = multi.mutable_settings();
-  s->ui_setting_index += e.data;
-  if (s->ui_setting_index < 0) {
-    s->ui_setting_index = 0;
-  } else if (settings.menu()[s->ui_setting_index] == SETTING_LAST) {
-    --s->ui_setting_index;
+  setting_index_ += e.data;
+  if (setting_index_ < 0) {
+    setting_index_ = 0;
+  } else if (settings.menu()[setting_index_] == SETTING_LAST) {
+    --setting_index_;
   }
 }
 
