@@ -163,7 +163,7 @@ void Ui::Init() {
   mode_ = UI_MODE_PARAMETER_SELECT;
   splash_mode_ = UI_MODE_SPLASH;
   show_splash_ = true;
-  setting_index_ = 0;
+  current_menu_category_ = &Settings::live_menus;
   previous_tap_time_ = 0;
   tap_tempo_count_ = 0;
   
@@ -461,6 +461,12 @@ void Ui::OnLongClick(const Event& e) {
 }
 
 void Ui::OnClick(const Event& e) {
+  if (current_menu_category_->setting_index() == SETTING_SETUP_SUBMENU) {
+    current_menu_category_ = &Settings::setup_menus;
+    return;
+  } else if (current_menu_category_ == &Settings::setup_menus && mode_ == UI_MODE_PARAMETER_EDIT) {
+    current_menu_category_ = &Settings::live_menus;
+  }
   mode_ = modes_[mode_].next_mode; 
 }
 
@@ -547,16 +553,11 @@ void Ui::OnClickFactoryTesting(const Event& e) {
 }
 
 void Ui::OnIncrementParameterSelect(const Event& e) {
-  setting_index_ += e.data;
-  if (setting_index_ < 0) {
-    setting_index_ = 0;
-  } else if (settings.menu()[setting_index_] == SETTING_LAST) {
-    --setting_index_;
-  }
+  current_menu_category_->increment_index(e.data);
 }
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
-  settings.Increment(setting(), e.data);
+  settings.Increment(current_menu_category_->setting(), e.data);
 }
 
 void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {

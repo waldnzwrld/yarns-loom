@@ -125,7 +125,7 @@ class Ui {
   }
   
   inline const Setting& setting() {
-    return settings.setting(settings.menu()[setting_index_]);
+    return current_menu_category_->setting();
   }
   inline bool calibrating() const {
     return mode_ == UI_MODE_CALIBRATION_SELECT_NOTE ||
@@ -252,7 +252,7 @@ class Ui {
   UiMode splash_mode_;
   bool show_splash_;
   
-  int8_t setting_index_;
+  Settings::MenuCategory* current_menu_category_;
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;
