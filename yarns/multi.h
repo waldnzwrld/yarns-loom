@@ -35,11 +35,14 @@
 #include "yarns/layout_configurator.h"
 #include "yarns/part.h"
 #include "yarns/voice.h"
+#include "yarns/storage_manager.h"
 
 namespace yarns {
 
 const uint8_t kNumParts = 4;
-const uint8_t kNumVoices = 4;
+const uint8_t kNumCVOutputs = 4;
+// One paraphonic part, one voice per remaining output
+const uint8_t kNumSystemVoices = kNumParaphonicVoices + (kNumCVOutputs - 1);
 const uint8_t kMaxBarDuration = 32;
 
 struct MultiSettings {
@@ -96,6 +99,7 @@ enum Layout {
   LAYOUT_THREE_ONE,
   LAYOUT_TWO_TWO,
   LAYOUT_TWO_ONE,
+  LAYOUT_PARAPHONIC_PLUS_TWO,
   LAYOUT_LAST
 };
 
@@ -315,8 +319,8 @@ class Multi {
   }
 
   inline void RenderAudio() {
-    for (uint8_t i = 0; i < kNumVoices; ++i) {
-      voice_[i].RenderAudio();
+    for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
+      cv_outputs_[i].RenderAudio();
     }
   }
   
@@ -346,11 +350,13 @@ class Multi {
     return reset() || ((settings_.clock_bar_duration == 0) && running_);
   }
   
+  inline const CVOutput& cv_output(uint8_t index) const { return cv_outputs_[index]; }
   inline const Part& part(uint8_t index) const { return part_[index]; }
   inline const Voice& voice(uint8_t index) const { return voice_[index]; }
   inline const MultiSettings& settings() const { return settings_; }
   inline uint8_t num_active_parts() const { return num_active_parts_; }
   
+  inline CVOutput* mutable_cv_output(uint8_t index) { return &cv_outputs_[index]; }
   inline Voice* mutable_voice(uint8_t index) { return &voice_[index]; }
   inline Part* mutable_part(uint8_t index) { return &part_[index]; }
   inline MultiSettings* mutable_settings() { return &settings_; }
@@ -373,18 +379,26 @@ class Multi {
     return true;
   }
   
+  void AssignVoicesToCVOutputs();
   void GetCvGate(uint16_t* cv, bool* gate);
-  bool GetAudioSource(uint8_t* audio_source);
+  void GetAudioSource(bool* audio_source);
   void GetLedsBrightness(uint8_t* brightness);
 
   template<typename T>
   void Serialize(T* stream_buffer) {
-    // 32 bytes + (4 voices x (16 + 32 + 178 bytes)) = 936 bytes
-    stream_buffer->Write(settings()); // 32 bytes
+    stream_buffer->Write(settings());
     for (uint8_t i = 0; i < kNumParts; ++i) {
+      STATIC_ASSERT(kStreamBufferSize >= (
+        sizeof(settings()) + // 32 bytes
+        kNumParts * ( // Max 248 bytes
+          sizeof(part_[i].midi_settings()) +
+          sizeof(part_[i].voicing_settings()) +
+          sizeof(part_[i].sequencer_settings())
+        )
+      ), buffer_size_exceeded);
       stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
       stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
-      stream_buffer->Write(part_[i].sequencer_settings()); // 178 bytes
+      stream_buffer->Write(part_[i].sequencer_settings()); // 176 bytes
     }
   };
   
@@ -403,20 +417,20 @@ class Multi {
   template<typename T>
   void SerializeCalibration(T* stream_buffer) {
     // 4 voices x 11 octaves x 2 bytes = 88 bytes
-    for (uint8_t i = 0; i < kNumVoices; ++i) {
+    for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
       for (uint8_t j = 0; j < kNumOctaves; ++j) {
-        stream_buffer->Write(voice_[i].calibration_dac_code(j)); // 2 bytes
+        stream_buffer->Write(cv_outputs_[i].calibration_dac_code(j)); // 2 bytes
       }
     }
   };
   
   template<typename T>
   void DeserializeCalibration(T* stream_buffer) {
-    for (uint8_t i = 0; i < kNumVoices; ++i) {
+    for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
       for (uint8_t j = 0; j < kNumOctaves; ++j) {
         uint16_t v;
         stream_buffer->Read(&v);
-        voice_[i].set_calibration_dac_code(j, v);
+        cv_outputs_[i].set_calibration_dac_code(j, v);
       }
     }
   };
@@ -437,7 +451,7 @@ class Multi {
 
  private:
   void ChangeLayout(Layout old_layout, Layout new_layout);
-  void UpdateLayout();
+  void AllocateParts();
   void ClockSong();
   void HandleRemoteControlCC(uint8_t controller, uint8_t value);
   
@@ -473,7 +487,8 @@ class Multi {
   uint8_t num_active_parts_;
   
   Part part_[kNumParts];
-  Voice voice_[kNumVoices];
+  Voice voice_[kNumSystemVoices];
+  CVOutput cv_outputs_[kNumCVOutputs];
 
   LayoutConfigurator layout_configurator_;
   

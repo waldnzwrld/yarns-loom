@@ -29,14 +29,21 @@
 #ifndef YARNS_DRIVERS_DISPLAY_H_
 #define YARNS_DRIVERS_DISPLAY_H_
 
+#include <cmath>
 #include "stmlib/stmlib.h"
 
 namespace yarns {
 
 const uint8_t kDisplayWidth = 2;
-const uint8_t kDisplayBrightnessBits = 7;
-const uint8_t kDisplayBrightnessLevels = 1 << kDisplayBrightnessBits;
 const uint8_t kScrollBufferSize = 32;
+
+// Applying a brightness fraction naively to PWM results in a visual bias toward
+// over-brightness -- exponentiating the fraction biases it back toward darkness
+const uint8_t kDisplayBrightnessLinearizingExponent = 2;
+// Max number of bits that, when exponentiated, will fit in a uint32_t
+const uint8_t kDisplayBrightnessLinearizingBaseBits = 32 / kDisplayBrightnessLinearizingExponent;
+// Max number of bits used by the result of exponentiation
+const uint8_t kDisplayBrightnessLinearizingPowerBits = kDisplayBrightnessLinearizingExponent * kDisplayBrightnessLinearizingBaseBits;
 
 class Display {
  public:
@@ -53,7 +60,11 @@ class Display {
   void Print(const char* short_string, const char* long_string);
   
   char* mutable_buffer() { return short_buffer_; }
-  void set_brightness(uint16_t brightness) { brightness_ = brightness; }
+  void set_brightness(uint16_t fraction) {
+    uint16_t base = fraction >> (16 - kDisplayBrightnessLinearizingBaseBits);
+    uint32_t power = pow(base, kDisplayBrightnessLinearizingExponent);
+    brightness_ = power >> (kDisplayBrightnessLinearizingPowerBits - 16);
+  }
   void Scroll();
   
   inline bool scrolling() const { return scrolling_; }
@@ -70,7 +81,7 @@ class Display {
   char long_buffer_[kScrollBufferSize];
   char* displayed_buffer_;
   uint8_t long_buffer_size_;
-  uint8_t actual_brightness_;
+  uint16_t actual_brightness_;
 
   bool scrolling_;
   bool blinking_;

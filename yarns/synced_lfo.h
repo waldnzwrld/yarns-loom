@@ -60,6 +60,12 @@ class SyncedLFO {
     return Increment(phase_increment_);
   }
 
+  int16_t Triangle(uint32_t phase) {
+    return phase < 1UL << 31       // x < 0.5
+      ?  INT16_MIN + (phase >> 15) // y = -0.5 + 2x = 2(x - 1/4)
+      : 0x17fff - (phase >> 15);   // y =  1.5 - 2x = 2(3/4 - x)
+  }
+
   void Tap(uint16_t num_ticks) {
     uint32_t target_phase = ((counter_ % num_ticks) * 65536 / num_ticks) << 16;
     uint32_t target_increment = target_phase - previous_target_phase_;

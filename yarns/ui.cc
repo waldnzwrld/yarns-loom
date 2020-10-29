@@ -88,7 +88,7 @@ Ui::Mode Ui::modes_[] = {
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectVoice,
     &Ui::PrintCalibrationVoiceNumber,
     UI_MODE_CALIBRATION_SELECT_VOICE,
-    NULL, 0, kNumVoices },
+    NULL, 0, kNumSystemVoices },
   
   // UI_MODE_CALIBRATION_SELECT_NOTE
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectNote,
@@ -160,9 +160,10 @@ void Ui::Init() {
   queue_.Init();
   leds_.Init();
   
-  previous_mode_ = UI_MODE_PARAMETER_SELECT;
-  mode_ = UI_MODE_SPLASH;
-  setting_index_ = 0;
+  mode_ = UI_MODE_PARAMETER_SELECT;
+  splash_mode_ = UI_MODE_SPLASH;
+  show_splash_ = true;
+  current_menu_category_ = &Settings::live_menus;
   previous_tap_time_ = 0;
   tap_tempo_count_ = 0;
   
@@ -216,7 +217,7 @@ void Ui::Poll() {
   display_.RefreshSlow();
   
   // Read LED brightness from multi and copy to LEDs driver.
-  uint8_t leds_brightness[kNumVoices];
+  uint8_t leds_brightness[kNumSystemVoices];
   multi.GetLedsBrightness(leds_brightness);
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     ++factory_testing_leds_counter_;
@@ -225,7 +226,7 @@ void Ui::Poll() {
     leds_brightness[1] = (((x + 256) & 511) < 128) ? 255 : 0;
     leds_brightness[2] = (((x + 128) & 511) < 128) ? 255 : 0;
     leds_brightness[3] = (((x + 000) & 511) < 128) ? 255 : 0;
-  } else if (mode_ == UI_MODE_SPLASH) {
+  } else if (splash_mode_ == UI_MODE_SPLASH && show_splash_) {
     leds_brightness[0] = 255;
     leds_brightness[1] = 0;
     leds_brightness[2] = 0;
@@ -291,7 +292,7 @@ void Ui::PrintProgramNumber() {
 }
 
 void Ui::PrintCalibrationVoiceNumber() {
-  if (calibration_voice_ < kNumVoices) {
+  if (calibration_voice_ < kNumSystemVoices) {
     strcpy(buffer_, "*1");
     buffer_[1] += calibration_voice_;
     display_.Print(buffer_);
@@ -307,9 +308,13 @@ void Ui::PrintCalibrationNote() {
 }
 
 void Ui::PrintActivePartAndPlayMode() {
+  uint8_t play_mode = active_part().sequencer_settings().play_mode;
+  if (multi.running()) {
+    SetBrightnessFromBarPhase();
+  }
   strcpy(buffer_, "1x");
   buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
-  buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[active_part().sequencer_settings().play_mode][0];
+  buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[play_mode][0];
   buffer_[2] = '\0';
   display_.Print(buffer_);
 }
@@ -347,21 +352,21 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
   display_.Print(buffer_, buffer_);
 }
 
+void Ui::SetBrightnessFromBarPhase() {
+  display_.set_brightness(UINT16_MAX - (active_part().BarPhase() >> 16));
+}
+
 void Ui::PrintLooperRecordingStatus() {
   uint8_t note_index = active_part().LooperCurrentNoteIndex();
-  uint32_t pos = active_part().LooperPhase();
+  uint32_t pos = active_part().BarPhase();
   if (note_index == looper::kNullIndex) {
-    display_.set_brightness(
-      kDisplayBrightnessLevels - 1 - (pos >> (32 - kDisplayBrightnessBits))
-    );
+    SetBrightnessFromBarPhase();
     display_.Print("__");
     return;
   }
   const looper::Tape& looper_tape = active_part().sequencer_settings().looper_tape;
   uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index, pos >> 16);
-  display_.set_brightness(
-    kDisplayBrightnessLevels - 1 - (note_fraction_completed >> (16 - kDisplayBrightnessBits))
-  );
+  display_.set_brightness(UINT16_MAX - note_fraction_completed);
   if (recording_mode_is_displaying_pitch_) {
     PrintNote(looper_tape.NotePitch(note_index));
   } else {
@@ -432,11 +437,12 @@ void Ui::PrintFactoryTesting() {
 
 void Ui::PrintVersionNumber() {
   display_.Print("L2"); // Loom v1.2.0
+  display_.set_brightness(UINT16_MAX);
 }
 
 void Ui::ChangedActivePartOrPlayMode() {
-  previous_mode_ = mode_;
-  mode_ = UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE;
+  splash_mode_ = UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE;
+  show_splash_ = true;
 }
 
 // Generic Handlers
@@ -455,6 +461,12 @@ void Ui::OnLongClick(const Event& e) {
 }
 
 void Ui::OnClick(const Event& e) {
+  if (current_menu_category_->setting_index() == SETTING_SETUP_SUBMENU) {
+    current_menu_category_ = &Settings::setup_menus;
+    return;
+  } else if (current_menu_category_ == &Settings::setup_menus && mode_ == UI_MODE_PARAMETER_EDIT) {
+    current_menu_category_ = &Settings::live_menus;
+  }
   mode_ = modes_[mode_].next_mode; 
 }
 
@@ -492,7 +504,7 @@ void Ui::OnClickLoadSave(const Event& e) {
 }
 
 void Ui::OnClickCalibrationSelectVoice(const Event& e) {
-  if (calibration_voice_ == kNumVoices) {
+  if (calibration_voice_ == kNumSystemVoices) {
     mode_ = UI_MODE_PARAMETER_SELECT;
     calibration_voice_ = 0;
     storage_manager.SaveCalibration();
@@ -541,20 +553,15 @@ void Ui::OnClickFactoryTesting(const Event& e) {
 }
 
 void Ui::OnIncrementParameterSelect(const Event& e) {
-  setting_index_ += e.data;
-  if (setting_index_ < 0) {
-    setting_index_ = 0;
-  } else if (settings.menu()[setting_index_] == SETTING_LAST) {
-    --setting_index_;
-  }
+  current_menu_category_->increment_index(e.data);
 }
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
-  settings.Increment(setting(), e.data);
+  settings.Increment(current_menu_category_->setting(), e.data);
 }
 
 void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {
-  Voice* voice = multi.mutable_voice(calibration_voice_);
+  CVOutput* voice = multi.mutable_cv_output(calibration_voice_);
   int32_t code = voice->calibration_dac_code(calibration_note_);
   code -= e.data * (switches_.pressed(2) ? 32 : 1);
   CONSTRAIN(code, 0, 65535);
@@ -594,6 +601,24 @@ void Ui::OnIncrementFactoryTesting(const Event& e) {
   OnIncrement(e);
 }
 
+void Ui::StartRecording() {
+  previous_mode_ = mode_;
+  multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
+  if (active_part().sequencer_settings().play_mode == PLAY_MODE_LOOPER) {
+    mode_ = UI_MODE_LOOPER_RECORDING;
+    multi.Start(false);
+  } else {
+    mode_ = active_part().overdubbing() ?
+          UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
+  }
+}
+
+void Ui::StopRecording() {
+  push_it_ = false;
+  multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
+  mode_ = previous_mode_;
+}
+
 void Ui::OnSwitchPress(const Event& e) {
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     factory_testing_display_ = static_cast<UiFactoryTestingDisplay>(
@@ -610,26 +635,14 @@ void Ui::OnSwitchPress(const Event& e) {
           mode_ == UI_MODE_LOOPER_RECORDING
         ) {
           if (recording_mode_is_displaying_pitch_) {
-            // Finish recording.
-            push_it_ = false;
-            multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
-            mode_ = previous_mode_;
-            ChangedActivePartOrPlayMode();
+            StopRecording();
           } else {
             // Toggle pitch display on
             recording_mode_is_displaying_pitch_ = true;
           }
         } else {
-          previous_mode_ = mode_;
           recording_mode_is_displaying_pitch_ = false;
-          multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
-          if (active_part().sequencer_settings().play_mode == PLAY_MODE_LOOPER) {
-            mode_ = UI_MODE_LOOPER_RECORDING;
-            multi.Start(false);
-          } else {
-            mode_ = active_part().overdubbing() ?
-                  UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
-          }
+          StartRecording();
         }
       }
       break;
@@ -712,10 +725,14 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_START_STOP:
-      if (!recording_any) {
-        settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
-        ChangedActivePartOrPlayMode();
+      if (recording_any) {
+        StopRecording();
       }
+      settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
+      if (recording_any) {
+        StartRecording();
+      }
+      ChangedActivePartOrPlayMode();
       break;
 
     case UI_SWITCH_TAP_TEMPO:
@@ -770,6 +787,7 @@ void Ui::DoEvents() {
       (this->*mode.on_click)(e);
     } else if (e.control_type == CONTROL_ENCODER) {
       (this->*mode.on_increment)(e);
+      scroll_display = true;
     } else if (e.control_type == CONTROL_ENCODER_LONG_CLICK) {
       OnLongClick(e);
     } else if (e.control_type == CONTROL_SWITCH) {
@@ -778,10 +796,10 @@ void Ui::DoEvents() {
       OnSwitchHeld(e);
     }
     refresh_display = true;
-    scroll_display = true;
   }
-  if (queue_.idle_time() > 300 && mode_ == UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE) {
+  if (queue_.idle_time() > 300 && show_splash_) {
     refresh_display = true;
+    show_splash_ = false;
   }
   if (queue_.idle_time() > 900) {
     if (!display_.scrolling()) {
@@ -800,24 +818,30 @@ void Ui::DoEvents() {
     displayed_recording_step_index_ = recording_step_index;
   }
 
-  if (seq_recording && recording_step_index != recording_part().playing_step()) {
-    // If playing a sequencer step other than the selected one, half brightness
-    display_.set_brightness((kDisplayBrightnessLevels >> 1) - 1);
-  } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-    // Brightness set in PrintLooperRecordingStatus
+  if (mode_ == UI_MODE_LOOPER_RECORDING) {
     refresh_display = true;
-  } else {
-    // Full brightness
-    display_.set_brightness(kDisplayBrightnessLevels - 1);
   }
 
   if (mode_ == UI_MODE_LEARNING && !multi.learning()) {
     OnClickLearning(Event());
   }
-  
-  if (refresh_display) {
+
+  if (show_splash_) {
+    // TODO hypothesis: UI never actually stays in CHANGED mode, just relies
+    // on residual display until something else causes an update.  Brightness
+    // also doesn't update during this period
+    (this->*modes_[splash_mode_].refresh_display)();
+  } else if (refresh_display) {
     queue_.Touch();
     (this->*modes_[mode_].refresh_display)();
+    if (seq_recording && recording_step_index != recording_part().playing_step()) {
+      // If playing a sequencer step other than the selected one, half brightness
+      display_.set_brightness(0x7fff);
+    } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
+      // Brightness set in PrintLooperRecordingStatus
+    } else {
+      display_.set_brightness(UINT16_MAX);
+    }
     if (scroll_display) {
       display_.Scroll();
     }
@@ -832,10 +856,6 @@ void Ui::DoEvents() {
       display_.set_fade(multi.tempo() * 235 >> 8);
     } else {
       display_.set_fade(0);
-    }
-    
-    if (mode_ == UI_MODE_SPLASH || mode_ == UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE) {
-      mode_ = previous_mode_;
     }
   }
 }

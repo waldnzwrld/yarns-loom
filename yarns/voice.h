@@ -32,7 +32,9 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/utils/ring_buffer.h"
 
+#include "yarns/envelope.h"
 #include "yarns/synced_lfo.h"
+#include "yarns/part.h"
 
 namespace yarns {
 
@@ -51,14 +53,32 @@ enum TriggerShape {
 enum AudioMode {
   AUDIO_MODE_OFF,
   AUDIO_MODE_SAW,
-  AUDIO_MODE_SQUARE,
+  AUDIO_MODE_PULSE_VARIABLE,
+  AUDIO_MODE_PULSE_50,
   AUDIO_MODE_TRIANGLE,
-  AUDIO_MODE_SINE
+  AUDIO_MODE_SINE,
+  AUDIO_MODE_NOISE,
+
+  AUDIO_MODE_LAST
+};
+
+enum ModAux {
+  MOD_AUX_VELOCITY,
+  MOD_AUX_MODULATION,
+  MOD_AUX_AFTERTOUCH,
+  MOD_AUX_BREATH,
+  MOD_AUX_PEDAL,
+  MOD_AUX_BEND,
+  MOD_AUX_VIBRATO_LFO,
+  MOD_AUX_FULL_LFO,
+
+  MOD_AUX_LAST
 };
 
 enum VibratoControlSource {
   VIBRATO_CONTROL_SOURCE_MODWHEEL,
-  VIBRATO_CONTROL_SOURCE_AFTERTOUCH
+  VIBRATO_CONTROL_SOURCE_AFTERTOUCH,
+  VIBRATO_CONTROL_SOURCE_LAST
 };
 
 class Oscillator {
@@ -66,19 +86,25 @@ class Oscillator {
   Oscillator() { }
   ~Oscillator() { }
   void Init(int32_t scale, int32_t offset);
-  void Render(uint8_t mode, int16_t note, bool gate);
+  void Render(uint8_t mode, int16_t note, bool gate, uint16_t gain);
   inline uint16_t ReadSample() {
     return audio_buffer_.ImmediateRead();
   }
+  inline void SetPulseWidth(uint32_t pw) { pulse_width_ = pw; }
 
  private:
   uint32_t ComputePhaseIncrement(int16_t pitch);
   
   void RenderSilence();
-  void RenderNoise();
-  void RenderSine(uint32_t phase_increment);
-  void RenderSaw(uint32_t phase_increment);
-  void RenderSquare(uint32_t phase_increment, uint32_t pw, bool integrate);
+  void RenderNoise(uint16_t gain);
+  void RenderSine(uint16_t gain, uint32_t phase_increment);
+  void RenderSaw(uint16_t gain, uint32_t phase_increment);
+  void RenderSquare(uint16_t gain, uint32_t phase_increment, uint32_t pw, bool integrate);
+
+  inline void WriteSample(uint16_t gain, int16_t sample) {
+    int32_t amplitude = (scale_ * gain) >> 16;
+    audio_buffer_.Overwrite(offset_ - ((amplitude * sample) >> 16));
+  }
 
   inline int32_t ThisBlepSample(uint32_t t) {
     if (t > 65535) {
@@ -100,6 +126,7 @@ class Oscillator {
   uint32_t phase_;
   int32_t next_sample_;
   int32_t integrator_state_;
+  uint32_t pulse_width_;
   bool high_;
   stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;
   
@@ -114,11 +141,10 @@ class Voice {
   // Clock-synced LFO.
   SyncedLFO synced_lfo_;
 
-  void Init(bool reset_calibration);
+  void Init();
   void ResetAllControllers();
 
-  void Calibrate(uint16_t* calibrated_dac_code);
-  void Refresh();
+  bool Refresh();
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
   void ControlChange(uint8_t controller, uint8_t value);
@@ -126,7 +152,7 @@ class Voice {
     mod_pitch_bend_ = pitch_bend;
   }
   void Aftertouch(uint8_t velocity) {
-    mod_aux_[2] = velocity << 9;
+    mod_aux_[MOD_AUX_AFTERTOUCH] = velocity << 9;
   }
 
   inline void set_modulation_rate(uint8_t modulation_rate) {
@@ -165,29 +191,6 @@ class Voice {
   inline uint8_t modulation() const { return mod_wheel_; }
   inline uint8_t aux_cv() const { return mod_aux_[aux_cv_source_] >> 8; }
   inline uint8_t aux_cv_2() const { return mod_aux_[aux_cv_source_2_] >> 8; }
-
-  inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
-    uint32_t v = static_cast<uint32_t>(value);
-    uint32_t scale = calibrated_dac_code_[3] - calibrated_dac_code_[8];
-    return static_cast<uint16_t>(calibrated_dac_code_[3] - (scale * v >> 16));
-  }
-
-  inline uint16_t note_dac_code() const {
-    return note_dac_code_;
-  }
-
-  inline uint16_t velocity_dac_code() const {
-    return DacCodeFrom16BitValue(mod_velocity_ << 9);
-  }
-  inline uint16_t modulation_dac_code() const {
-    return DacCodeFrom16BitValue(mod_wheel_ << 9);
-  }
-  inline uint16_t aux_cv_dac_code() const { 
-    return DacCodeFrom16BitValue(mod_aux_[aux_cv_source_]);
-  }
-  inline uint16_t aux_cv_dac_code_2() const { 
-    return DacCodeFrom16BitValue(mod_aux_[aux_cv_source_2_]);
-  }
   
   inline bool gate_on() const { return gate_; }
 
@@ -196,19 +199,16 @@ class Voice {
     return gate_ && trigger_pulse_;
   }
   
-  uint16_t trigger_dac_code() const;
-  
-  inline uint16_t calibration_dac_code(uint8_t note) const {
-    return calibrated_dac_code_[note];
-  }
-  
-  inline void set_calibration_dac_code(uint8_t note, uint16_t dac_code) {
-    calibrated_dac_code_[note] = dac_code;
-    dirty_ = true;
-  }
+  int32_t trigger_value() const;
   
   inline void set_audio_mode(uint8_t audio_mode) {
     audio_mode_ = audio_mode;
+  }
+  inline void set_oscillator_pw_initial(uint8_t pw) {
+    oscillator_pw_initial_ = pw;
+  }
+  inline void set_oscillator_pw_mod(int8_t pwm) {
+    oscillator_pw_mod_ = pwm;
   }
   
   inline void set_tuning(int8_t coarse, int8_t fine) {
@@ -218,16 +218,23 @@ class Voice {
   inline uint8_t audio_mode() {
     return audio_mode_;
   }
+
+  inline Oscillator* oscillator() {
+    return &oscillator_;
+  }
+
+  inline Envelope* envelope() {
+    return &envelope_;
+  }
+
   inline void RenderAudio() {
-    oscillator_.Render(audio_mode_, note_, gate_);
+    oscillator_.Render(audio_mode_, note_, gate_, envelope_.value());
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
   }
   
  private:
-  uint16_t NoteToDacCode(int32_t note) const;
-  void FillAudioBuffer();
 
   int32_t note_source_;
   int32_t note_target_;
@@ -236,13 +243,9 @@ class Voice {
   int32_t tuning_;
   bool gate_;
   
-  bool dirty_;  // Set to true when the calibration settings have changed.
-  uint16_t note_dac_code_;
-  uint16_t calibrated_dac_code_[kNumOctaves];
-  
   int16_t mod_pitch_bend_;
   uint8_t mod_wheel_;
-  uint16_t mod_aux_[8];
+  uint16_t mod_aux_[MOD_AUX_LAST];
   uint8_t mod_velocity_;
   
   uint8_t pitch_bend_range_;
@@ -272,9 +275,124 @@ class Voice {
   uint32_t trigger_phase_;
   
   uint8_t audio_mode_;
+  uint8_t oscillator_pw_initial_;
+  int8_t oscillator_pw_mod_;
   Oscillator oscillator_;
+  Envelope envelope_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
+};
+
+class CVOutput {
+ public:
+  CVOutput() { }
+  ~CVOutput() { }
+
+  void Init(bool reset_calibration);
+
+  void Calibrate(uint16_t* calibrated_dac_code);
+
+  inline void assign_voices(Voice* list, uint8_t num) {
+    num_voices_ = num;
+    for (uint8_t i = 0; i < num_voices_; ++i) {
+      voices_[i] = list + i;
+      voices_[i]->oscillator()->Init(scale() / num_voices_, offset());
+    }
+  }
+  inline void assign_voices(Voice* list) {
+    return assign_voices(list, 1);
+  }
+
+  inline bool gate() const {
+    for (uint8_t i = 0; i < num_voices_; ++i) {
+      if (voices_[i]->gate()) { return true; }
+    }
+    return false;
+  }
+
+  inline int32_t scale() const {
+    return offset() - volts_dac_code(5);
+  }
+
+  inline int32_t offset() const {
+    return volts_dac_code(0);
+  }
+
+  inline Voice* main_voice() const {
+    return voices_[0];
+  }
+
+  inline bool has_audio() const {
+    return !!(main_voice()->audio_mode());
+  }
+
+  inline uint16_t ReadSample() {
+    uint16_t mix = 0;
+    for (uint8_t i = 0; i < num_voices_; ++i) {
+      mix += voices_[i]->ReadSample();
+    }
+    return mix;
+  }
+
+  void Refresh();
+
+  inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
+    uint32_t v = static_cast<uint32_t>(value);
+    uint32_t scale = calibrated_dac_code_[3] - calibrated_dac_code_[8];
+    return static_cast<uint16_t>(calibrated_dac_code_[3] - (scale * v >> 16));
+  }
+
+  inline uint16_t note_dac_code() const {
+    return note_dac_code_;
+  }
+
+  inline uint16_t velocity_dac_code() const {
+    return DacCodeFrom16BitValue(main_voice()->velocity() << 9);
+  }
+  inline uint16_t modulation_dac_code() const {
+    return DacCodeFrom16BitValue(main_voice()->modulation() << 9);
+  }
+  inline uint16_t aux_cv_dac_code() const {
+    return DacCodeFrom16BitValue(main_voice()->aux_cv() << 8);
+  }
+  inline uint16_t aux_cv_dac_code_2() const {
+    return DacCodeFrom16BitValue(main_voice()->aux_cv_2() << 8);
+  }
+  inline uint16_t trigger_dac_code() const {
+    int32_t max = volts_dac_code(5);
+    int32_t min = volts_dac_code(0);
+    return min + ((max - min) * main_voice()->trigger_value() >> 15);
+  }
+
+  inline uint16_t calibration_dac_code(uint8_t note) const {
+    return calibrated_dac_code_[note];
+  }
+
+  inline void set_calibration_dac_code(uint8_t note, uint16_t dac_code) {
+    calibrated_dac_code_[note] = dac_code;
+    dirty_ = true;
+  }
+
+  inline uint16_t volts_dac_code(uint8_t volts) const {
+    return calibration_dac_code(volts + 3);
+  }
+
+  inline void RenderAudio() {
+    for (uint8_t i = 0; i < num_voices_; ++i) {
+      voices_[i]->RenderAudio();
+    }
+  }
+
+ private:
+  void NoteToDacCode();
+
+  Voice* voices_[kNumMaxVoicesPerPart];
+  uint8_t num_voices_;
+  uint16_t note_dac_code_;
+  bool dirty_;  // Set to true when the calibration settings have changed.
+  uint16_t calibrated_dac_code_[kNumOctaves];
+
+  DISALLOW_COPY_AND_ASSIGN(CVOutput);
 };
 
 }  // namespace yarns

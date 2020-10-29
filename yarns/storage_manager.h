@@ -38,6 +38,8 @@
 
 namespace yarns {
 
+const size_t kStreamBufferSize = 1024;
+
 class StorageManager {
  public:
   StorageManager() { }
@@ -59,7 +61,7 @@ class StorageManager {
   void DeserializeMulti();
 
  private:
-  stmlib::StreamBuffer<1024> stream_buffer_;
+  stmlib::StreamBuffer<kStreamBufferSize> stream_buffer_;
   stmlib::Storage<0x8020000, 9> storage_;
   
   DISALLOW_COPY_AND_ASSIGN(StorageManager);
