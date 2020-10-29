@@ -43,7 +43,8 @@ namespace yarns {
 class Voice;
 
 const uint8_t kNumSteps = 16;
-const uint8_t kMaxNumVoices = 4;
+const uint8_t kNumMaxVoicesPerPart = 4;
+const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
 
 const int8_t whiteKeyValues[] = {
@@ -171,7 +172,11 @@ struct VoicingSettings {
   uint8_t tuning_factor;
   uint8_t oscillator_pw_initial;
   int8_t oscillator_pw_mod;
-  uint8_t padding[10];
+  uint8_t envelope_attack;
+  uint8_t envelope_decay;
+  uint8_t envelope_sustain;
+  uint8_t envelope_release;
+  uint8_t padding[6];
 };
 
 
@@ -207,6 +212,10 @@ enum PartSetting {
   PART_VOICING_TUNING_FACTOR,
   PART_VOICING_OSCILLATOR_PW_INITIAL,
   PART_VOICING_OSCILLATOR_PW_MOD,
+  PART_VOICING_ENVELOPE_ATTACK,
+  PART_VOICING_ENVELOPE_DECAY,
+  PART_VOICING_ENVELOPE_SUSTAIN,
+  PART_VOICING_ENVELOPE_RELEASE,
   PART_VOICING_LAST = PART_VOICING_ALLOCATION_MODE + sizeof(VoicingSettings) - 1,
   PART_SEQUENCER_CLOCK_DIVISION,
   PART_SEQUENCER_GATE_LENGTH,
@@ -321,6 +330,18 @@ class Part {
   }
   void StartRecording();
   void DeleteSequence();
+
+  inline void NewLayout() {
+    midi_.min_note = 0;
+    midi_.max_note = 127;
+    midi_.min_velocity = 0;
+    midi_.max_velocity = 127;
+
+    voicing_.allocation_mode = num_voices_ > 1 ? VOICE_ALLOCATION_MODE_POLY : VOICE_ALLOCATION_MODE_MONO;
+    voicing_.allocation_priority = stmlib::NOTE_STACK_PRIORITY_LAST;
+    voicing_.portamento = 0;
+    voicing_.legato_mode = LEGATO_MODE_OFF;
+  }
 
   inline void Refresh() {
     uint16_t new_pos = bar_lfo_.Refresh() >> 16;
@@ -517,7 +538,7 @@ class Part {
   VoicingSettings voicing_;
   SequencerSettings seq_;
   
-  Voice* voice_[kMaxNumVoices];
+  Voice* voice_[kNumMaxVoicesPerPart];
   int8_t* custom_pitch_table_;
   uint8_t num_voices_;
   bool polychained_;
@@ -528,8 +549,8 @@ class Part {
   stmlib::NoteStack<kNoteStackSize> pressed_keys_;
   stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
   stmlib::NoteStack<kNoteStackSize> mono_allocator_;
-  stmlib::VoiceAllocator<kMaxNumVoices * 2> poly_allocator_;
-  uint8_t active_note_[kMaxNumVoices];
+  stmlib::VoiceAllocator<kNumMaxVoicesPerPart * 2> poly_allocator_;
+  uint8_t active_note_[kNumMaxVoicesPerPart];
   uint8_t cyclic_allocation_note_counter_;
   
   uint16_t arp_seq_prescaler_;

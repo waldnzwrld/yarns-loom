@@ -88,7 +88,7 @@ Ui::Mode Ui::modes_[] = {
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectVoice,
     &Ui::PrintCalibrationVoiceNumber,
     UI_MODE_CALIBRATION_SELECT_VOICE,
-    NULL, 0, kNumVoices },
+    NULL, 0, kNumSystemVoices },
   
   // UI_MODE_CALIBRATION_SELECT_NOTE
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectNote,
@@ -217,7 +217,7 @@ void Ui::Poll() {
   display_.RefreshSlow();
   
   // Read LED brightness from multi and copy to LEDs driver.
-  uint8_t leds_brightness[kNumVoices];
+  uint8_t leds_brightness[kNumSystemVoices];
   multi.GetLedsBrightness(leds_brightness);
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     ++factory_testing_leds_counter_;
@@ -292,7 +292,7 @@ void Ui::PrintProgramNumber() {
 }
 
 void Ui::PrintCalibrationVoiceNumber() {
-  if (calibration_voice_ < kNumVoices) {
+  if (calibration_voice_ < kNumSystemVoices) {
     strcpy(buffer_, "*1");
     buffer_[1] += calibration_voice_;
     display_.Print(buffer_);
@@ -504,7 +504,7 @@ void Ui::OnClickLoadSave(const Event& e) {
 }
 
 void Ui::OnClickCalibrationSelectVoice(const Event& e) {
-  if (calibration_voice_ == kNumVoices) {
+  if (calibration_voice_ == kNumSystemVoices) {
     mode_ = UI_MODE_PARAMETER_SELECT;
     calibration_voice_ = 0;
     storage_manager.SaveCalibration();
@@ -561,7 +561,7 @@ void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
 }
 
 void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {
-  Voice* voice = multi.mutable_voice(calibration_voice_);
+  CVOutput* voice = multi.mutable_cv_output(calibration_voice_);
   int32_t code = voice->calibration_dac_code(calibration_note_);
   code -= e.data * (switches_.pressed(2) ? 32 : 1);
   CONSTRAIN(code, 0, 65535);

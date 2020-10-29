@@ -36,7 +36,7 @@
 namespace yarns {
 
 const char* const layout_values[] = {
-  "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "3+1", "22", "21"
+  "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "31", "22", "21", "*2"
 };
 
 const char* const midi_out_mode_values[] = {
@@ -385,25 +385,25 @@ const Setting Settings::settings_[] = {
   {
     "CV", "CV OUT",
     SETTING_DOMAIN_PART, { PART_VOICING_AUX_CV, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 7, voicing_aux_cv_values,
+    SETTING_UNIT_ENUMERATION, 0, MOD_AUX_LAST - 1, voicing_aux_cv_values,
     31, 22,
   },
   {
     "3>", "CV OUT 3",
     SETTING_DOMAIN_PART, { PART_VOICING_AUX_CV, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 7, voicing_aux_cv_values,
+    SETTING_UNIT_ENUMERATION, 0, MOD_AUX_LAST - 1, voicing_aux_cv_values,
     31, 22,
   },
   {
     "4>", "CV OUT 4",
     SETTING_DOMAIN_PART, { PART_VOICING_AUX_CV_2, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 7, voicing_aux_cv_values,
+    SETTING_UNIT_ENUMERATION, 0, MOD_AUX_LAST - 1, voicing_aux_cv_values,
     72, 0,
   },
   {
     "OS", "OSC WAVE",
     SETTING_DOMAIN_PART, { PART_VOICING_AUDIO_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 6, voicing_oscillator_values,
+    SETTING_UNIT_ENUMERATION, 0, AUDIO_MODE_LAST - 1, voicing_oscillator_values,
     71, 23,
   },
   {
@@ -416,6 +416,30 @@ const Setting Settings::settings_[] = {
     "PM", "OSC PW MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_MOD, 0 },
     SETTING_UNIT_INT8, -64, 64, NULL,
+    0, 0,
+  },
+  {
+    "\x8F""A", "ENV ATTACK TIME",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_ATTACK, 0 },
+    SETTING_UNIT_INT8, 0, 127, NULL,
+    0, 0,
+  },
+  {
+    "\x8F""D", "ENV DECAY TIME",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_DECAY, 0 },
+    SETTING_UNIT_INT8, 0, 127, NULL,
+    0, 0,
+  },
+  {
+    "\x8F""S", "ENV SUSTAIN LEVEL",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_SUSTAIN, 0 },
+    SETTING_UNIT_INT8, 0, 127, NULL,
+    0, 0,
+  },
+  {
+    "\x8F""R", "ENV RELEASE TIME",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_RELEASE, 0 },
+    SETTING_UNIT_INT8, 0, 127, NULL,
     0, 0,
   },
   {
@@ -601,6 +625,29 @@ const SettingIndex menu_live_poly[] = {
   SETTING_LAST
 };
 
+const SettingIndex menu_live_para[] = {
+  SETTING_SETUP_SUBMENU,
+  SETTING_MIDI_TRANSPOSE_OCTAVES,
+  SETTING_VOICING_PORTAMENTO,
+  SETTING_VOICING_MODULATION_RATE,
+  SETTING_VOICING_VIBRATO_INITIAL,
+  SETTING_VOICING_OSCILLATOR_PW_INITIAL,
+  SETTING_VOICING_OSCILLATOR_PW_MOD,
+  SETTING_VOICING_ENVELOPE_ATTACK,
+  SETTING_VOICING_ENVELOPE_DECAY,
+  SETTING_VOICING_ENVELOPE_SUSTAIN,
+  SETTING_VOICING_ENVELOPE_RELEASE,
+  SETTING_VOICING_TUNING_TRANSPOSE,
+  SETTING_VOICING_TUNING_FINE,
+  SETTING_SEQUENCER_CLOCK_DIVISION,
+  SETTING_SEQUENCER_GATE_LENGTH,
+  SETTING_SEQUENCER_ARP_RANGE,
+  SETTING_SEQUENCER_ARP_DIRECTION,
+  SETTING_SEQUENCER_ARP_PATTERN,
+  MENU_EUCLIDEAN,
+  SETTING_LAST
+};
+
 const SettingIndex menu_live_quad_triggers[] = {
   SETTING_VOICING_TRIGGER_DURATION,
   SETTING_VOICING_TRIGGER_SCALE,
@@ -720,6 +767,17 @@ const SettingIndex two_two_menu[] = {
   MENU_FULL_HYBRID
 };
 
+const SettingIndex paraphonic_plus_two_menu[] = {
+  MENU_LAYOUT_CLOCK,
+  SETTING_CLOCK_OVERRIDE,
+  MENU_MIDI,
+  MENU_VOICING_ALLOCATION_MIXED,
+  MENU_MODULATION,
+  SETTING_VOICING_CV_OUT_3,
+  MENU_OUTPUT,
+  MENU_END
+};
+
 const SettingIndex two_one_menu[] = {
   MENU_LAYOUT_CLOCK,
   MENU_MIDI,
@@ -752,6 +810,7 @@ Settings::MenuCategory Settings::setup_menus = { 0, {
   three_one_menu,
   two_two_menu,
   two_one_menu,
+  paraphonic_plus_two_menu,
 }};
 
 Settings::MenuCategory Settings::live_menus = { 0, {
@@ -768,6 +827,7 @@ Settings::MenuCategory Settings::live_menus = { 0, {
   menu_live_poly,
   menu_live_poly,
   menu_live_poly,
+  menu_live_para,
 }};
 
 void Settings::Init() {
@@ -941,11 +1001,15 @@ void Settings::Increment(const Setting& setting, int16_t increment) {
     value = static_cast<int8_t>(value);
   }
   value += increment;
-  if (value < setting.min_value) {
-    value = setting.min_value;
-  } else if (value > setting.max_value) {
-    value = setting.max_value;
+  int16_t min_value = setting.min_value;
+  if (
+    multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
+    global_.active_part == 0 &&
+    &setting == &settings_[SETTING_VOICING_AUDIO_MODE]
+  ) {
+    min_value = 1;
   }
+  CONSTRAIN(value, min_value, setting.max_value);
   Set(setting, static_cast<uint8_t>(value));
 }
 
