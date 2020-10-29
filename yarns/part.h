@@ -130,6 +130,13 @@ enum SustainMode {
   SUSTAIN_MODE_LAST,
 };
 
+enum LegatoMode {
+  LEGATO_MODE_OFF,
+  LEGATO_MODE_AUTO_PORTAMENTO,
+  LEGATO_MODE_ON,
+  LEGATO_MODE_LAST
+};
+
 struct MidiSettings {
   uint8_t channel;
   uint8_t min_note;
@@ -138,7 +145,8 @@ struct MidiSettings {
   uint8_t max_velocity;
   uint8_t out_mode;
   uint8_t sustain_mode;
-  uint8_t padding[9];
+  int8_t transpose_octaves;
+  uint8_t padding[8];
 };
 
 struct VoicingSettings {
@@ -162,7 +170,9 @@ struct VoicingSettings {
   uint8_t audio_mode;
   uint8_t aux_cv_2;
   uint8_t tuning_factor;
-  uint8_t padding[12];
+  uint8_t oscillator_pw_initial;
+  int8_t oscillator_pw_mod;
+  uint8_t padding[10];
 };
 
 
@@ -174,6 +184,7 @@ enum PartSetting {
   PART_MIDI_MAX_VELOCITY,
   PART_MIDI_OUT_MODE,
   PART_MIDI_SUSTAIN_MODE,
+  PART_MIDI_TRANSPOSE_OCTAVES,
   PART_MIDI_LAST = PART_MIDI_CHANNEL + sizeof(MidiSettings) - 1,
   PART_VOICING_ALLOCATION_MODE,
   PART_VOICING_ALLOCATION_PRIORITY,
@@ -195,6 +206,8 @@ enum PartSetting {
   PART_VOICING_AUDIO_MODE,
   PART_VOICING_AUX_CV_2,
   PART_VOICING_TUNING_FACTOR,
+  PART_VOICING_OSCILLATOR_PW_INITIAL,
+  PART_VOICING_OSCILLATOR_PW_MOD,
   PART_VOICING_LAST = PART_VOICING_ALLOCATION_MODE + sizeof(VoicingSettings) - 1,
   PART_SEQUENCER_CLOCK_DIVISION,
   PART_SEQUENCER_GATE_LENGTH,
@@ -295,6 +308,11 @@ class Part {
   // whether the message should be sent to the part.
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
   bool NoteOff(uint8_t channel, uint8_t note);
+  uint8_t TransposeInputPitch(uint8_t pitch) {
+    int8_t transpose_octaves = midi_.transpose_octaves;
+    CONSTRAIN(transpose_octaves, (0 - pitch) / 12, (127 - pitch) / 12);
+    return pitch + 12 * transpose_octaves;
+  }
   void InternalNoteOn(uint8_t note, uint8_t velocity);
   void InternalNoteOff(uint8_t note);
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
@@ -313,12 +331,12 @@ class Part {
   void DeleteSequence();
 
   inline void Refresh() {
-    uint16_t new_pos = looper_synced_lfo_.Refresh() >> 16;
+    uint16_t new_pos = bar_lfo_.Refresh() >> 16;
     if (
       // phase has definitely changed, or
       looper_pos_ != new_pos ||
       // phase has wrapped exactly around
-      looper_synced_lfo_.GetPhaseIncrement() > UINT16_MAX
+      bar_lfo_.GetPhaseIncrement() > UINT16_MAX
     ) {
       looper_needs_advance_ = true;
     }
@@ -331,8 +349,8 @@ class Part {
   inline void LooperRemoveNewestNote() {
     seq_.looper_tape.RemoveNewestNote(this, looper_pos_);
   }
-  inline uint32_t LooperPhase() const {
-    return looper_synced_lfo_.GetPhase();
+  inline uint32_t BarPhase() const {
+    return bar_lfo_.GetPhase();
   }
   inline uint8_t LooperCurrentNoteIndex() const {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
@@ -534,14 +552,13 @@ class Part {
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
   
-  SyncedLFO looper_synced_lfo_;
+  SyncedLFO bar_lfo_;
   uint16_t looper_pos_;
   bool looper_needs_advance_;
   uint8_t looper_note_index_for_pressed_key_index_[kNoteStackSize];
   uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
 
   uint16_t gate_length_counter_;
-  uint16_t lfo_counter_;
   
   bool has_siblings_;
   bool transposable_;

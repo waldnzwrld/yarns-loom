@@ -64,6 +64,7 @@ void Part::Init() {
   release_latched_keys_on_next_note_on_ = false;
   transposable_ = true;
   seq_.looper_tape.RemoveAll();
+  bar_lfo_.Init();
   LooperRewind();
 }
   
@@ -83,6 +84,7 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   bool sent_from_step_editor = channel & 0x80;
   
+  note = TransposeInputPitch(note);
   // scale velocity to compensate for its min/max range, so that voices using
   // velocity filtering can still have a full velocity range
   velocity = (128 * (velocity - midi_.min_velocity)) / (midi_.max_velocity - midi_.min_velocity + 1);
@@ -122,6 +124,8 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
 
 bool Part::NoteOff(uint8_t channel, uint8_t note) {
   bool sent_from_step_editor = channel & 0x80;
+
+  note = TransposeInputPitch(note);
 
   if (ignore_note_off_messages_) {
     for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
@@ -332,26 +336,20 @@ void Part::Clock() {
     arp_seq_prescaler_ = 0;
   }
   
-  uint32_t num_ticks;
-  uint32_t expected_phase;
+  uint16_t num_ticks;
 
   if (voicing_.modulation_rate >= 100) {
     num_ticks = clock_division::num_ticks[voicing_.modulation_rate - 100];
     // TODO decipher this math -- how much to add so that the voices are in quadrature?
-    expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
     for (uint8_t i = 0; i < num_voices_; ++i) {
-      voice_[i]->TapLfo(expected_phase << 16);
+      voice_[i]->synced_lfo_.Tap(num_ticks);
     }
   }
 
   // looper
   num_ticks = clock_division::num_ticks[seq_.clock_division];
   uint8_t bar_duration = multi.settings().clock_bar_duration;
-  num_ticks = num_ticks * (bar_duration ? bar_duration : 1);
-  expected_phase = (lfo_counter_ % num_ticks) * 65536 / num_ticks;
-  looper_synced_lfo_.Tap(expected_phase << 16);
-
-  ++lfo_counter_;
+  bar_lfo_.Tap(num_ticks * (bar_duration ? bar_duration : 1));
 }
 
 void Part::Start() {
@@ -367,15 +365,13 @@ void Part::Start() {
   arp_direction_ = 1;
   arp_step_ = 0;
   
-  lfo_counter_ = 0;
-  
+  bar_lfo_.Init();
   LooperRewind();
 
   generated_notes_.Clear();
 }
 
 void Part::LooperRewind() {
-  looper_synced_lfo_.Init();
   looper_pos_ = 0;
   looper_needs_advance_ = false;
   seq_.looper_tape.ResetHead();
@@ -390,7 +386,7 @@ void Part::LooperAdvance() {
   if (!looper_needs_advance_) {
     return;
   }
-  uint16_t new_pos = looper_synced_lfo_.GetPhase() >> 16;
+  uint16_t new_pos = bar_lfo_.GetPhase() >> 16;
   seq_.looper_tape.Advance(
     this, seq_.play_mode == PLAY_MODE_LOOPER, looper_pos_, new_pos
   );
@@ -725,8 +721,8 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
         voice_[i]->NoteOn(
             Tune(after.note),
             after.velocity,
-            (voicing_.legato_mode == 1) && !legato ? 0 : voicing_.portamento,
-            (voicing_.legato_mode == 0) || !legato);
+            (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
+            (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato);
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
@@ -822,7 +818,7 @@ void Part::InternalNoteOff(uint8_t note) {
             Tune(after.note),
             after.velocity,
             voicing_.portamento,
-            voicing_.legato_mode == 0);
+            voicing_.legato_mode == LEGATO_MODE_OFF);
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
@@ -871,6 +867,8 @@ void Part::TouchVoices() {
     voice_[i]->set_aux_cv_2(voicing_.aux_cv_2);
     voice_[i]->set_audio_mode(voicing_.audio_mode);
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
+    voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
+    voice_[i]->set_oscillator_pw_mod(voicing_.oscillator_pw_mod);
   }
 }
 
@@ -887,6 +885,7 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MIN_VELOCITY:
       case PART_MIDI_MAX_VELOCITY:
       case PART_MIDI_SUSTAIN_MODE:
+      case PART_MIDI_TRANSPOSE_OCTAVES:
       case PART_SEQUENCER_INPUT_RESPONSE:
       case PART_SEQUENCER_PLAY_MODE:
         // Shut all channels off when a MIDI parameter is changed to prevent
@@ -910,6 +909,8 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_VOICING_AUX_CV:
       case PART_VOICING_AUX_CV_2:
       case PART_VOICING_AUDIO_MODE:
+      case PART_VOICING_OSCILLATOR_PW_INITIAL:
+      case PART_VOICING_OSCILLATOR_PW_MOD:
       case PART_VOICING_TUNING_TRANSPOSE:
       case PART_VOICING_TUNING_FINE:
         TouchVoices();

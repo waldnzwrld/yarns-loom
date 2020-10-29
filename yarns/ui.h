@@ -125,7 +125,7 @@ class Ui {
   }
   
   inline const Setting& setting() {
-    return settings.setting(settings.menu()[setting_index_]);
+    return current_menu_category_->setting();
   }
   inline bool calibrating() const {
     return mode_ == UI_MODE_CALIBRATION_SELECT_NOTE ||
@@ -191,6 +191,7 @@ class Ui {
   void PrintCalibrationNote();
   void PrintRecordingPart();
   void PrintDeleteSequence();
+  void SetBrightnessFromBarPhase();
   void PrintLooperRecordingStatus();
   void PrintRecordingStatus();
   void PrintNote(int16_t note);
@@ -198,11 +199,13 @@ class Ui {
   void PrintLearning();
   void PrintFactoryTesting();
   void PrintVersionNumber();
-  void PrintRecordingStep(SequencerStep step);
+  void PrintRecordingStep();
   void PrintArpeggiatorMovementStep(SequencerStep step);
   void PrintActivePartAndPlayMode();
   
   void ChangedActivePartOrPlayMode();
+  void StartRecording();
+  void StopRecording();
 
   void DoInitCommand();
   void DoDumpCommand();
@@ -246,8 +249,10 @@ class Ui {
   
   UiMode mode_;
   UiMode previous_mode_;
+  UiMode splash_mode_;
+  bool show_splash_;
   
-  int8_t setting_index_;
+  Settings::MenuCategory* current_menu_category_;
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;
@@ -256,6 +261,7 @@ class Ui {
   bool push_it_;
   int16_t push_it_note_;
   uint8_t displayed_recording_step_index_;
+  bool recording_mode_is_displaying_pitch_;
   
   UiFactoryTestingDisplay factory_testing_display_;
   int8_t factory_testing_number_;

@@ -51,14 +51,17 @@ enum TriggerShape {
 enum AudioMode {
   AUDIO_MODE_OFF,
   AUDIO_MODE_SAW,
-  AUDIO_MODE_SQUARE,
+  AUDIO_MODE_PULSE_VARIABLE,
+  AUDIO_MODE_PULSE_50,
   AUDIO_MODE_TRIANGLE,
-  AUDIO_MODE_SINE
+  AUDIO_MODE_SINE,
+  AUDIO_MODE_NOISE
 };
 
 enum VibratoControlSource {
   VIBRATO_CONTROL_SOURCE_MODWHEEL,
-  VIBRATO_CONTROL_SOURCE_AFTERTOUCH
+  VIBRATO_CONTROL_SOURCE_AFTERTOUCH,
+  VIBRATO_CONTROL_SOURCE_LAST
 };
 
 class Oscillator {
@@ -70,6 +73,7 @@ class Oscillator {
   inline uint16_t ReadSample() {
     return audio_buffer_.ImmediateRead();
   }
+  inline void SetPulseWidth(uint32_t pw) { pulse_width_ = pw; }
 
  private:
   uint32_t ComputePhaseIncrement(int16_t pitch);
@@ -100,6 +104,7 @@ class Oscillator {
   uint32_t phase_;
   int32_t next_sample_;
   int32_t integrator_state_;
+  uint32_t pulse_width_;
   bool high_;
   stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;
   
@@ -111,6 +116,9 @@ class Voice {
   Voice() { }
   ~Voice() { }
   
+  // Clock-synced LFO.
+  SyncedLFO synced_lfo_;
+
   void Init(bool reset_calibration);
   void ResetAllControllers();
 
@@ -207,6 +215,12 @@ class Voice {
   inline void set_audio_mode(uint8_t audio_mode) {
     audio_mode_ = audio_mode;
   }
+  inline void set_oscillator_pw_initial(uint8_t pw) {
+    oscillator_pw_initial_ = pw;
+  }
+  inline void set_oscillator_pw_mod(int8_t pwm) {
+    oscillator_pw_mod_ = pwm;
+  }
   
   inline void set_tuning(int8_t coarse, int8_t fine) {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
@@ -220,10 +234,6 @@ class Voice {
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
-  }
-  
-  void TapLfo(uint32_t target_phase) {
-    synced_lfo_.Tap(target_phase);
   }
   
  private:
@@ -272,10 +282,9 @@ class Voice {
   uint32_t trigger_phase_increment_;
   uint32_t trigger_phase_;
   
-  // Clock-synced LFO.
-  SyncedLFO synced_lfo_;
-  
   uint8_t audio_mode_;
+  uint8_t oscillator_pw_initial_;
+  int8_t oscillator_pw_mod_;
   Oscillator oscillator_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);

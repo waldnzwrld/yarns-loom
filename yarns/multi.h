@@ -35,6 +35,7 @@
 #include "yarns/layout_configurator.h"
 #include "yarns/part.h"
 #include "yarns/voice.h"
+#include "yarns/storage_manager.h"
 
 namespace yarns {
 
@@ -379,12 +380,19 @@ class Multi {
 
   template<typename T>
   void Serialize(T* stream_buffer) {
-    // 32 bytes + (4 voices x (16 + 32 + 178 bytes)) = 936 bytes
-    stream_buffer->Write(settings()); // 32 bytes
+    stream_buffer->Write(settings());
     for (uint8_t i = 0; i < kNumParts; ++i) {
+      STATIC_ASSERT(kStreamBufferSize >= (
+        sizeof(settings()) + // 32 bytes
+        kNumParts * ( // Max 248 bytes
+          sizeof(part_[i].midi_settings()) +
+          sizeof(part_[i].voicing_settings()) +
+          sizeof(part_[i].sequencer_settings())
+        )
+      ), buffer_size_exceeded);
       stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
       stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
-      stream_buffer->Write(part_[i].sequencer_settings()); // 178 bytes
+      stream_buffer->Write(part_[i].sequencer_settings()); // 176 bytes
     }
   };
   

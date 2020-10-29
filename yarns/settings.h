@@ -64,6 +64,8 @@ enum SettingUnit {
 };
 
 enum SettingIndex {
+  SETTING_SETUP_SUBMENU,
+
   SETTING_LAYOUT,
   SETTING_ACTIVE_PART_4,
   SETTING_ACTIVE_PART_3,
@@ -83,6 +85,7 @@ enum SettingIndex {
   SETTING_MIDI_MIN_VELOCITY,
   SETTING_MIDI_MAX_VELOCITY,
   SETTING_MIDI_OUT_MODE,
+  SETTING_MIDI_TRANSPOSE_OCTAVES,
   SETTING_VOICING_ALLOCATION_MODE,
   SETTING_VOICING_ALLOCATION_PRIORITY,
   SETTING_VOICING_PORTAMENTO,
@@ -103,6 +106,8 @@ enum SettingIndex {
   SETTING_VOICING_CV_OUT_3,
   SETTING_VOICING_CV_OUT_4,
   SETTING_VOICING_AUDIO_MODE,
+  SETTING_VOICING_OSCILLATOR_PW_INITIAL,
+  SETTING_VOICING_OSCILLATOR_PW_MOD,
   SETTING_SEQUENCER_CLOCK_DIVISION,
   SETTING_SEQUENCER_GATE_LENGTH,
   SETTING_SEQUENCER_ARP_RANGE,
@@ -119,7 +124,7 @@ enum SettingIndex {
   SETTING_REMOTE_CONTROL_CHANNEL,
   SETTING_VOICING_TUNING_FACTOR,
 
-  SETTING_LAST
+  SETTING_LAST,
 };
 
 struct Setting {
@@ -153,6 +158,34 @@ class Settings {
  public:
   Settings() { }
   ~Settings() { }
+
+  struct MenuCategory {
+    int8_t pos;
+    const SettingIndex* const layout_menus[LAYOUT_LAST];
+
+    inline const SettingIndex* menu() {
+      return layout_menus[multi.layout()];
+    }
+    inline const SettingIndex setting_index() {
+      return menu()[pos];
+    }
+    inline const Setting& setting() {
+      return settings_[setting_index()];
+    }
+
+    void increment_index(int32_t n) {
+      pos += n;
+      if (pos < 0) {
+        pos = 0;
+      } else if (menu()[pos] == SETTING_LAST) {
+        --pos;
+      }
+    }
+
+  };
+
+  static MenuCategory setup_menus;
+  static MenuCategory live_menus;
   
   void Init();
   void Set(const Setting& setting, uint8_t value);
@@ -177,16 +210,12 @@ class Settings {
   
   static void PrintInteger(char* buffer, uint8_t number);
   static void PrintSignedInteger(char* buffer, int8_t number);
-  const SettingIndex* menu() {
-    return menus_[multi.layout()];
-  }
   
  private:
   GlobalSettings global_;
    
   static const Setting settings_[SETTING_LAST];
-  static const SettingIndex* const menus_[LAYOUT_LAST];
-  
+
   uint8_t part_cc_map_[128];
   uint8_t remote_control_cc_map_[128];
   
