@@ -55,7 +55,7 @@ void Part::Init() {
   generated_notes_.Init();
   std::fill(
       &active_note_[0],
-      &active_note_[kMaxNumVoices],
+      &active_note_[kNumMaxVoicesPerPart],
       VOICE_ALLOCATION_NOT_FOUND);
   num_voices_ = 0;
   polychained_ = false;
@@ -71,7 +71,7 @@ void Part::Init() {
 void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
   AllNotesOff();
     
-  num_voices_ = std::min(num_voices, kMaxNumVoices);
+  num_voices_ = std::min(num_voices, kNumMaxVoicesPerPart);
   polychained_ = polychain;
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i] = voice + i;
@@ -660,7 +660,7 @@ void Part::AllNotesOff() {
   }
   std::fill(
       &active_note_[0],
-      &active_note_[kMaxNumVoices],
+      &active_note_[kNumMaxVoicesPerPart],
       VOICE_ALLOCATION_NOT_FOUND);
   release_latched_keys_on_next_note_on_ = false;
   ignore_note_off_messages_ = false;
@@ -693,7 +693,8 @@ void Part::DispatchSortedNotes(bool unison) {
           Tune(note_entry.note),
           note_entry.velocity,
           voicing_.portamento,
-          !voice_[i]->gate_on());
+          active_note_[i] != note_entry.note && voicing_.legato_mode == LEGATO_MODE_OFF
+      );
       active_note_[i] = note_entry.note;
     } else {
       voice_[i]->NoteOff();
@@ -852,8 +853,8 @@ void Part::TouchVoiceAllocation() {
 }
 
 void Part::TouchVoices() {
-  CONSTRAIN(voicing_.aux_cv, 0, 7);
-  CONSTRAIN(voicing_.aux_cv_2, 0, 7);
+  CONSTRAIN(voicing_.aux_cv, 0, MOD_AUX_LAST - 1);
+  CONSTRAIN(voicing_.aux_cv_2, 0, MOD_AUX_LAST - 1);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
     voice_[i]->set_modulation_rate(voicing_.modulation_rate * pow(1.123, (int) i));
@@ -869,6 +870,12 @@ void Part::TouchVoices() {
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
     voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
     voice_[i]->set_oscillator_pw_mod(voicing_.oscillator_pw_mod);
+    voice_[i]->envelope()->SetADSR(
+        voicing_.envelope_attack,
+        voicing_.envelope_decay,
+        voicing_.envelope_sustain,
+        voicing_.envelope_release
+    );
   }
 }
 
@@ -911,6 +918,10 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_VOICING_AUDIO_MODE:
       case PART_VOICING_OSCILLATOR_PW_INITIAL:
       case PART_VOICING_OSCILLATOR_PW_MOD:
+      case PART_VOICING_ENVELOPE_ATTACK:
+      case PART_VOICING_ENVELOPE_DECAY:
+      case PART_VOICING_ENVELOPE_SUSTAIN:
+      case PART_VOICING_ENVELOPE_RELEASE:
       case PART_VOICING_TUNING_TRANSPOSE:
       case PART_VOICING_TUNING_FINE:
         TouchVoices();
