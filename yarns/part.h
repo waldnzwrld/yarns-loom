@@ -463,12 +463,20 @@ class Part {
     return VOICE_ALLOCATION_NOT_FOUND;
   }
 
+  inline const stmlib::NoteEntry& priority_note(
+      stmlib::NoteStackFlags priority,
+      uint8_t index = 0
+  ) const {
+    return mono_allocator_.note_by_priority(priority, index);
+  }
   inline const stmlib::NoteEntry& priority_note(uint8_t index = 0) const {
-    return mono_allocator_.note_by_priority(
+    return priority_note(
         static_cast<stmlib::NoteStackFlags>(voicing_.allocation_priority),
         index
     );
   }
+
+  inline Voice* voice(uint8_t index) const { return voice_[index]; }
   
   void Set(uint8_t address, uint8_t value);
   inline uint8_t Get(uint8_t address) const {
