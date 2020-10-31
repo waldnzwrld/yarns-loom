@@ -457,14 +457,14 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      cv[0] = 0; // CV not possible for paraphonic output
+      cv[0] = 0; // Paraphonic output only outputs audio, not CV
       cv[1] = cv_outputs_[1].note_dac_code();
       cv[2] = cv_outputs_[2].aux_cv_dac_code();
       cv[3] = cv_outputs_[3].note_dac_code();
       gate[0] = cv_outputs_[0].gate();
-      gate[1] = voice_[kNumParaphonicVoices].gate();
-      gate[2] = voice_[kNumParaphonicVoices].trigger();
-      gate[3] = voice_[kNumParaphonicVoices + 1].gate();
+      gate[1] = cv_outputs_[1].gate();
+      gate[2] = settings_.clock_override ? clock() : voice_[kNumParaphonicVoices].trigger();
+      gate[3] = cv_outputs_[3].gate();
       break;
 
     case LAYOUT_QUAD_TRIGGERS:
@@ -603,10 +603,15 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      brightness[0] = cv_outputs_[0].gate() ? (cv_outputs_[0].main_voice()->velocity() << 1) : 0; //TODO use velocity of newest note?
-      brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
-      brightness[2] = voice_[kNumParaphonicVoices].aux_cv();
-      brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;
+      {
+        const NoteEntry& last_note = part_[0].priority_note(NOTE_STACK_PRIORITY_LAST);
+        const uint8_t last_voice_index = part_[0].FindVoiceForNote(last_note.note);
+        brightness[0] = (cv_outputs_[0].gate() && last_voice_index != VOICE_ALLOCATION_NOT_FOUND) ? (part_[0].voice(last_voice_index)->velocity() << 1) : 0;
+        brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
+        bool on_2 = settings_.clock_override ? clock() : voice_[kNumParaphonicVoices].trigger();
+        brightness[2] = on_2 ? voice_[kNumParaphonicVoices].aux_cv() : 0;
+        brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;
+      }
       break;
 
     case LAYOUT_QUAD_VOLTAGES:

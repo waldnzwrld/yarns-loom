@@ -686,9 +686,7 @@ void Part::DispatchSortedNotes(bool unison) {
       index = i < mono_allocator_.size() ? i : 0xff;
     }
     if (index != 0xff) {
-      const NoteEntry& note_entry = mono_allocator_.note_by_priority(
-          static_cast<NoteStackFlags>(voicing_.allocation_priority),
-          index);
+      const NoteEntry& note_entry = priority_note(index);
       voice_[i]->NoteOn(
           Tune(note_entry.note),
           note_entry.velocity,
@@ -709,11 +707,9 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
   }
   
   if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
-    const NoteEntry& before = mono_allocator_.note_by_priority(
-        static_cast<NoteStackFlags>(voicing_.allocation_priority));
+    const NoteEntry& before = priority_note();
     mono_allocator_.NoteOn(note, velocity);
-    const NoteEntry& after = mono_allocator_.note_by_priority(
-        static_cast<NoteStackFlags>(voicing_.allocation_priority));
+    const NoteEntry& after = priority_note();
     // Check if the note that has been played should be triggered according
     // to selected voice priority rules.
     if (before.note != after.note) {
@@ -801,11 +797,9 @@ void Part::InternalNoteOff(uint8_t note) {
   }
   
   if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
-    const NoteEntry& before = mono_allocator_.note_by_priority(
-        static_cast<NoteStackFlags>(voicing_.allocation_priority));
+    const NoteEntry& before = priority_note();
     mono_allocator_.NoteOff(note);
-    const NoteEntry& after = mono_allocator_.note_by_priority(
-        static_cast<NoteStackFlags>(voicing_.allocation_priority));
+    const NoteEntry& after = priority_note();
     if (mono_allocator_.size() == 0) {
       // No key is pressed, we just close the gate.
       for (uint8_t i = 0; i < num_voices_; ++i) {
