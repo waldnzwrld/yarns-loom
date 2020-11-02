@@ -264,10 +264,10 @@ class Voice {
   uint32_t portamento_phase_increment_;
   bool portamento_exponential_shape_;
   
-  // This counter is used to artificially create a 500µs dip at LOW level when
-  // the gate is currently HIGH and a new note arrive with a retrigger command.
-  // This happens with note-stealing; or when sending a MIDI sequence with
-  // overlapping notes.
+  // This counter is used to artificially create a 750µs (3-systick) dip at LOW
+  // level when the gate is currently HIGH and a new note arrive with a
+  // retrigger command. This happens with note-stealing; or when sending a MIDI
+  // sequence with overlapping notes.
   uint16_t retrigger_delay_;
   
   uint16_t trigger_pulse_;

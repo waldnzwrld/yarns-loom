@@ -224,7 +224,7 @@ void Voice::NoteOn(
   mod_velocity_ = velocity;
 
   if (gate_ && trigger) {
-    retrigger_delay_ = 2;
+    retrigger_delay_ = 3;
   }
   if (trigger) {
     envelope_.Trigger(ENV_SEGMENT_ATTACK);
