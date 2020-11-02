@@ -477,6 +477,7 @@ class Part {
   }
 
   inline Voice* voice(uint8_t index) const { return voice_[index]; }
+  inline uint8_t num_voices() const { return num_voices_; }
   
   void Set(uint8_t address, uint8_t value);
   inline uint8_t Get(uint8_t address) const {
