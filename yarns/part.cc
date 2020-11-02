@@ -682,10 +682,10 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     midi_handler.OnInternalNoteOn(tx_channel(), note, velocity);
   }
   
+  const NoteEntry& before = priority_note();
+  mono_allocator_.NoteOn(note, velocity);
+  const NoteEntry& after = priority_note();
   if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
-    const NoteEntry& before = priority_note();
-    mono_allocator_.NoteOn(note, velocity);
-    const NoteEntry& after = priority_note();
     // Check if the note that has been played should be triggered according
     // to selected voice priority rules.
     if (before.note != after.note) {
@@ -701,7 +701,6 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
-    mono_allocator_.NoteOn(note, velocity);
     DispatchSortedNotes(
         voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED);
   } else {
@@ -772,10 +771,10 @@ void Part::InternalNoteOff(uint8_t note) {
     just_intonation_processor.NoteOff(note);
   }
   
+  const NoteEntry& before = priority_note();
+  mono_allocator_.NoteOff(note);
+  const NoteEntry& after = priority_note();
   if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
-    const NoteEntry& before = priority_note();
-    mono_allocator_.NoteOff(note);
-    const NoteEntry& after = priority_note();
     if (mono_allocator_.size() == 0) {
       // No key is pressed, we just close the gate.
       for (uint8_t i = 0; i < num_voices_; ++i) {
@@ -795,7 +794,6 @@ void Part::InternalNoteOff(uint8_t note) {
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
-    mono_allocator_.NoteOff(note);
     KillAllInstancesOfNote(note);
     if (
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
