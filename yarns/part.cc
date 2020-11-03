@@ -177,36 +177,28 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       }
     }
   } else {
-    bool off = true;
-    /*
-    if (midi_.sustain_mode == SUSTAIN_MODE_SOSTENUTO) {
-      for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
-        NoteEntry* e = pressed_keys_.mutable_note(i);
-        // If this note is flagged, don't remove it
-        if (e->note == note && e->velocity && (e->velocity & 0x80)) {
-          off = false;
-        }
-      }
+    uint8_t pressed_key_index = pressed_keys_.Find(note);
+    if (pressed_keys_.note(pressed_key_index).velocity & 0x80) {
+      // If the note was flagged by a prior NoteOff, this subsequent NoteOff was
+      // meant for another part (there is no velocity filter for NoteOff)
+      return false;
     }
-    */
-    if (off) {
-      uint8_t pressed_key_index = pressed_keys_.NoteOff(note);
-    
+    pressed_keys_.NoteOff(note);
+
+    if (
+      seq_.play_mode == PLAY_MODE_MANUAL ||
+      sent_from_step_editor ||
+      SequencerDirectResponse()
+    ) {
+      InternalNoteOff(note);
+    } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+      uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
+      looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
       if (
-        seq_.play_mode == PLAY_MODE_MANUAL ||
-        sent_from_step_editor ||
-        SequencerDirectResponse()
+        looper_note_index != looper::kNullIndex &&
+        seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
       ) {
-        InternalNoteOff(note);
-      } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
-        uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
-        looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
-        if (
-          looper_note_index != looper::kNullIndex &&
-          seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
-        ) {
-          LooperNoteOff(looper_note_index, note);
-        }
+        LooperNoteOff(looper_note_index, note);
       }
     }
   }
@@ -258,6 +250,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
               break;
             */
             case SUSTAIN_MODE_LATCH:
+            case SUSTAIN_MODE_MOMENTARY_LATCH:
               Latch();
               break;
             case SUSTAIN_MODE_OFF:
@@ -277,8 +270,10 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
               break;
             */
             case SUSTAIN_MODE_LATCH:
-              Unlatch();
+              UnlatchOnNextNoteOn();
               break;
+            case SUSTAIN_MODE_MOMENTARY_LATCH:
+              UnlatchImmediate();
             case SUSTAIN_MODE_OFF:
             default:
               break;
@@ -711,6 +706,7 @@ void Part::ReleaseLatchedNotes() {
   for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
     NoteEntry* e = pressed_keys_.mutable_note(i);
     if (e->velocity & 0x80) {
+      e->velocity &= ~0x80; // Un-flag the note
       NoteOff(tx_channel(), e->note);
     }
   }
@@ -924,14 +920,11 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MAX_NOTE:
       case PART_MIDI_MIN_VELOCITY:
       case PART_MIDI_MAX_VELOCITY:
-      case PART_MIDI_SUSTAIN_MODE:
-      case PART_MIDI_TRANSPOSE_OCTAVES:
       case PART_SEQUENCER_INPUT_RESPONSE:
       case PART_SEQUENCER_PLAY_MODE:
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();
-        Unlatch();
         break;
         
       case PART_VOICING_ALLOCATION_MODE:
@@ -962,6 +955,10 @@ void Part::Set(uint8_t address, uint8_t value) {
         
       case PART_SEQUENCER_ARP_DIRECTION:
         arp_direction_ = 1;
+        break;
+
+      case PART_MIDI_SUSTAIN_MODE:
+      case PART_MIDI_TRANSPOSE_OCTAVES:
         break;
     }
   }

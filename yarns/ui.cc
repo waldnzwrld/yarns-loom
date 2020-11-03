@@ -675,7 +675,7 @@ void Ui::OnSwitchPress(const Event& e) {
           }
         } else {
           if (multi.latched()) {
-            multi.Unlatch();
+            multi.UnlatchOnNextNoteOn();
           } else {
             if (!multi.running()) {
               multi.Start(false);

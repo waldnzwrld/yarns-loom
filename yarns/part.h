@@ -127,6 +127,7 @@ enum SustainMode {
   SUSTAIN_MODE_NORMAL,
   // SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
+  SUSTAIN_MODE_MOMENTARY_LATCH,
   SUSTAIN_MODE_OFF,
   SUSTAIN_MODE_LAST,
 };
@@ -544,10 +545,14 @@ class Part {
     ignore_note_off_messages_ = true;
     release_latched_keys_on_next_note_on_ = true;
   }
-  inline void Unlatch() {
+  inline void UnlatchImmediate() {
     ignore_note_off_messages_ = false;
     release_latched_keys_on_next_note_on_ = false;
     ReleaseLatchedNotes();
+  }
+  inline void UnlatchOnNextNoteOn() {
+    ignore_note_off_messages_ = false;
+    release_latched_keys_on_next_note_on_ = true;
   }
   
   inline void SetMultiIsRecording(bool b) {
