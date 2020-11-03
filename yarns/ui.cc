@@ -710,7 +710,7 @@ void Ui::OnSwitchHeld(const Event& e) {
         mode_ = UI_MODE_PARAMETER_SELECT;
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
         mutable_active_part()->mutable_sequencer_settings()->looper_tape.RemoveAll();
-        mutable_active_part()->AllNotesOff();
+        mutable_active_part()->AllSequencerNotesOff();
       } else {
         if (!push_it_ && !multi.latched()) {
           if (multi.running()) {

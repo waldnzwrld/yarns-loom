@@ -369,12 +369,31 @@ class Part {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
   inline void LooperNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
-    looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
-    InternalNoteOn(pitch, velocity);
+    looper_note_index_for_generated_note_index_[SequencerNoteOn(pitch, velocity)] = looper_note_index;
   }
   inline void LooperNoteOff(uint8_t looper_note_index, uint8_t pitch) {
-    looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
-    InternalNoteOff(pitch);
+    looper_note_index_for_generated_note_index_[SequencerNoteOff(pitch)] = looper::kNullIndex;
+  }
+
+  inline uint8_t SequencerNoteOn(uint8_t pitch, uint8_t velocity) {
+    uint8_t index = generated_notes_.NoteOn(pitch, velocity);
+    if (!pressed_keys_.Find(pitch)) {
+      InternalNoteOn(pitch, velocity);
+    }
+    return index;
+  }
+  inline uint8_t SequencerNoteOff(uint8_t pitch) {
+    uint8_t index = generated_notes_.NoteOff(pitch);
+    if (!pressed_keys_.Find(pitch)) {
+      InternalNoteOff(pitch);
+    }
+    return index;
+  }
+
+  inline void AllSequencerNotesOff() {
+    while (generated_notes_.size()) {
+      SequencerNoteOff(generated_notes_.sorted_note(0).note);
+    }
   }
   
   inline void RecordStep(const SequencerStep& step) {
