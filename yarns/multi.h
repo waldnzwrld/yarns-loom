@@ -253,10 +253,10 @@ class Multi {
     }
   }
 
-  inline void Unlatch() {
+  inline void UnlatchOnNextNoteOn() {
     if (latched_) {
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        part_[i].Unlatch();
+        part_[i].UnlatchOnNextNoteOn();
       }
       latched_ = false;
     }

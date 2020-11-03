@@ -132,6 +132,7 @@ const char* const sustain_mode_values[] = {
   "NORMAL",
   // "SOSTENUTO",
   "LATCH",
+  "MOMENTARY LATCH",
   "OFF"
 };
 

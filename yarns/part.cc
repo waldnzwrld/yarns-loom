@@ -258,6 +258,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
               break;
             */
             case SUSTAIN_MODE_LATCH:
+            case SUSTAIN_MODE_MOMENTARY_LATCH:
               Latch();
               break;
             case SUSTAIN_MODE_OFF:
@@ -277,8 +278,10 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
               break;
             */
             case SUSTAIN_MODE_LATCH:
-              Unlatch();
+              UnlatchOnNextNoteOn();
               break;
+            case SUSTAIN_MODE_MOMENTARY_LATCH:
+              UnlatchImmediate();
             case SUSTAIN_MODE_OFF:
             default:
               break;
@@ -900,14 +903,11 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MAX_NOTE:
       case PART_MIDI_MIN_VELOCITY:
       case PART_MIDI_MAX_VELOCITY:
-      case PART_MIDI_SUSTAIN_MODE:
-      case PART_MIDI_TRANSPOSE_OCTAVES:
       case PART_SEQUENCER_INPUT_RESPONSE:
       case PART_SEQUENCER_PLAY_MODE:
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();
-        Unlatch();
         break;
         
       case PART_VOICING_ALLOCATION_MODE:
@@ -938,6 +938,10 @@ void Part::Set(uint8_t address, uint8_t value) {
         
       case PART_SEQUENCER_ARP_DIRECTION:
         arp_direction_ = 1;
+        break;
+
+      case PART_MIDI_SUSTAIN_MODE:
+      case PART_MIDI_TRANSPOSE_OCTAVES:
         break;
     }
   }
