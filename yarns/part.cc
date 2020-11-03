@@ -177,36 +177,28 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       }
     }
   } else {
-    bool off = true;
-    /*
-    if (midi_.sustain_mode == SUSTAIN_MODE_SOSTENUTO) {
-      for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
-        NoteEntry* e = pressed_keys_.mutable_note(i);
-        // If this note is flagged, don't remove it
-        if (e->note == note && e->velocity && (e->velocity & 0x80)) {
-          off = false;
-        }
-      }
+    uint8_t pressed_key_index = pressed_keys_.Find(note);
+    if (pressed_keys_.note(pressed_key_index).velocity & 0x80) {
+      // If the note was flagged by a prior NoteOff, this subsequent NoteOff was
+      // meant for another part (there is no velocity filter for NoteOff)
+      return false;
     }
-    */
-    if (off) {
-      uint8_t pressed_key_index = pressed_keys_.NoteOff(note);
-    
+    pressed_keys_.NoteOff(note);
+
+    if (
+      seq_.play_mode == PLAY_MODE_MANUAL ||
+      sent_from_step_editor ||
+      SequencerDirectResponse()
+    ) {
+      InternalNoteOff(note);
+    } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+      uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
+      looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
       if (
-        seq_.play_mode == PLAY_MODE_MANUAL ||
-        sent_from_step_editor ||
-        SequencerDirectResponse()
+        looper_note_index != looper::kNullIndex &&
+        seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
       ) {
-        InternalNoteOff(note);
-      } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
-        uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
-        looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
-        if (
-          looper_note_index != looper::kNullIndex &&
-          seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
-        ) {
-          LooperNoteOff(looper_note_index, note);
-        }
+        LooperNoteOff(looper_note_index, note);
       }
     }
   }
@@ -690,6 +682,7 @@ void Part::ReleaseLatchedNotes() {
   for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
     NoteEntry* e = pressed_keys_.mutable_note(i);
     if (e->velocity & 0x80) {
+      e->velocity &= ~0x80; // Un-flag the note
       NoteOff(tx_channel(), e->note);
     }
   }
