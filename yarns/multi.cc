@@ -75,53 +75,7 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
   settings_.clock_manual_start = 0;
-  
-  MidiSettings* midi = part_[0].mutable_midi_settings();
-  midi->channel = 0;
-  midi->min_note = 0;
-  midi->max_note = 127;
-  midi->min_velocity = 0;
-  midi->max_velocity = 127;
-  midi->out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
-  midi->sustain_mode = SUSTAIN_MODE_NORMAL;
-  midi->transpose_octaves = 0;
-  
-  VoicingSettings* voicing = part_[0].mutable_voicing_settings();
-  voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
-  voicing->allocation_mode = VOICE_ALLOCATION_MODE_MONO;
-  voicing->legato_mode = LEGATO_MODE_OFF;
-  voicing->portamento = 0;
-  voicing->pitch_bend_range = 2;
-  voicing->vibrato_range = 1;
-  voicing->vibrato_initial = 0;
-  voicing->vibrato_control_source = VIBRATO_CONTROL_SOURCE_MODWHEEL;
-  voicing->modulation_rate = 50;
-  voicing->trigger_duration = 2;
-  voicing->aux_cv = MOD_AUX_MODULATION;
-  voicing->aux_cv_2 = MOD_AUX_VIBRATO_LFO;
-  voicing->oscillator_pw_initial = 80;
-  voicing->oscillator_pw_mod = 10;
-  voicing->envelope_attack = 40;
-  voicing->envelope_decay = 30;
-  voicing->envelope_sustain = 80;
-  voicing->envelope_release = 105;
-  voicing->tuning_transpose = 0;
-  voicing->tuning_fine = 0;
-  voicing->tuning_root = 0;
-  voicing->tuning_system = TUNING_SYSTEM_EQUAL;
-  voicing->tuning_factor = 0;
-  voicing->audio_mode = AUDIO_MODE_OFF;
 
-  SequencerSettings* seq = part_[0].mutable_sequencer_settings();
-  seq->clock_division = 6; // /4
-  seq->gate_length = 3;
-  seq->arp_range = 0;
-  seq->arp_direction = 0;
-  seq->arp_pattern = 0;
-  seq->input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
-  seq->play_mode = PLAY_MODE_MANUAL;
-  
-  part_[0].DeleteSequence();
   // A test sequence...
   // seq->num_steps = 4;
   // seq->step[0].data[0] = 48;

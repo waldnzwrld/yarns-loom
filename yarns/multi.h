@@ -125,7 +125,7 @@ class Multi {
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
       if (part_[i].accepts(channel, note, velocity)) {
         received = true;
-        thru = part_[i].NoteOn(channel, note, velocity) && thru;
+        thru = part_[i].NoteOn(channel, part_[i].TransposeInputPitch(note), velocity) && thru;
       }
     }
     
@@ -147,7 +147,7 @@ class Multi {
     bool has_notes = false;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
       if (part_[i].accepts(channel, note)) {
-        thru = part_[i].NoteOff(channel, note) && thru;
+        thru = part_[i].NoteOff(channel, part_[i].TransposeInputPitch(note)) && thru;
       }
       has_notes = has_notes || part_[i].has_notes();
     }

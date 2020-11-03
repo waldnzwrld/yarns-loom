@@ -287,7 +287,7 @@ const Setting Settings::settings_[] = {
   {
     "VO", "VOICING",
     SETTING_DOMAIN_PART, { PART_VOICING_ALLOCATION_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 1, VOICE_ALLOCATION_MODE_LAST - 1,
+    SETTING_UNIT_ENUMERATION, 0, VOICE_ALLOCATION_MODE_LAST - 1,
     voicing_allocation_mode_values,
     18, 8,
   },
@@ -1002,14 +1002,21 @@ void Settings::Increment(const Setting& setting, int16_t increment) {
   }
   value += increment;
   int16_t min_value = setting.min_value;
+  int16_t max_value = setting.max_value;
+  if (
+    &setting == &settings_[SETTING_VOICING_ALLOCATION_MODE] &&
+    multi.part(global_.active_part).num_voices() == 1
+  ) {
+    max_value = VOICE_ALLOCATION_MODE_MONO;
+  }
   if (
     multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
     global_.active_part == 0 &&
     &setting == &settings_[SETTING_VOICING_AUDIO_MODE]
   ) {
-    min_value = 1;
+    min_value = AUDIO_MODE_SAW;
   }
-  CONSTRAIN(value, min_value, setting.max_value);
+  CONSTRAIN(value, min_value, max_value);
   Set(setting, static_cast<uint8_t>(value));
 }
 
