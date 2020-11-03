@@ -66,6 +66,50 @@ void Part::Init() {
   seq_.looper_tape.RemoveAll();
   bar_lfo_.Init();
   LooperRewind();
+
+  midi_.channel = 0;
+  midi_.min_note = 0;
+  midi_.max_note = 127;
+  midi_.min_velocity = 0;
+  midi_.max_velocity = 127;
+  midi_.out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
+  midi_.sustain_mode = SUSTAIN_MODE_NORMAL;
+  midi_.transpose_octaves = 0;
+
+  voicing_.allocation_priority = NOTE_STACK_PRIORITY_LAST;
+  voicing_.allocation_mode = VOICE_ALLOCATION_MODE_MONO;
+  voicing_.legato_mode = LEGATO_MODE_OFF;
+  voicing_.portamento = 0;
+  voicing_.pitch_bend_range = 2;
+  voicing_.vibrato_range = 1;
+  voicing_.vibrato_initial = 0;
+  voicing_.vibrato_control_source = VIBRATO_CONTROL_SOURCE_MODWHEEL;
+  voicing_.modulation_rate = 50;
+  voicing_.trigger_duration = 2;
+  voicing_.aux_cv = MOD_AUX_MODULATION;
+  voicing_.aux_cv_2 = MOD_AUX_VIBRATO_LFO;
+  voicing_.oscillator_pw_initial = 80;
+  voicing_.oscillator_pw_mod = 10;
+  voicing_.envelope_attack = 40;
+  voicing_.envelope_decay = 30;
+  voicing_.envelope_sustain = 80;
+  voicing_.envelope_release = 105;
+  voicing_.tuning_transpose = 0;
+  voicing_.tuning_fine = 0;
+  voicing_.tuning_root = 0;
+  voicing_.tuning_system = TUNING_SYSTEM_EQUAL;
+  voicing_.tuning_factor = 0;
+  voicing_.audio_mode = AUDIO_MODE_OFF;
+
+  seq_.clock_division = 6; // /4
+  seq_.gate_length = 3;
+  seq_.arp_range = 0;
+  seq_.arp_direction = 0;
+  seq_.arp_pattern = 0;
+  seq_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
+  seq_.play_mode = PLAY_MODE_MANUAL;
+
+  DeleteSequence();
 }
   
 void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
