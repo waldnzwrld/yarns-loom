@@ -396,10 +396,10 @@ void Part::Start() {
   release_latched_keys_on_next_note_on_ = false;
   ignore_note_off_messages_ = false;
   
-  arp_note_ = 0;
+  arp_key_index_ = 0;
   arp_octave_ = 0;
-  arp_direction_ = 1;
-  arp_step_ = 0;
+  arp_key_increment_ = 1;
+  arp_step_index_ = 0;
   
   bar_lfo_.Init();
   LooperRewind();
@@ -526,7 +526,7 @@ void Part::ClockArpeggiator() {
   
   if (seq_.euclidean_length != 0) {
     pattern_length = seq_.euclidean_length;
-    pattern_mask = 1 << ((arp_step_ + seq_.euclidean_rotate) % pattern_length);
+    pattern_mask = 1 << ((arp_step_index_ + seq_.euclidean_rotate) % pattern_length);
     // Read euclidean pattern from ROM.
     uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) * 32;
     pattern = lut_euclidean[offset + seq_.euclidean_fill];
@@ -539,12 +539,12 @@ void Part::ClockArpeggiator() {
     seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
   ) {
     pattern_length = seq_.num_steps;
-    seq_step_ = arp_step_;
-    if (seq_.step[arp_step_].has_note()) {
+    seq_step_ = arp_step_index_;
+    if (seq_.step[arp_step_index_].has_note()) {
       ArpeggiatorNoteOn();
     }
   } else {
-    pattern_mask = 1 << arp_step_;
+    pattern_mask = 1 << arp_step_index_;
     pattern = lut_arpeggiator_patterns[seq_.arp_pattern];
     pattern_length = 16;
     if (pattern_mask & pattern) {
@@ -552,15 +552,15 @@ void Part::ClockArpeggiator() {
     }
   }
   
-  ++arp_step_;
-  if (arp_step_ >= pattern_length) {
-    arp_step_ = 0;
+  ++arp_step_index_;
+  if (arp_step_index_ >= pattern_length) {
+    arp_step_index_ = 0;
   }
 }
 
 void Part::ArpeggiatorNoteOn() {
-  uint8_t num_notes = pressed_keys_.size();
-  if (!num_notes) {
+  uint8_t num_keys = pressed_keys_.size();
+  if (!num_keys) {
     return;
   }
   // Update arepggiator note/octave counter.
@@ -569,7 +569,7 @@ void Part::ArpeggiatorNoteOn() {
       {
         uint16_t random = Random::GetSample();
         arp_octave_ = (random & 0xff) % seq_.arp_range;
-        arp_note_ = (random >> 8) % num_notes;
+        arp_key_index_ = (random >> 8) % num_keys;
       }
       break;
     case ARPEGGIATOR_DIRECTION_SEQUENCER_ALL:
@@ -577,7 +577,7 @@ void Part::ArpeggiatorNoteOn() {
     case ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP:
       {
         // TODO respect arp range?
-        SequencerStep step = seq_.step[arp_step_];
+        SequencerStep step = seq_.step[arp_step_index_];
         if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP) {
           // Movement instructions derived from sequence step
           uint8_t limit = step.octave();
@@ -590,51 +590,51 @@ void Part::ArpeggiatorNoteOn() {
             clock = 1;
             spacer = step.black_key_value() + 1; // TODO is 0 spacer useful?
           }
-          uint8_t old_pos = modulo(arp_note_ / spacer, limit);
+          uint8_t old_pos = modulo(arp_key_index_ / spacer, limit);
           uint8_t new_pos = modulo(old_pos + clock, limit);
           uint8_t increment_without_wrap = spacer * (new_pos - old_pos);
-          if ((arp_note_ + increment_without_wrap) < num_notes) {
-            arp_note_ += increment_without_wrap;
+          if ((arp_key_index_ + increment_without_wrap) < num_keys) {
+            arp_key_index_ += increment_without_wrap;
           } else {
-            arp_note_ -= spacer * old_pos;
+            arp_key_index_ -= spacer * old_pos;
           }
         } else {
           uint8_t new_arp_note;
           if (step.is_white()) {
-            new_arp_note = arp_note_ + step.white_key_distance_from_middle_c();
+            new_arp_note = arp_key_index_ + step.white_key_distance_from_middle_c();
           } else {
             new_arp_note = step.black_key_distance_from_middle_c();
           }
-          arp_note_ = stmlib::modulo(new_arp_note, num_notes);
-          if (arp_note_ != new_arp_note && seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST) {
+          arp_key_index_ = stmlib::modulo(new_arp_note, num_keys);
+          if (arp_key_index_ != new_arp_note && seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST) {
             // if we moved out of bounds, rest this step
             return;
           }
         }
-        arp_direction_ = 0; // these arp directions move before playing the note
+        arp_key_increment_ = 0; // these arp directions move before playing the note
       }
       break;
     default:
       {
-        if (num_notes == 1 && seq_.arp_range == 1) {
+        if (num_keys == 1 && seq_.arp_range == 1) {
           // This is a corner case for the Up/down pattern code.
           // Get it out of the way.
-          arp_note_ = 0;
+          arp_key_index_ = 0;
           arp_octave_ = 0;
         } else {
           bool wrapped = true;
           while (wrapped) {
-            if (arp_note_ >= num_notes || arp_note_ < 0) {
-              arp_octave_ += arp_direction_;
-              arp_note_ = arp_direction_ > 0 ? 0 : num_notes - 1;
+            if (arp_key_index_ >= num_keys || arp_key_index_ < 0) {
+              arp_octave_ += arp_key_increment_;
+              arp_key_index_ = arp_key_increment_ > 0 ? 0 : num_keys - 1;
             }
             wrapped = false;
             if (arp_octave_ >= seq_.arp_range || arp_octave_ < 0) {
-              arp_octave_ = arp_direction_ > 0 ? 0 : seq_.arp_range - 1;
+              arp_octave_ = arp_key_increment_ > 0 ? 0 : seq_.arp_range - 1;
               if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_UP_DOWN) {
-                arp_direction_ = -arp_direction_;
-                arp_note_ = arp_direction_ > 0 ? 1 : num_notes - 2;
-                arp_octave_ = arp_direction_ > 0 ? 0 : seq_.arp_range - 1;
+                arp_key_increment_ = -arp_key_increment_;
+                arp_key_index_ = arp_key_increment_ > 0 ? 1 : num_keys - 2;
+                arp_octave_ = arp_key_increment_ > 0 ? 0 : seq_.arp_range - 1;
                 wrapped = true;
               }
             }
@@ -651,7 +651,7 @@ void Part::ArpeggiatorNoteOn() {
   if (seq_.arp_direction != ARPEGGIATOR_DIRECTION_CHORD) {
     const NoteEntry* arpeggio_note = &pressed_keys_.note_by_priority(
       static_cast<NoteStackFlags>(voicing_.allocation_priority),
-      arp_note_
+      arp_key_index_
     );
     uint8_t note = arpeggio_note->note;
     uint8_t velocity = arpeggio_note->velocity & 0x7f;
@@ -659,7 +659,7 @@ void Part::ArpeggiatorNoteOn() {
       seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
       seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
     ) {
-      velocity = (velocity * seq_.step[arp_step_].velocity()) >> 7;
+      velocity = (velocity * seq_.step[arp_step_index_].velocity()) >> 7;
     }
     note += 12 * arp_octave_;
     while (note > 127) {
@@ -668,13 +668,13 @@ void Part::ArpeggiatorNoteOn() {
     generated_notes_.NoteOn(note, velocity);
     InternalNoteOn(note, velocity);
   } else {
-    for (uint8_t i = 0; i < num_notes; ++i) {
+    for (uint8_t i = 0; i < num_keys; ++i) {
       const NoteEntry& chord_note = pressed_keys_.played_note(i);
       generated_notes_.NoteOn(chord_note.note, chord_note.velocity & 0x7f);
       InternalNoteOn(chord_note.note, chord_note.velocity & 0x7f);
     }
   }
-  arp_note_ += arp_direction_;
+  arp_key_index_ += arp_key_increment_;
   gate_length_counter_ = seq_.gate_length;
 }
 
@@ -954,7 +954,7 @@ void Part::Set(uint8_t address, uint8_t value) {
         break;
         
       case PART_SEQUENCER_ARP_DIRECTION:
-        arp_direction_ = 1;
+        arp_key_increment_ = 1;
         break;
 
       case PART_MIDI_SUSTAIN_MODE:
