@@ -300,6 +300,13 @@ struct SequencerSettings {
   }
 };
 
+struct ArpeggiatorState {
+  uint8_t step_index;
+  int8_t key_index;
+  int8_t octave;
+  int8_t key_increment;
+};
+
 class Part {
  public:
   Part() { }
@@ -603,10 +610,7 @@ class Part {
   
   uint16_t arp_seq_prescaler_;
   
-  uint8_t arp_step_index_;
-  int8_t arp_key_index_;
-  int8_t arp_octave_;
-  int8_t arp_key_increment_;
+  ArpeggiatorState arp_;
   
   bool seq_recording_;
   bool seq_overdubbing_;
