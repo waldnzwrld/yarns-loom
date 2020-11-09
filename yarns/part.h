@@ -561,6 +561,9 @@ class Part {
     ignore_note_off_messages_ = false;
     release_latched_keys_on_next_note_on_ = true;
   }
+  inline bool IsLatched() const {
+    return release_latched_keys_on_next_note_on_;
+  }
   
   inline void SetMultiIsRecording(bool b) {
     multi_is_recording_ = b;

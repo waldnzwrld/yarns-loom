@@ -674,8 +674,8 @@ void Ui::OnSwitchPress(const Event& e) {
             mode_ = UI_MODE_PARAMETER_SELECT;
           }
         } else {
-          if (multi.latched()) {
-            multi.UnlatchOnNextNoteOn();
+          if (active_part().IsLatched()) {
+            mutable_active_part()->UnlatchOnNextNoteOn();
           } else {
             if (!multi.running()) {
               multi.Start(false);
@@ -722,9 +722,9 @@ void Ui::OnSwitchHeld(const Event& e) {
         mutable_active_part()->mutable_sequencer_settings()->looper_tape.RemoveAll();
         mutable_active_part()->AllSequencerNotesOff();
       } else {
-        if (!push_it_ && !multi.latched()) {
+        if (!push_it_ && !active_part().IsLatched()) {
           if (multi.running()) {
-            multi.Latch();
+            mutable_active_part()->Latch();
           } else {
             mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
             push_it_ = true;
@@ -817,12 +817,22 @@ void Ui::DoEvents() {
       refresh_display = true;
     }
   }
+  bool print_latch = active_part().IsLatched();
+  bool print_both = print_latch && !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
+  if (queue_.idle_time() > 600) {
+    if (print_both) {
+      PrintActivePartAndPlayMode();
+    } else if (print_latch) {
+      display_.Print("//");
+    }
+  } else if (queue_.idle_time() > 300) {
+    if (print_both) {
+      display_.Print("//");
+    }
+  }
 
   uint8_t recording_step_index = recording_part().recording_step();
   bool seq_recording = (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING);
-  if (queue_.idle_time() > 600 && !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT) {
-    PrintActivePartAndPlayMode();
-  }
   if (displayed_recording_step_index_ != recording_step_index && seq_recording) {
     refresh_display = true;
     displayed_recording_step_index_ = recording_step_index;
