@@ -662,7 +662,8 @@ void Part::ArpeggiatorNoteOn() {
     uint8_t velocity = arpeggio_note->velocity & 0x7f;
     if (
       seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
-      seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
+      seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST ||
+      seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
     ) {
       velocity = (velocity * seq_.step[arp_.step_index].velocity()) >> 7;
     }
