@@ -818,15 +818,15 @@ void Ui::DoEvents() {
     }
   }
   bool print_latch = active_part().IsLatched();
-  bool print_both = print_latch && !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
+  bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > 600) {
-    if (print_both) {
+    if (print_part) {
       PrintActivePartAndPlayMode();
     } else if (print_latch) {
       display_.Print("//");
     }
   } else if (queue_.idle_time() > 300) {
-    if (print_both) {
+    if (print_latch && print_part) {
       display_.Print("//");
     }
   }
