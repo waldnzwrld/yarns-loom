@@ -179,8 +179,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
   } else {
     uint8_t pressed_key_index = pressed_keys_.Find(note);
     if (pressed_keys_.note(pressed_key_index).velocity & 0x80) {
-      // If the note was flagged by a prior NoteOff, this subsequent NoteOff was
-      // meant for another part (there is no velocity filter for NoteOff)
+      // If the note is flagged, it can only be released by ReleaseLatchedNotes
       return false;
     }
     pressed_keys_.NoteOff(note);
@@ -270,6 +269,11 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
               break;
             */
             case SUSTAIN_MODE_LATCH:
+              for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
+                NoteEntry* e = pressed_keys_.mutable_note(i);
+                if (!e->velocity) { continue; }
+                e->velocity |= 0x80;
+              }
               UnlatchOnNextNoteOn();
               break;
             case SUSTAIN_MODE_MOMENTARY_LATCH:
