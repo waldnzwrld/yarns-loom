@@ -103,7 +103,7 @@ void Part::Init() {
 
   seq_.clock_division = 6; // /4
   seq_.gate_length = 3;
-  seq_.arp_range = 0;
+  seq_.arp_range = 1;
   seq_.arp_direction = 0;
   seq_.arp_pattern = 0;
   seq_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
@@ -567,6 +567,7 @@ void Part::ArpeggiatorNoteOn() {
   if (!num_keys) {
     return;
   }
+  CONSTRAIN(seq_.arp_range, 1, 4);
   // Update arepggiator note/octave counter.
   switch (seq_.arp_direction) {
     case ARPEGGIATOR_DIRECTION_RANDOM:
