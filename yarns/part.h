@@ -390,6 +390,14 @@ class Part {
   inline void LooperNoteOff(uint8_t looper_note_index, uint8_t pitch) {
     looper_note_index_for_generated_note_index_[SequencerNoteOff(pitch)] = looper::kNullIndex;
   }
+  inline void LooperRecordNoteOn(uint8_t pressed_key_index, uint8_t pitch, uint8_t velocity) {
+    uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
+      this, looper_pos_, pitch, velocity
+    );
+    looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
+    LooperNoteOn(looper_note_index, pitch, velocity);
+    InternalNoteOn(pitch, velocity);
+  }
 
   inline uint8_t SequencerNoteOn(uint8_t pitch, uint8_t velocity) {
     uint8_t index = generated_notes_.NoteOn(pitch, velocity);

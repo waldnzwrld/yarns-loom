@@ -155,12 +155,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     ) {
       InternalNoteOn(note, velocity);
     } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
-      uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
-        this, looper_pos_, note, velocity
-      );
-      looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
-      LooperNoteOn(looper_note_index, note, velocity);
-      InternalNoteOn(note, velocity);
+      LooperRecordNoteOn(pressed_key_index, note, velocity);
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -272,7 +267,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
             case SUSTAIN_MODE_LATCH:
               for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
                 NoteEntry* e = pressed_keys_.mutable_note(i);
-                if (!e->velocity) { continue; }
+                if (e->note == NOTE_STACK_FREE_SLOT) { continue; }
                 e->velocity |= 0x80;
               }
               UnlatchOnNextNoteOn();
@@ -445,7 +440,14 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  if (seq_.play_mode != PLAY_MODE_LOOPER) {
+  if (seq_.play_mode == PLAY_MODE_LOOPER) {
+    // Start recording any held notes
+    for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
+      const NoteEntry& e = pressed_keys_.note(i);
+      if (e.note == NOTE_STACK_FREE_SLOT) { continue; }
+      LooperRecordNoteOn(i, e.note, e.velocity);
+    }
+  } else {
     seq_rec_step_ = 0;
     seq_overdubbing_ = seq_.num_steps > 0;
   }
