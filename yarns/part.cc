@@ -533,6 +533,16 @@ void Part::ClockArpeggiator() {
     if (pattern_mask & pattern) {
       ArpeggiatorNoteOn();
     }
+  } else if (
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST ||
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
+  ) {
+    pattern_length = seq_.num_steps;
+    seq_step_ = arp_.step_index;
+    if (seq_.step[arp_.step_index].has_note()) {
+      ArpeggiatorNoteOn();
+    }
   } else {
     pattern_mask = 1 << arp_.step_index;
     pattern = lut_arpeggiator_patterns[seq_.arp_pattern];
@@ -566,10 +576,6 @@ void Part::ArpeggiatorNoteOn() {
     case ARPEGGIATOR_DIRECTION_SEQUENCER_REST:
     case ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP:
       {
-        seq_step_ = arp_.step_index;
-        if (!seq_.step[arp_.step_index].has_note()) {
-          return;
-        }
         // TODO respect arp range?
         SequencerStep step = seq_.step[arp_.step_index];
         if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP) {
