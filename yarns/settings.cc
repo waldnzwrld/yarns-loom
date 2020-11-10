@@ -53,7 +53,7 @@ const char* const voicing_allocation_mode_values[] = {
 };
 
 const char* const sequencer_arp_direction_values[] = {
-  "LINEAR", "BOUNCE", "RANDOM", "CHORD", "HIT SEQ", "REST SEQ"
+  "LINEAR", "BOUNCE", "RANDOM", "HIT SEQ", "REST SEQ", "WRAP SEQ", "CHORD"
 };
 
 const char* const voicing_aux_cv_values[] = {
@@ -479,13 +479,13 @@ const Setting Settings::settings_[] = {
   {
     "AP", "ARP PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, 21, NULL,
+    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
     106, 28,
   },
   {
     "RP", "RHYTHMIC PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, 21, NULL,
+    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
     0, 0,
   },
   {

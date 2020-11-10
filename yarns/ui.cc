@@ -336,6 +336,16 @@ void Ui::PrintRecordingStep() {
     PrintArpeggiatorMovementStep(step);
     return;
   }
+  if (recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP) {
+    if (step.is_white()) {
+      buffer_[0] = '\x90' + step.white_key_value(); // spinner 1
+    } else {
+      buffer_[0] = '\x98' + step.black_key_value(); // spinner 2
+    }
+    buffer_[1] = octave[step.octave()];
+    display_.Print(buffer_, buffer_);
+    return;
+  }
   PrintNote(step.note());
 }
 
@@ -657,25 +667,13 @@ void Ui::OnSwitchPress(const Event& e) {
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
         mutable_active_part()->LooperRemoveOldestNote();
       } else {
-        if (push_it_) {
-          multi.PushItNoteOff(push_it_note_);
-          push_it_ = false;
-          if (mode_ == UI_MODE_PUSH_IT_SELECT_NOTE) {
-            mode_ = UI_MODE_PARAMETER_SELECT;
+        if (!multi.running()) {
+          multi.Start(false);
+          if (multi.paques()) {
+            multi.StartSong();
           }
         } else {
-          if (multi.latched()) {
-            multi.UnlatchOnNextNoteOn();
-          } else {
-            if (!multi.running()) {
-              multi.Start(false);
-              if (multi.paques()) {
-                multi.StartSong();
-              }
-            } else {
-              multi.Stop();
-            }
-          }
+          multi.Stop();
         }
       }
       break;
@@ -712,9 +710,17 @@ void Ui::OnSwitchHeld(const Event& e) {
         mutable_active_part()->mutable_sequencer_settings()->looper_tape.RemoveAll();
         mutable_active_part()->AllSequencerNotesOff();
       } else {
-        if (!push_it_ && !multi.latched()) {
-          if (multi.running()) {
-            multi.Latch();
+        if (active_part().IsLatched()) {
+          mutable_active_part()->UnlatchOnNextNoteOn();
+        } else if (multi.running() && active_part().has_notes()) {
+          mutable_active_part()->Latch();
+        } else {
+          if (push_it_) {
+            multi.PushItNoteOff(push_it_note_);
+            push_it_ = false;
+            if (mode_ == UI_MODE_PUSH_IT_SELECT_NOTE) {
+              mode_ = UI_MODE_PARAMETER_SELECT;
+            }
           } else {
             mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
             push_it_ = true;
@@ -807,12 +813,22 @@ void Ui::DoEvents() {
       refresh_display = true;
     }
   }
+  bool print_latch = active_part().IsLatched();
+  bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
+  if (queue_.idle_time() > 600) {
+    if (print_part) {
+      PrintActivePartAndPlayMode();
+    } else if (print_latch) {
+      display_.Print("//");
+    }
+  } else if (queue_.idle_time() > 300) {
+    if (print_latch && print_part) {
+      display_.Print("//");
+    }
+  }
 
   uint8_t recording_step_index = recording_part().recording_step();
   bool seq_recording = (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING);
-  if (queue_.idle_time() > 600 && !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT) {
-    PrintActivePartAndPlayMode();
-  }
   if (displayed_recording_step_index_ != recording_step_index && seq_recording) {
     refresh_display = true;
     displayed_recording_step_index_ = recording_step_index;

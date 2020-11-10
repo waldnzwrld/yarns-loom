@@ -47,26 +47,27 @@ const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
 
-const int8_t whiteKeyValues[] = {
+const uint8_t whiteKeyValues[] = {
   0,    0x7f, 1,    0x7f,
   2,    3,    0x7f, 4,
   0x7f, 5,    0x7f, 6,
 };
-const int8_t blackKeyValues[] = {
+const uint8_t blackKeyValues[] = {
   0x7f, 0,    0x7f, 1,
   0x7f, 0x7f, 2,    0x7f,
   3,    0x7f, 4,    0x7f,
 };
-const int8_t kNumBlackKeys = 5;
-const int8_t kNumWhiteKeys = 7;
+const uint8_t kNumBlackKeys = 5;
+const uint8_t kNumWhiteKeys = 7;
 
 enum ArpeggiatorDirection {
   ARPEGGIATOR_DIRECTION_LINEAR,
   ARPEGGIATOR_DIRECTION_UP_DOWN,
   ARPEGGIATOR_DIRECTION_RANDOM,
-  ARPEGGIATOR_DIRECTION_CHORD,
   ARPEGGIATOR_DIRECTION_SEQUENCER_ALL,
   ARPEGGIATOR_DIRECTION_SEQUENCER_REST,
+  ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP,
+  ARPEGGIATOR_DIRECTION_CHORD,
   ARPEGGIATOR_DIRECTION_LAST
 };
 
@@ -261,9 +262,16 @@ struct SequencerStep {
   inline uint8_t velocity() const { return data[1] & 0x7f; }
 
   inline bool is_white() const { return whiteKeyValues[note() % 12] != 0x7f; }
-  inline int8_t octaves_above_middle_c() const { return ((int8_t) (note() / 12)) - (60 / 12); }
-  inline int8_t white_key_value() const { return octaves_above_middle_c() * kNumWhiteKeys + whiteKeyValues[note() % 12]; }
-  inline int8_t black_key_value() const { return octaves_above_middle_c() * kNumBlackKeys + blackKeyValues[note() % 12]; }
+  inline uint8_t octave() const { return note() / 12; }
+  inline int8_t octaves_above_middle_c() const { return ((int8_t) octave()) - (60 / 12); }
+  inline uint8_t white_key_value() const { return whiteKeyValues[note() % 12]; }
+  inline uint8_t black_key_value() const { return blackKeyValues[note() % 12]; }
+  inline int8_t white_key_distance_from_middle_c() const {
+    return octaves_above_middle_c() * ((int8_t) kNumWhiteKeys) + white_key_value();
+  }
+  inline int8_t black_key_distance_from_middle_c() const {
+    return octaves_above_middle_c() * ((int8_t) kNumBlackKeys) + black_key_value();
+  }
 };
 
 struct SequencerSettings {
@@ -290,6 +298,13 @@ struct SequencerSettings {
     }
     return 60;
   }
+};
+
+struct ArpeggiatorState {
+  uint8_t step_index;
+  int8_t key_index;
+  int8_t octave;
+  int8_t key_increment;
 };
 
 class Part {
@@ -546,6 +561,9 @@ class Part {
     ignore_note_off_messages_ = false;
     release_latched_keys_on_next_note_on_ = true;
   }
+  inline bool IsLatched() const {
+    return ignore_note_off_messages_;
+  }
   
   inline void SetMultiIsRecording(bool b) {
     multi_is_recording_ = b;
@@ -595,10 +613,7 @@ class Part {
   
   uint16_t arp_seq_prescaler_;
   
-  uint8_t arp_step_;
-  int8_t arp_note_;
-  int8_t arp_octave_;
-  int8_t arp_direction_;
+  ArpeggiatorState arp_;
   
   bool seq_recording_;
   bool seq_overdubbing_;
