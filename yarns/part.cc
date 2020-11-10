@@ -160,6 +160,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
       );
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
       LooperNoteOn(looper_note_index, note, velocity);
+      InternalNoteOn(note, velocity);
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
