@@ -667,25 +667,13 @@ void Ui::OnSwitchPress(const Event& e) {
       } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
         mutable_active_part()->LooperRemoveOldestNote();
       } else {
-        if (push_it_) {
-          multi.PushItNoteOff(push_it_note_);
-          push_it_ = false;
-          if (mode_ == UI_MODE_PUSH_IT_SELECT_NOTE) {
-            mode_ = UI_MODE_PARAMETER_SELECT;
+        if (!multi.running()) {
+          multi.Start(false);
+          if (multi.paques()) {
+            multi.StartSong();
           }
         } else {
-          if (active_part().IsLatched()) {
-            mutable_active_part()->UnlatchOnNextNoteOn();
-          } else {
-            if (!multi.running()) {
-              multi.Start(false);
-              if (multi.paques()) {
-                multi.StartSong();
-              }
-            } else {
-              multi.Stop();
-            }
-          }
+          multi.Stop();
         }
       }
       break;
@@ -722,9 +710,17 @@ void Ui::OnSwitchHeld(const Event& e) {
         mutable_active_part()->mutable_sequencer_settings()->looper_tape.RemoveAll();
         mutable_active_part()->AllSequencerNotesOff();
       } else {
-        if (!push_it_ && !active_part().IsLatched()) {
-          if (multi.running()) {
-            mutable_active_part()->Latch();
+        if (active_part().IsLatched()) {
+          mutable_active_part()->UnlatchOnNextNoteOn();
+        } else if (multi.running() && active_part().has_notes()) {
+          mutable_active_part()->Latch();
+        } else {
+          if (push_it_) {
+            multi.PushItNoteOff(push_it_note_);
+            push_it_ = false;
+            if (mode_ == UI_MODE_PUSH_IT_SELECT_NOTE) {
+              mode_ = UI_MODE_PARAMETER_SELECT;
+            }
           } else {
             mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
             push_it_ = true;
