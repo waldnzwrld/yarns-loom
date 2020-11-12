@@ -325,10 +325,12 @@ class Part {
   // whether the message should be sent to the part.
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
   bool NoteOff(uint8_t channel, uint8_t note);
-  uint8_t TransposeInputPitch(uint8_t pitch) {
-    int8_t transpose_octaves = midi_.transpose_octaves;
+  uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) {
     CONSTRAIN(transpose_octaves, (0 - pitch) / 12, (127 - pitch) / 12);
     return pitch + 12 * transpose_octaves;
+  }
+  uint8_t TransposeInputPitch(uint8_t pitch) {
+    return TransposeInputPitch(pitch, midi_.transpose_octaves);
   }
   void InternalNoteOn(uint8_t note, uint8_t velocity);
   void InternalNoteOff(uint8_t note);
@@ -422,8 +424,13 @@ class Part {
   
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
-      seq_.step[seq_rec_step_].data[0] = step.data[0];
-      seq_.step[seq_rec_step_].data[1] |= step.data[1];
+      SequencerStep* target = &seq_.step[seq_rec_step_];
+      target->data[0] = step.data[0];
+      if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+        // This is an arpeggiation control step, so undo input transpose
+        target->data[0] = TransposeInputPitch(target->data[0], -midi_.transpose_octaves);
+      }
+      target->data[1] |= step.data[1];
       ++seq_rec_step_;
       uint8_t last_step = seq_overdubbing_ ? seq_.num_steps : kNumSteps;
       // Extend sequence.
