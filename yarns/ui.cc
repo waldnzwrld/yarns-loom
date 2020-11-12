@@ -703,12 +703,8 @@ void Ui::OnSwitchHeld(const Event& e) {
   switch (e.control_id) {
 
     case UI_SWITCH_REC:
-      if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
-        mutable_active_part()->DeleteSequence();
-        mode_ = UI_MODE_PARAMETER_SELECT;
-      } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->mutable_sequencer_settings()->looper_tape.RemoveAll();
-        mutable_active_part()->AllSequencerNotesOff();
+      if (multi.recording()) {
+        mutable_active_part()->DeleteRecording();
       } else {
         if (active_part().IsLatched()) {
           mutable_active_part()->UnlatchOnNextNoteOn();

@@ -422,6 +422,15 @@ class Part {
     }
   }
   
+  inline void DeleteRecording() {
+    if (seq_.play_mode == PLAY_MODE_LOOPER) {
+      seq_.looper_tape.RemoveAll();
+    } else {
+      DeleteSequence();
+    }
+    AllSequencerNotesOff();
+  }
+
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
       SequencerStep* target = &seq_.step[seq_rec_step_];
