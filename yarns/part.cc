@@ -184,7 +184,10 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     if (
       seq_.play_mode == PLAY_MODE_MANUAL ||
       sent_from_step_editor ||
-      SequencerDirectResponse()
+      SequencerDirectResponse() || (
+        seq_.play_mode == PLAY_MODE_SEQUENCER &&
+        !generated_notes_.Find(note)
+      )
     ) {
       InternalNoteOff(note);
     } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
