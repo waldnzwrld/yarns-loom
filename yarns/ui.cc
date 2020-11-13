@@ -329,6 +329,10 @@ void Ui::PrintRecordingStep() {
     display_.Print("TI");
     return;
   }
+  if (active_part().sequencer_settings().play_mode != PLAY_MODE_ARPEGGIATOR) {
+    PrintNote(step.note());
+    return;
+  }
   if (
     recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
     recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
@@ -346,7 +350,6 @@ void Ui::PrintRecordingStep() {
     display_.Print(buffer_, buffer_);
     return;
   }
-  PrintNote(step.note());
 }
 
 void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
