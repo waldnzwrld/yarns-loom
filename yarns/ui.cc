@@ -787,6 +787,9 @@ void Ui::DoEvents() {
     const Mode& mode = modes_[mode_];
     if (e.control_type == CONTROL_ENCODER_CLICK) {
       (this->*mode.on_click)(e);
+      if (mode_ == UI_MODE_PARAMETER_EDIT) {
+        scroll_display = true;
+      }
     } else if (e.control_type == CONTROL_ENCODER) {
       (this->*mode.on_increment)(e);
       scroll_display = true;
@@ -802,6 +805,9 @@ void Ui::DoEvents() {
   if (queue_.idle_time() > 300 && show_splash_) {
     refresh_display = true;
     show_splash_ = false;
+    if (mode_ == UI_MODE_PARAMETER_EDIT) {
+      scroll_display = true;
+    }
   }
   if (queue_.idle_time() > 900) {
     if (!display_.scrolling()) {
