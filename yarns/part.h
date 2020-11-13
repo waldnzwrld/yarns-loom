@@ -441,7 +441,7 @@ class Part {
     if (seq_recording_) {
       SequencerStep* target = &seq_.step[seq_rec_step_];
       target->data[0] = step.data[0];
-      if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR && step.has_note()) {
         // This is an arpeggiation control step, so undo input transpose
         target->data[0] = TransposeInputPitch(target->data[0], -midi_.transpose_octaves);
       }
