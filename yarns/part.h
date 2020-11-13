@@ -290,7 +290,7 @@ struct SequencerSettings {
   looper::Tape looper_tape;
   // no padding needed
   
-  int16_t first_note() {
+  int16_t first_note() const {
     for (uint8_t i = 0; i < num_steps; ++i) {
       if (step[i].has_note()) {
         return step[i].note();
@@ -301,10 +301,16 @@ struct SequencerSettings {
 };
 
 struct ArpeggiatorState {
+  SequencerStep step;
   uint8_t step_index;
   int8_t key_index;
   int8_t octave;
   int8_t key_increment;
+  void ResetKey() {
+    key_index = 0;
+    octave = 0;
+    key_increment = 1;
+  }
 };
 
 class Part {
@@ -610,10 +616,9 @@ class Part {
   void ReleaseLatchedNotes();
   void DispatchSortedNotes(bool unison);
   void KillAllInstancesOfNote(uint8_t note);
-  
-  void ClockSequencer();
-  void ClockArpeggiator();
-  void ArpeggiatorNoteOn();
+
+  const SequencerStep BuildSeqStep() const;
+  const ArpeggiatorState BuildArpState(SequencerStep seq_step) const;
   void StopSequencerArpeggiatorNotes();
 
   MidiSettings midi_;
