@@ -383,7 +383,14 @@ void Part::Clock() {
     }
   }
 
-  if (!gate_length_counter_ && generated_notes_.size()) {
+  if (num_voices_ > 1) {
+    while (generated_notes_.size() > num_voices_) {
+      const NoteEntry note = generated_notes_.played_note(0);
+      generated_notes_.NoteOff(note.note);
+    }
+  } else if (gate_length_counter_) {
+    --gate_length_counter_;
+  } else if (generated_notes_.size()) {
     // Peek at next step
     step = BuildSeqStep();
     if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
@@ -397,8 +404,6 @@ void Part::Clock() {
     } else {
       StopSequencerArpeggiatorNotes();
     }
-  } else {
-    --gate_length_counter_;
   }
   
   ++arp_seq_prescaler_;
@@ -661,13 +666,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       }
       break;
   }
-/* ARPEGGIATOR_DIRECTION_CHORD
-    for (uint8_t i = 0; i < num_keys; ++i) {
-      const NoteEntry& chord_note = pressed_keys_.played_note(i);
-      generated_notes_.NoteOn(chord_note.note, chord_note.velocity & 0x7f);
-      InternalNoteOn(chord_note.note, chord_note.velocity & 0x7f);
-    }
-*/
+
   // Build arpeggiator step
   const NoteEntry* arpeggio_note = &pressed_keys_.played_note(next.key_index);
   next.key_index += next.key_increment;

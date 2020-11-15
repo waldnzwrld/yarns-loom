@@ -53,7 +53,7 @@ const char* const voicing_allocation_mode_values[] = {
 };
 
 const char* const sequencer_arp_direction_values[] = {
-  "LINEAR", "BOUNCE", "RANDOM", "HIT SEQ", "REST SEQ", "WRAP SEQ", "CHORD"
+  "LINEAR", "BOUNCE", "RANDOM", "HIT SEQ", "REST SEQ", "WRAP SEQ"
 };
 
 const char* const voicing_aux_cv_values[] = {
@@ -469,14 +469,6 @@ const Setting Settings::settings_[] = {
     0, 0,
   },
   {
-    // Variant without the CHORD option.
-    "AD", "ARP DIRECTION",
-    SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_DIRECTION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, ARPEGGIATOR_DIRECTION_LAST - 2,
-    sequencer_arp_direction_values,
-    105, 27,
-  },
-  {
     "AP", "ARP PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
     SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
@@ -588,26 +580,7 @@ const Setting Settings::settings_[] = {
   SETTING_REMOTE_CONTROL_CHANNEL, \
   SETTING_LAST
 
-const SettingIndex menu_live_mono[] = {
-  SETTING_SETUP_SUBMENU,
-  SETTING_MIDI_TRANSPOSE_OCTAVES,
-  SETTING_VOICING_PORTAMENTO,
-  SETTING_VOICING_MODULATION_RATE,
-  SETTING_VOICING_VIBRATO_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_MOD,
-  SETTING_VOICING_TUNING_TRANSPOSE,
-  SETTING_VOICING_TUNING_FINE,
-  SETTING_SEQUENCER_CLOCK_DIVISION,
-  SETTING_SEQUENCER_GATE_LENGTH,
-  SETTING_SEQUENCER_ARP_RANGE,
-  SETTING_SEQUENCER_ARP_DIRECTION_NO_CHORD,
-  SETTING_SEQUENCER_ARP_PATTERN,
-  MENU_EUCLIDEAN,
-  SETTING_LAST
-};
-
-const SettingIndex menu_live_poly[] = {
+const SettingIndex menu_live[] = {
   SETTING_SETUP_SUBMENU,
   SETTING_MIDI_TRANSPOSE_OCTAVES,
   SETTING_VOICING_PORTAMENTO,
@@ -815,19 +788,19 @@ Settings::MenuCategory Settings::setup_menus = { 0, {
 }};
 
 Settings::MenuCategory Settings::live_menus = { 0, {
-  menu_live_mono,
-  menu_live_mono,
-  menu_live_mono,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
+  menu_live,
+  menu_live,
+  menu_live,
+  menu_live,
+  menu_live,
+  menu_live,
+  menu_live,
+  menu_live,
   menu_live_quad_triggers,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
+  menu_live,
+  menu_live,
+  menu_live,
+  menu_live,
   menu_live_para,
 }};
 
