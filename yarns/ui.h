@@ -260,7 +260,6 @@ class Ui {
   int8_t active_program_;
   bool push_it_;
   int16_t push_it_note_;
-  uint8_t displayed_recording_step_index_;
   bool recording_mode_is_displaying_pitch_;
   
   UiFactoryTestingDisplay factory_testing_display_;

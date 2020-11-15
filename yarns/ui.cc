@@ -391,6 +391,12 @@ void Ui::PrintRecordingStatus() {
   if (push_it_) {
     PrintPushItNote();
   } else {
+    if (recording_part().recording_step() == recording_part().playing_step()) {
+      display_.set_brightness(UINT16_MAX);
+    } else {
+      // If playing a sequencer step other than the selected one, 2/3 brightness
+      display_.set_brightness(43690);
+    }
     if (recording_mode_is_displaying_pitch_) {
       PrintRecordingStep();
     } else {
@@ -832,14 +838,7 @@ void Ui::DoEvents() {
     }
   }
 
-  uint8_t recording_step_index = recording_part().recording_step();
-  bool seq_recording = (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING);
-  if (displayed_recording_step_index_ != recording_step_index && seq_recording) {
-    refresh_display = true;
-    displayed_recording_step_index_ = recording_step_index;
-  }
-
-  if (mode_ == UI_MODE_LOOPER_RECORDING) {
+  if (multi.recording()) {
     refresh_display = true;
   }
 
@@ -855,10 +854,7 @@ void Ui::DoEvents() {
   } else if (refresh_display) {
     queue_.Touch();
     (this->*modes_[mode_].refresh_display)();
-    if (seq_recording && recording_step_index != recording_part().playing_step()) {
-      // If playing a sequencer step other than the selected one, half brightness
-      display_.set_brightness(0x7fff);
-    } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
+    if (multi.recording()) {
       // Brightness set in PrintLooperRecordingStatus
     } else {
       display_.set_brightness(UINT16_MAX);
