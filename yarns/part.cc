@@ -106,8 +106,8 @@ void Part::Init() {
   seq_.arp_range = 1;
   seq_.arp_direction = 0;
   seq_.arp_pattern = 0;
-  seq_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
-  seq_.play_mode = PLAY_MODE_MANUAL;
+  midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
+  midi_.play_mode = PLAY_MODE_MANUAL;
 
   StopRecording();
   DeleteSequence();
@@ -133,7 +133,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   // velocity filtering can still have a full velocity range
   velocity = (128 * (velocity - midi_.min_velocity)) / (midi_.max_velocity - midi_.min_velocity + 1);
 
-  if (seq_recording_ && !sent_from_step_editor && seq_.play_mode != PLAY_MODE_LOOPER) {
+  if (seq_recording_ && !sent_from_step_editor && midi_.play_mode != PLAY_MODE_LOOPER) {
     RecordStep(SequencerStep(note, velocity));
   } else {
     if (release_latched_keys_on_next_note_on_) {
@@ -150,12 +150,12 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     uint8_t pressed_key_index = pressed_keys_.NoteOn(note, velocity);
   
     if (
-      seq_.play_mode == PLAY_MODE_MANUAL ||
+      midi_.play_mode == PLAY_MODE_MANUAL ||
       sent_from_step_editor ||
       SequencerDirectResponse()
     ) {
       InternalNoteOn(note, velocity);
-    } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+    } else if (seq_recording_ && midi_.play_mode == PLAY_MODE_LOOPER) {
       LooperRecordNoteOn(pressed_key_index, note, velocity);
     }
   }
@@ -182,15 +182,15 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     pressed_keys_.NoteOff(note);
 
     if (
-      seq_.play_mode == PLAY_MODE_MANUAL ||
+      midi_.play_mode == PLAY_MODE_MANUAL ||
       sent_from_step_editor ||
       SequencerDirectResponse() || (
-        seq_.play_mode == PLAY_MODE_SEQUENCER &&
+        midi_.play_mode == PLAY_MODE_SEQUENCER &&
         !generated_notes_.Find(note)
       )
     ) {
       InternalNoteOff(note);
-    } else if (seq_recording_ && seq_.play_mode == PLAY_MODE_LOOPER) {
+    } else if (seq_recording_ && midi_.play_mode == PLAY_MODE_LOOPER) {
       uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
       if (
@@ -389,7 +389,7 @@ void Part::Clock() {
     } else if (generated_notes_.size()) {
       // Peek at next step
       step = BuildSeqStep();
-      if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
         step = BuildArpState(step).step;
       }
 
@@ -478,7 +478,7 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  if (seq_.play_mode == PLAY_MODE_LOOPER) {
+  if (midi_.play_mode == PLAY_MODE_LOOPER) {
     // Start recording any held notes
     for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
       const NoteEntry& e = pressed_keys_.note(i);
@@ -514,7 +514,7 @@ const SequencerStep Part::BuildSeqStep() const {
   const SequencerStep& step = seq_.step[seq_step_];
   int16_t note = step.note();
   if (step.has_note() && pressed_keys_.size() && transposable_) {
-    switch (seq_.input_response) {
+    switch (midi_.input_response) {
       case SEQUENCER_INPUT_RESPONSE_TRANSPOSE:
         {
         // When we play a monophonic sequence, we can make the guess that root
@@ -933,8 +933,8 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MAX_NOTE:
       case PART_MIDI_MIN_VELOCITY:
       case PART_MIDI_MAX_VELOCITY:
-      case PART_SEQUENCER_INPUT_RESPONSE:
-      case PART_SEQUENCER_PLAY_MODE:
+      case PART_MIDI_INPUT_RESPONSE:
+      case PART_MIDI_PLAY_MODE:
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();

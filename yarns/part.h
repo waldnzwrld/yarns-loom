@@ -146,7 +146,9 @@ struct MidiSettings {
   uint8_t out_mode;
   uint8_t sustain_mode;
   int8_t transpose_octaves;
-  uint8_t padding[8];
+  uint8_t play_mode;
+  uint8_t input_response;
+  uint8_t padding[6];
 };
 
 struct VoicingSettings {
@@ -189,6 +191,8 @@ enum PartSetting {
   PART_MIDI_OUT_MODE,
   PART_MIDI_SUSTAIN_MODE,
   PART_MIDI_TRANSPOSE_OCTAVES,
+  PART_MIDI_PLAY_MODE,
+  PART_MIDI_INPUT_RESPONSE,
   PART_MIDI_LAST = PART_MIDI_CHANNEL + sizeof(MidiSettings) - 1,
   PART_VOICING_ALLOCATION_MODE,
   PART_VOICING_ALLOCATION_PRIORITY,
@@ -225,8 +229,6 @@ enum PartSetting {
   PART_SEQUENCER_EUCLIDEAN_LENGTH,
   PART_SEQUENCER_EUCLIDEAN_FILL,
   PART_SEQUENCER_EUCLIDEAN_ROTATE,
-  PART_SEQUENCER_PLAY_MODE,
-  PART_SEQUENCER_INPUT_RESPONSE,
   // PART_SEQUENCER_LOOPER_CLOCK_DIVISION,
 };
 
@@ -281,12 +283,10 @@ struct SequencerSettings {
   uint8_t euclidean_length;
   uint8_t euclidean_fill;
   uint8_t euclidean_rotate;
-  uint8_t play_mode;
-  uint8_t input_response;
   uint8_t num_steps;
+  uint8_t padding[2];
   SequencerStep step[kNumSteps];
   looper::Tape looper_tape;
-  // no padding needed
   
   int16_t first_note() const {
     for (uint8_t i = 0; i < num_steps; ++i) {
@@ -391,11 +391,11 @@ class Part {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
-    if (seq_.play_mode != PLAY_MODE_LOOPER) { return; }
+    if (midi_.play_mode != PLAY_MODE_LOOPER) { return; }
     looper_note_index_for_generated_note_index_[GeneratedNoteOn(pitch, velocity)] = looper_note_index;
   }
   inline void LooperPlayNoteOff(uint8_t looper_note_index, uint8_t pitch) {
-    if (seq_.play_mode != PLAY_MODE_LOOPER) { return; }
+    if (midi_.play_mode != PLAY_MODE_LOOPER) { return; }
     looper_note_index_for_generated_note_index_[GeneratedNoteOff(pitch)] = looper::kNullIndex;
   }
   inline void LooperRecordNoteOn(uint8_t pressed_key_index, uint8_t pitch, uint8_t velocity) {
@@ -429,7 +429,7 @@ class Part {
   }
   
   inline void DeleteRecording() {
-    if (seq_.play_mode == PLAY_MODE_LOOPER) {
+    if (midi_.play_mode == PLAY_MODE_LOOPER) {
       seq_.looper_tape.RemoveAll();
     } else {
       DeleteSequence();
@@ -441,7 +441,7 @@ class Part {
     if (seq_recording_) {
       SequencerStep* target = &seq_.step[seq_rec_step_];
       target->data[0] = step.data[0];
-      if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR && step.has_note()) {
+      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && step.has_note()) {
         // This is an arpeggiation control step, so undo input transpose
         target->data[0] = TransposeInputPitch(target->data[0], -midi_.transpose_octaves);
       }
@@ -472,9 +472,9 @@ class Part {
   inline bool SequencerDirectResponse() {
     return (
       !seq_recording_ &&
-      seq_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT && (
-        seq_.play_mode == PLAY_MODE_SEQUENCER ||
-        seq_.play_mode == PLAY_MODE_LOOPER
+      midi_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT && (
+        midi_.play_mode == PLAY_MODE_SEQUENCER ||
+        midi_.play_mode == PLAY_MODE_LOOPER
       )
     );
   }

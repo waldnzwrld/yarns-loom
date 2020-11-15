@@ -308,7 +308,7 @@ void Ui::PrintCalibrationNote() {
 }
 
 void Ui::PrintActivePartAndPlayMode() {
-  uint8_t play_mode = active_part().sequencer_settings().play_mode;
+  uint8_t play_mode = active_part().midi_settings().play_mode;
   if (multi.running()) {
     SetBrightnessFromBarPhase();
   }
@@ -329,7 +329,7 @@ void Ui::PrintRecordingStep() {
     display_.Print("TI");
     return;
   }
-  if (active_part().sequencer_settings().play_mode != PLAY_MODE_ARPEGGIATOR) {
+  if (active_part().midi_settings().play_mode != PLAY_MODE_ARPEGGIATOR) {
     PrintNote(step.note());
     return;
   }
@@ -616,7 +616,7 @@ void Ui::OnIncrementFactoryTesting(const Event& e) {
 void Ui::StartRecording() {
   previous_mode_ = mode_;
   multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
-  if (active_part().sequencer_settings().play_mode == PLAY_MODE_LOOPER) {
+  if (active_part().midi_settings().play_mode == PLAY_MODE_LOOPER) {
     mode_ = UI_MODE_LOOPER_RECORDING;
     multi.Start(false);
   } else {
@@ -740,8 +740,9 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_TAP_TEMPO:
+      // Use this to set last step for sequencer?
       if (!recording_any) {
-        mutable_active_part()->Set(PART_SEQUENCER_PLAY_MODE, (1 + active_part().sequencer_settings().play_mode) % PLAY_MODE_LAST);
+        mutable_active_part()->Set(PART_MIDI_PLAY_MODE, (1 + active_part().midi_settings().play_mode) % PLAY_MODE_LAST);
         ChangedActivePartOrPlayMode();
       }
       break;

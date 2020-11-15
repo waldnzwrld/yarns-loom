@@ -500,13 +500,13 @@ const Setting Settings::settings_[] = {
   },
   {
     "SP", "SEQUENCER PLAY MODE",
-    SETTING_DOMAIN_PART, { PART_SEQUENCER_PLAY_MODE, 0 },
+    SETTING_DOMAIN_PART, { PART_MIDI_PLAY_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
     0, 0,
   },
   {
     "SI", "SEQUENCER INPUT RESPONSE",
-    SETTING_DOMAIN_PART, { PART_SEQUENCER_INPUT_RESPONSE, 0 },
+    SETTING_DOMAIN_PART, { PART_MIDI_INPUT_RESPONSE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SEQUENCER_INPUT_RESPONSE_LAST - 1, sequencer_input_response_values,
     0, 0,
   },
