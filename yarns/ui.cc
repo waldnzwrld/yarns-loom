@@ -334,8 +334,7 @@ void Ui::PrintRecordingStep() {
     return;
   }
   if (
-    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
-    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST
+    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_HIT
   ) {
     PrintArpeggiatorMovementStep(step);
     return;

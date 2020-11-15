@@ -361,6 +361,7 @@ void Part::Clock() {
 
   if (!arp_seq_prescaler_) {
     CONSTRAIN(seq_.arp_range, 1, 4);
+    CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     SequencerStep step = BuildSeqStep();
     if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       arp_ = BuildArpState(step);
@@ -560,16 +561,11 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
     pattern = lut_euclidean[offset + seq_.euclidean_fill];
     hit = pattern_mask & pattern;
   } else if (
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST ||
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_HIT ||
     seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
   ) {
     pattern_length = seq_.num_steps;
-    if (seq_step.is_tie()) {
-      next.step.data[0] = SEQUENCER_STEP_TIE;
-    } else if (seq_step.has_note()) {
-      hit = true;
-    }
+    hit = true;
   } else {
     pattern_length = 16;
     pattern_mask = 1 << next.step_index;
@@ -581,11 +577,19 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
     next.step_index = 0;
   }
 
+  // If the pattern or sequence step doesn't have a note, don't advance the arp
+  if (!hit) {
+    return next;
+  } else if (!seq_step.has_note()) {
+    next.step.data[0] = seq_step.data[0];
+    return next;
+  }
   uint8_t num_keys = pressed_keys_.size();
   if (!num_keys) {
     next.ResetKey();
     return next;
   }
+
   // Update arepggiator note/octave counter.
   switch (seq_.arp_direction) {
     case ARPEGGIATOR_DIRECTION_RANDOM:
@@ -595,44 +599,40 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         next.key_index = (random >> 8) % num_keys;
       }
       break;
-    case ARPEGGIATOR_DIRECTION_SEQUENCER_ALL:
-    case ARPEGGIATOR_DIRECTION_SEQUENCER_REST:
+    case ARPEGGIATOR_DIRECTION_SEQUENCER_HIT:
+      {
+        uint8_t new_arp_note;
+        if (seq_step.is_white()) {
+          new_arp_note = next.key_index + seq_step.white_key_distance_from_middle_c();
+        } else {
+          new_arp_note = seq_step.black_key_distance_from_middle_c();
+        }
+        next.key_index = stmlib::modulo(new_arp_note, num_keys);
+        next.key_increment = 0; // these arp directions move before playing the note
+      }
+      break;
     case ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP:
       {
         // TODO respect arp range?
-        if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP) {
-          // Movement instructions derived from sequence step
-          uint8_t limit = seq_step.octave();
-          uint8_t clock;
-          uint8_t spacer;
-          if (seq_step.is_white()) {
-            clock = seq_step.white_key_value(); // TODO is 0 clock useful?
-            spacer = 1;
-          } else {
-            clock = 1;
-            spacer = seq_step.black_key_value() + 1; // TODO is 0 spacer useful?
-          }
-          uint8_t old_pos = modulo(next.key_index / spacer, limit);
-          uint8_t new_pos = modulo(old_pos + clock, limit);
-          uint8_t increment_without_wrap = spacer * (new_pos - old_pos);
-          if ((next.key_index + increment_without_wrap) < num_keys) {
-            next.key_index += increment_without_wrap;
-          } else {
-            // TODO need to constrain vs num_keys?
-            next.key_index -= spacer * old_pos;
-          }
+        // Movement instructions derived from sequence step
+        uint8_t limit = seq_step.octave();
+        uint8_t clock;
+        uint8_t spacer;
+        if (seq_step.is_white()) {
+          clock = seq_step.white_key_value(); // TODO is 0 clock useful?
+          spacer = 1;
         } else {
-          uint8_t new_arp_note;
-          if (seq_step.is_white()) {
-            new_arp_note = next.key_index + seq_step.white_key_distance_from_middle_c();
-          } else {
-            new_arp_note = seq_step.black_key_distance_from_middle_c();
-          }
-          next.key_index = stmlib::modulo(new_arp_note, num_keys);
-          if (next.key_index != new_arp_note && seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST) {
-            // if we moved out of bounds, rest this step
-            next.step.data[0] = SEQUENCER_STEP_REST;
-          }
+          clock = 1;
+          spacer = seq_step.black_key_value() + 1; // TODO is 0 spacer useful?
+        }
+        uint8_t old_pos = modulo(next.key_index / spacer, limit);
+        uint8_t new_pos = modulo(old_pos + clock, limit);
+        uint8_t increment_without_wrap = spacer * (new_pos - old_pos);
+        if ((next.key_index + increment_without_wrap) < num_keys) {
+          next.key_index += increment_without_wrap;
+        } else {
+          // TODO need to constrain vs num_keys?
+          next.key_index -= spacer * old_pos;
         }
         next.key_increment = 0; // these arp directions move before playing the note
       }
@@ -670,13 +670,13 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   // Build arpeggiator step
   const NoteEntry* arpeggio_note = &pressed_keys_.played_note(next.key_index);
   next.key_index += next.key_increment;
-  if (!hit) { return next; }
+
+  // TODO step type algorithm
 
   uint8_t note = arpeggio_note->note;
   uint8_t velocity = arpeggio_note->velocity & 0x7f;
   if (
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_ALL ||
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_REST ||
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_HIT ||
     seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
   ) {
     velocity = (velocity * seq_step.velocity()) >> 7;
