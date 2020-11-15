@@ -359,54 +359,54 @@ void Part::Reset() {
 void Part::Clock() {
   SequencerStep step;
 
-  if (!arp_seq_prescaler_) {
-    CONSTRAIN(seq_.arp_range, 1, 4);
-    CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
-    SequencerStep step = BuildSeqStep();
-    if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-      arp_ = BuildArpState(step);
-      step = arp_.step;
+  if (seq_.play_mode == PLAY_MODE_SEQUENCER || seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+    if (!arp_seq_prescaler_) {
+      step = BuildSeqStep();
+      if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+        arp_ = BuildArpState(step);
+        step = arp_.step;
+      }
+      if (step.has_note()) {
+        if (step.is_slid()) {
+          InternalNoteOn(step.note(), step.velocity());
+          StopSequencerArpeggiatorNotes();
+        } else {
+          StopSequencerArpeggiatorNotes();
+          InternalNoteOn(step.note(), step.velocity());
+        }
+        generated_notes_.NoteOn(step.note(), step.velocity());
+        gate_length_counter_ = seq_.gate_length;
+      }
     }
-    ++seq_step_;
-    if (seq_step_ >= seq_.num_steps) {
-      seq_step_ = 0;
-    }
-    if (step.has_note()) {
-      if (step.is_slid()) {
-        InternalNoteOn(step.note(), step.velocity());
-        StopSequencerArpeggiatorNotes();
+
+    if (num_voices_ > 1) {
+      while (generated_notes_.size() > num_voices_) {
+        const NoteEntry note = generated_notes_.played_note(0);
+        generated_notes_.NoteOff(note.note);
+      }
+    } else if (gate_length_counter_) {
+      --gate_length_counter_;
+    } else if (generated_notes_.size()) {
+      // Peek at next step
+      step = BuildSeqStep();
+      if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+        step = BuildArpState(step).step;
+      }
+
+      if (step.is_tie() || step.is_slid()) {
+        // The next step contains a "sustain" message; or a slid note. Extends
+        // the duration of the current note.
+        gate_length_counter_ += clock_division::num_ticks[seq_.clock_division];
       } else {
         StopSequencerArpeggiatorNotes();
-        InternalNoteOn(step.note(), step.velocity());
       }
-      generated_notes_.NoteOn(step.note(), step.velocity());
-      gate_length_counter_ = seq_.gate_length;
-    }
-  }
-
-  if (num_voices_ > 1) {
-    while (generated_notes_.size() > num_voices_) {
-      const NoteEntry note = generated_notes_.played_note(0);
-      generated_notes_.NoteOff(note.note);
-    }
-  } else if (gate_length_counter_) {
-    --gate_length_counter_;
-  } else if (generated_notes_.size()) {
-    // Peek at next step
-    step = BuildSeqStep();
-    if (seq_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-      step = BuildArpState(step).step;
-    }
-
-    if (step.is_tie() || step.is_slid()) {
-      // The next step contains a "sustain" message; or a slid note. Extends
-      // the duration of the current note.
-      gate_length_counter_ += clock_division::num_ticks[seq_.clock_division];
-    } else {
-      StopSequencerArpeggiatorNotes();
     }
   }
   
+  ++seq_step_;
+  if (seq_step_ >= seq_.num_steps) {
+    seq_step_ = 0;
+  }
   ++arp_seq_prescaler_;
   if (arp_seq_prescaler_ >= clock_division::num_ticks[seq_.clock_division]) {
     arp_seq_prescaler_ = 0;
@@ -438,6 +438,8 @@ void Part::Start() {
   
   arp_.ResetKey();
   arp_.step_index = 0;
+  CONSTRAIN(seq_.arp_range, 1, 4);
+  CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
   
   bar_lfo_.Init();
   LooperRewind();
