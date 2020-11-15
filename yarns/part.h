@@ -391,10 +391,10 @@ class Part {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
   inline void LooperNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
-    looper_note_index_for_generated_note_index_[SequencerNoteOn(pitch, velocity)] = looper_note_index;
+    looper_note_index_for_generated_note_index_[GeneratedNoteOn(pitch, velocity)] = looper_note_index;
   }
   inline void LooperNoteOff(uint8_t looper_note_index, uint8_t pitch) {
-    looper_note_index_for_generated_note_index_[SequencerNoteOff(pitch)] = looper::kNullIndex;
+    looper_note_index_for_generated_note_index_[GeneratedNoteOff(pitch)] = looper::kNullIndex;
   }
   inline void LooperRecordNoteOn(uint8_t pressed_key_index, uint8_t pitch, uint8_t velocity) {
     uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
@@ -405,14 +405,14 @@ class Part {
     InternalNoteOn(pitch, velocity);
   }
 
-  inline uint8_t SequencerNoteOn(uint8_t pitch, uint8_t velocity) {
+  inline uint8_t GeneratedNoteOn(uint8_t pitch, uint8_t velocity) {
     uint8_t index = generated_notes_.NoteOn(pitch, velocity);
     if (!pressed_keys_.Find(pitch)) {
       InternalNoteOn(pitch, velocity);
     }
     return index;
   }
-  inline uint8_t SequencerNoteOff(uint8_t pitch) {
+  inline uint8_t GeneratedNoteOff(uint8_t pitch) {
     uint8_t index = generated_notes_.NoteOff(pitch);
     if (!pressed_keys_.Find(pitch)) {
       InternalNoteOff(pitch);
@@ -420,9 +420,9 @@ class Part {
     return index;
   }
 
-  inline void AllSequencerNotesOff() {
+  inline void AllGeneratedNotesOff() { // TODO should this replace StopSequencerArpeggiatorNotes?
     while (generated_notes_.size()) {
-      SequencerNoteOff(generated_notes_.sorted_note(0).note);
+      GeneratedNoteOff(generated_notes_.sorted_note(0).note);
     }
   }
   
@@ -432,7 +432,7 @@ class Part {
     } else {
       DeleteSequence();
     }
-    AllSequencerNotesOff();
+    AllGeneratedNotesOff();
   }
 
   inline void RecordStep(const SequencerStep& step) {
