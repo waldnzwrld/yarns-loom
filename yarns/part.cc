@@ -197,7 +197,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
         looper_note_index != looper::kNullIndex &&
         seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
       ) {
-        LooperNoteOff(looper_note_index, note);
+        LooperPlayNoteOff(looper_note_index, note);
       }
     }
   }
@@ -463,9 +463,7 @@ void Part::LooperAdvance() {
     return;
   }
   uint16_t new_pos = bar_lfo_.GetPhase() >> 16;
-  seq_.looper_tape.Advance(
-    this, seq_.play_mode == PLAY_MODE_LOOPER, looper_pos_, new_pos
-  );
+  seq_.looper_tape.Advance(this, looper_pos_, new_pos);
   looper_pos_ = new_pos;
   looper_needs_advance_ = false;
 }

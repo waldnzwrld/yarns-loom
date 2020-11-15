@@ -390,10 +390,12 @@ class Part {
   inline uint8_t LooperCurrentNoteIndex() const {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
-  inline void LooperNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
+  inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
+    if (seq_.play_mode != PLAY_MODE_LOOPER) { return; }
     looper_note_index_for_generated_note_index_[GeneratedNoteOn(pitch, velocity)] = looper_note_index;
   }
-  inline void LooperNoteOff(uint8_t looper_note_index, uint8_t pitch) {
+  inline void LooperPlayNoteOff(uint8_t looper_note_index, uint8_t pitch) {
+    if (seq_.play_mode != PLAY_MODE_LOOPER) { return; }
     looper_note_index_for_generated_note_index_[GeneratedNoteOff(pitch)] = looper::kNullIndex;
   }
   inline void LooperRecordNoteOn(uint8_t pressed_key_index, uint8_t pitch, uint8_t velocity) {
@@ -401,7 +403,7 @@ class Part {
       this, looper_pos_, pitch, velocity
     );
     looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
-    LooperNoteOn(looper_note_index, pitch, velocity);
+    LooperPlayNoteOn(looper_note_index, pitch, velocity);
     InternalNoteOn(pitch, velocity);
   }
 
