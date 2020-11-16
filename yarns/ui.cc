@@ -622,7 +622,7 @@ void Ui::OnIncrementFactoryTesting(const Event& e) {
 void Ui::StartRecording() {
   previous_mode_ = mode_;
   multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
-  if (active_part().midi_settings().play_mode == PLAY_MODE_LOOPER) {
+  if (active_part().RecordsLoops()) {
     mode_ = UI_MODE_LOOPER_RECORDING;
     multi.Start(false);
   } else {

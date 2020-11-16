@@ -118,10 +118,14 @@ const char* const tuning_system_values[] = {
 };
 
 const char* const sequencer_play_mode_values[] = {
-  "m",
-  "r",
-  "s",
-  "l",
+  "M",
+  "A",
+  "R",
+};
+
+const char* const sequencer_clock_quantization_values[] = {
+  "LOOP",
+  "STEP"
 };
 
 const char* const sequencer_input_response_values[] = {
@@ -511,6 +515,12 @@ const Setting Settings::settings_[] = {
     0, 0,
   },
   {
+    "RQ", "RECORD TIME QUANTIZATION",
+    SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_QUANTIZATION, 0 },
+    SETTING_UNIT_ENUMERATION, 0, 1, sequencer_clock_quantization_values,
+    0, 0,
+  },
+  {
     "SU", "SUSTAIN MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SUSTAIN_MODE_LAST - 1, sustain_mode_values,
@@ -571,6 +581,7 @@ const Setting Settings::settings_[] = {
 
 #define MENU_OUTPUT \
   SETTING_VOICING_AUDIO_MODE, \
+  SETTING_SEQUENCER_CLOCK_QUANTIZATION, \
   SETTING_SEQUENCER_INPUT_RESPONSE, \
   SETTING_VOICING_TUNING_SYSTEM, \
   SETTING_VOICING_TUNING_ROOT, \

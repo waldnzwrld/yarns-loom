@@ -108,6 +108,7 @@ void Part::Init() {
   seq_.arp_pattern = 0;
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   midi_.play_mode = PLAY_MODE_MANUAL;
+  seq_.clock_quantization = 0;
 
   StopRecording();
   DeleteSequence();
@@ -133,7 +134,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   // velocity filtering can still have a full velocity range
   velocity = (128 * (velocity - midi_.min_velocity)) / (midi_.max_velocity - midi_.min_velocity + 1);
 
-  if (seq_recording_ && !sent_from_step_editor && midi_.play_mode != PLAY_MODE_LOOPER) {
+  if (seq_recording_ && !sent_from_step_editor && seq_.clock_quantization == 1) {
     RecordStep(SequencerStep(note, velocity));
   } else {
     if (release_latched_keys_on_next_note_on_) {
@@ -155,7 +156,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
       SequencerDirectResponse()
     ) {
       InternalNoteOn(note, velocity);
-    } else if (seq_recording_ && midi_.play_mode == PLAY_MODE_LOOPER) {
+    } else if (seq_recording_ && RecordsLoops()) {
       LooperRecordNoteOn(pressed_key_index, note, velocity);
     }
   }
@@ -185,12 +186,12 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       midi_.play_mode == PLAY_MODE_MANUAL ||
       sent_from_step_editor ||
       SequencerDirectResponse() || (
-        midi_.play_mode == PLAY_MODE_SEQUENCER &&
+        RecordsSteps() &&
         !generated_notes_.Find(note)
       )
     ) {
       InternalNoteOff(note);
-    } else if (seq_recording_ && midi_.play_mode == PLAY_MODE_LOOPER) {
+    } else if (seq_recording_ && RecordsLoops()) {
       uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
       if (
@@ -360,10 +361,7 @@ void Part::Clock() {
   SequencerStep step;
 
   bool clock = !arp_seq_prescaler_;
-  bool play = (
-    midi_.play_mode == PLAY_MODE_SEQUENCER ||
-    midi_.play_mode == PLAY_MODE_ARPEGGIATOR
-  );
+  bool play = RecordsSteps() || midi_.play_mode == PLAY_MODE_ARPEGGIATOR;
 
   if (clock && play) {
     step = BuildSeqStep();
@@ -487,7 +485,7 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  if (midi_.play_mode == PLAY_MODE_LOOPER) {
+  if (RecordsLoops()) {
     // Start recording any held notes
     for (uint8_t i = 1; i <= pressed_keys_.max_size(); ++i) {
       const NoteEntry& e = pressed_keys_.note(i);

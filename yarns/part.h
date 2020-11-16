@@ -116,8 +116,7 @@ enum SequencerInputResponse {
 enum PlayMode {
   PLAY_MODE_MANUAL,
   PLAY_MODE_ARPEGGIATOR,
-  PLAY_MODE_SEQUENCER,
-  PLAY_MODE_LOOPER,
+  PLAY_MODE_RECORD,
   PLAY_MODE_LAST
 };
 
@@ -229,6 +228,8 @@ enum PartSetting {
   PART_SEQUENCER_EUCLIDEAN_LENGTH,
   PART_SEQUENCER_EUCLIDEAN_FILL,
   PART_SEQUENCER_EUCLIDEAN_ROTATE,
+  PART_SEQUENCER_NUM_STEPS,
+  PART_SEQUENCER_CLOCK_QUANTIZATION,
   // PART_SEQUENCER_LOOPER_CLOCK_DIVISION,
 };
 
@@ -284,7 +285,8 @@ struct SequencerSettings {
   uint8_t euclidean_fill;
   uint8_t euclidean_rotate;
   uint8_t num_steps;
-  uint8_t padding[2];
+  uint8_t clock_quantization;
+  uint8_t padding[1];
   SequencerStep step[kNumSteps];
   looper::Tape looper_tape;
   
@@ -391,11 +393,11 @@ class Part {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
-    if (midi_.play_mode != PLAY_MODE_LOOPER) { return; }
+    if (!RecordsLoops()) { return; }
     looper_note_index_for_generated_note_index_[GeneratedNoteOn(pitch, velocity)] = looper_note_index;
   }
   inline void LooperPlayNoteOff(uint8_t looper_note_index, uint8_t pitch) {
-    if (midi_.play_mode != PLAY_MODE_LOOPER) { return; }
+    if (!RecordsLoops()) { return; }
     looper_note_index_for_generated_note_index_[GeneratedNoteOff(pitch)] = looper::kNullIndex;
   }
   inline void LooperRecordNoteOn(uint8_t pressed_key_index, uint8_t pitch, uint8_t velocity) {
@@ -427,9 +429,16 @@ class Part {
       GeneratedNoteOff(generated_notes_.sorted_note(0).note);
     }
   }
+
+  inline bool RecordsLoops() const {
+    return midi_.play_mode == PLAY_MODE_RECORD && seq_.clock_quantization == 0;
+  }
+  inline bool RecordsSteps() const {
+    return midi_.play_mode == PLAY_MODE_RECORD && seq_.clock_quantization == 1;
+  }
   
   inline void DeleteRecording() {
-    if (midi_.play_mode == PLAY_MODE_LOOPER) {
+    if (RecordsLoops()) {
       seq_.looper_tape.RemoveAll();
     } else {
       DeleteSequence();
@@ -472,10 +481,8 @@ class Part {
   inline bool SequencerDirectResponse() {
     return (
       !seq_recording_ &&
-      midi_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT && (
-        midi_.play_mode == PLAY_MODE_SEQUENCER ||
-        midi_.play_mode == PLAY_MODE_LOOPER
-      )
+      midi_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT &&
+      midi_.play_mode == PLAY_MODE_RECORD
     );
   }
 
@@ -574,6 +581,8 @@ class Part {
   }
   
   void Touch() {
+    CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
+    CONSTRAIN(seq_.clock_quantization, 0, 1);
     TouchVoices();
     TouchVoiceAllocation();
   }
