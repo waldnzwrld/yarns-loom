@@ -636,12 +636,12 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         }
         uint8_t old_pos = modulo(next.key_index / spacer, limit);
         uint8_t new_pos = modulo(old_pos + clock, limit);
-        uint8_t increment_without_wrap = spacer * (new_pos - old_pos);
-        if ((next.key_index + increment_without_wrap) < num_keys) {
-          next.key_index += increment_without_wrap;
+        uint8_t without_wrap = next.key_index + spacer * (new_pos - old_pos);
+        if (without_wrap < num_keys) {
+          next.key_index = without_wrap;
         } else {
-          // TODO need to constrain vs num_keys?
           next.key_index -= spacer * old_pos;
+          next.key_index = modulo(next.key_index, num_keys);
         }
         next.key_increment = 0; // these arp directions move before playing the note
       }
