@@ -599,8 +599,8 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
     pattern = lut_euclidean[offset + seq_.euclidean_fill];
     hit = pattern_mask & pattern;
   } else if (
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_HIT ||
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_STEP_ROTATE ||
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_STEP_SUBROTATE
   ) {
     pattern_length = seq_.num_steps;
     hit = true;
@@ -637,7 +637,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         next.key_index = (random >> 8) % num_keys;
       }
       break;
-    case ARPEGGIATOR_DIRECTION_SEQUENCER_HIT:
+    case ARPEGGIATOR_DIRECTION_STEP_ROTATE:
       {
         uint8_t new_arp_note;
         if (seq_step.is_white()) {
@@ -649,7 +649,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         next.key_increment = 0; // these arp directions move before playing the note
       }
       break;
-    case ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP:
+    case ARPEGGIATOR_DIRECTION_STEP_SUBROTATE:
       {
         // TODO respect arp range?
         // Movement instructions derived from sequence step
@@ -714,8 +714,8 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   uint8_t note = arpeggio_note->note;
   uint8_t velocity = arpeggio_note->velocity & 0x7f;
   if (
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_HIT ||
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_STEP_ROTATE ||
+    seq_.arp_direction == ARPEGGIATOR_DIRECTION_STEP_SUBROTATE
   ) {
     velocity = (velocity * seq_step.velocity()) >> 7;
   }

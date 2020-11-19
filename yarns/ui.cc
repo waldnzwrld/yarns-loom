@@ -334,12 +334,12 @@ void Ui::PrintRecordingStep() {
     return;
   }
   if (
-    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_HIT
+    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_STEP_ROTATE
   ) {
     PrintArpeggiatorMovementStep(step);
     return;
   }
-  if (recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_SEQUENCER_WRAP) {
+  if (recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_STEP_SUBROTATE) {
     if (step.is_white()) {
       buffer_[0] = '\x90' + step.white_key_value(); // spinner 1
     } else {
