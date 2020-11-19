@@ -50,6 +50,7 @@ using namespace std;
 
 void Part::Init() {
   pressed_keys_.Init();
+  arp_keys_.Init();
   mono_allocator_.Init();
   poly_allocator_.Init();
   generated_notes_.Init();
@@ -137,7 +138,12 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   if (seq_recording_ && !sent_from_step_editor && seq_.clock_quantization == 1) {
     RecordStep(SequencerStep(note, velocity));
   } else {
-    if (release_latched_keys_on_next_note_on_) {
+    bool looper_recording = seq_recording_ && seq_.clock_quantization == 0;
+
+    if (
+      release_latched_keys_on_next_note_on_ &&
+      !(looper_recording && midi_.play_mode == PLAY_MODE_ARPEGGIATOR)
+    ) {
       bool still_latched = ignore_note_off_messages_;
 
       // Releasing all latched key will generate "fake" NoteOff messages. We
@@ -149,15 +155,18 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
       ignore_note_off_messages_ = still_latched;
     }
     uint8_t pressed_key_index = pressed_keys_.NoteOn(note, velocity);
-  
-    if (
-      midi_.play_mode == PLAY_MODE_MANUAL ||
-      sent_from_step_editor ||
-      SequencerDirectResponse()
-    ) {
-      InternalNoteOn(note, velocity);
-    } else if (seq_recording_ && RecordsLoops()) {
+
+    if (looper_recording) {
       LooperRecordNoteOn(pressed_key_index, note, velocity);
+    } else {
+      arp_keys_.NoteOn(note, velocity);
+      if (
+        midi_.play_mode == PLAY_MODE_MANUAL ||
+        sent_from_step_editor ||
+        SequencerDirectResponse()
+      ) {
+        InternalNoteOn(note, velocity);
+      }
     }
   }
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -182,23 +191,26 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     }
     pressed_keys_.NoteOff(note);
 
-    if (
-      midi_.play_mode == PLAY_MODE_MANUAL ||
-      sent_from_step_editor ||
-      SequencerDirectResponse() || (
-        RecordsSteps() &&
-        !generated_notes_.Find(note)
-      )
-    ) {
-      InternalNoteOff(note);
-    } else if (seq_recording_ && RecordsLoops()) {
+    if (seq_recording_ && seq_.clock_quantization == 0) {
       uint8_t looper_note_index = looper_note_index_for_pressed_key_index_[pressed_key_index];
       looper_note_index_for_pressed_key_index_[pressed_key_index] = looper::kNullIndex;
+      if (looper_note_index == looper::kNullIndex) {
+        // If note wasn't being recorded to the looper
+        arp_keys_.NoteOff(note);
+      } else if (seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)) {
+        LooperPlayNoteOff(looper_note_index, ArpUndoTransposeInputPitch(note));
+      }
+    } else {
+      arp_keys_.NoteOff(note);
       if (
-        looper_note_index != looper::kNullIndex &&
-        seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)
+        midi_.play_mode == PLAY_MODE_MANUAL ||
+        sent_from_step_editor ||
+        SequencerDirectResponse() || (
+          RecordsSteps() &&
+          !generated_notes_.Find(note)
+        )
       ) {
-        LooperPlayNoteOff(looper_note_index, note);
+        InternalNoteOff(note);
       }
     }
   }
@@ -361,7 +373,8 @@ void Part::Clock() {
   SequencerStep step;
 
   bool clock = !arp_seq_prescaler_;
-  bool play = RecordsSteps() || midi_.play_mode == PLAY_MODE_ARPEGGIATOR;
+  bool play = RecordsSteps() ||
+    (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && seq_.clock_quantization == 1);
 
   if (clock && play) {
     step = BuildSeqStep();
@@ -398,13 +411,12 @@ void Part::Clock() {
     } else if (gate_length_counter_) {
       --gate_length_counter_;
     } else if (generated_notes_.size()) {
-      // Peek at next step
+      // Peek at next step to see if it's a continuation
       step = BuildSeqStep();
       if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
         step = BuildArpState(step).step;
       }
-
-      if (step.is_tie() || step.is_slid()) {
+      if (step.is_continuation()) {
         // The next step contains a "sustain" message; or a slid note. Extends
         // the duration of the current note.
         gate_length_counter_ += clock_division::num_ticks[seq_.clock_division];
@@ -463,12 +475,20 @@ void Part::LooperRewind() {
     &looper_note_index_for_pressed_key_index_[kNoteStackSize],
     looper::kNullIndex
   );
+  std::fill(
+    &looper_note_index_for_generated_note_index_[0],
+    &looper_note_index_for_generated_note_index_[kNoteStackSize],
+    looper::kNullIndex
+  );
 }
 
 void Part::LooperAdvance() {
-  if (!looper_needs_advance_) {
-    return;
-  }
+  if (
+    !looper_needs_advance_ ||
+    seq_.clock_quantization == 1 ||
+    midi_.play_mode == PLAY_MODE_MANUAL
+  ) { return; }
+
   uint16_t new_pos = bar_lfo_.GetPhase() >> 16;
   seq_.looper_tape.Advance(this, looper_pos_, new_pos);
   looper_pos_ = new_pos;
@@ -511,9 +531,20 @@ void Part::DeleteSequence() {
 
 void Part::StopSequencerArpeggiatorNotes() {
   while (generated_notes_.size()) {
-    uint8_t note = generated_notes_.sorted_note(0).note;
-    generated_notes_.NoteOff(note);
-    InternalNoteOff(note);
+    uint8_t generated_note_index = generated_notes_.most_recent_note_index();
+    uint8_t pitch = generated_notes_.note(generated_note_index).note;
+    uint8_t looper_note_index = looper_note_index_for_generated_note_index_[generated_note_index];
+
+    looper_note_index_for_generated_note_index_[generated_note_index] = looper::kNullIndex;
+    generated_notes_.NoteOff(pitch);
+    if (seq_.clock_quantization == 0) {
+      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+        pitch = arp_pitch_for_looper_note_[looper_note_index];
+      } else if (pressed_keys_.Find(pitch)) {
+        continue;
+      }
+    }
+    InternalNoteOff(pitch);
   }
 }
 
@@ -591,7 +622,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
     next.step.data[0] = seq_step.data[0];
     return next;
   }
-  uint8_t num_keys = pressed_keys_.size();
+  uint8_t num_keys = arp_keys_.size();
   if (!num_keys) {
     next.ResetKey();
     return next;
@@ -675,7 +706,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   }
 
   // Build arpeggiator step
-  const NoteEntry* arpeggio_note = &pressed_keys_.played_note(next.key_index);
+  const NoteEntry* arpeggio_note = &arp_keys_.played_note(next.key_index);
   next.key_index += next.key_increment;
 
   // TODO step type algorithm
@@ -709,6 +740,7 @@ void Part::AllNotesOff() {
   poly_allocator_.ClearNotes();
   mono_allocator_.Clear();
   pressed_keys_.Clear();
+  arp_keys_.Clear();
   generated_notes_.Clear();
   looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()] = looper::kNullIndex;
   for (uint8_t i = 0; i < num_voices_; ++i) {

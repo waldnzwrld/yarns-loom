@@ -257,6 +257,7 @@ struct SequencerStep {
   inline bool has_note() const { return !(data[0] & 0x80); }
   inline bool is_rest() const { return data[0] == SEQUENCER_STEP_REST; }
   inline bool is_tie() const { return data[0] == SEQUENCER_STEP_TIE; }
+  inline bool is_continuation() const { return is_tie() || is_slid(); }
   inline uint8_t note() const { return data[0] & 0x7f; }
 
   inline bool is_slid() const { return data[1] & 0x80; }
@@ -392,42 +393,53 @@ class Part {
   inline uint8_t LooperCurrentNoteIndex() const {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
-  inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
-    if (!RecordsLoops()) { return; }
-    looper_note_index_for_generated_note_index_[GeneratedNoteOn(pitch, velocity)] = looper_note_index;
+
+  inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity, bool recording = false) {
+    looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
+    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      // Advance arp
+      arp_ = BuildArpState(SequencerStep(pitch, velocity));
+      if (arp_.step.has_note()) {
+        InternalNoteOn(arp_.step.note(), arp_.step.velocity());
+        if (arp_.step.is_slid()) {
+          InternalNoteOff(arp_pitch_for_looper_note_[looper_note_index]);
+        }
+        arp_pitch_for_looper_note_[looper_note_index] = arp_.step.note();
+      } //  else if tie, arp_pitch_for_looper_note_ is already set to the tied pitch
+    } else {
+      if (recording || !pressed_keys_.Find(pitch)) {
+        InternalNoteOn(pitch, velocity);
+      }
+    }
   }
+
   inline void LooperPlayNoteOff(uint8_t looper_note_index, uint8_t pitch) {
-    if (!RecordsLoops()) { return; }
-    looper_note_index_for_generated_note_index_[GeneratedNoteOff(pitch)] = looper::kNullIndex;
+    looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
+    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      uint8_t arp_pitch = arp_pitch_for_looper_note_[looper_note_index];
+      // Peek at next looper note
+      uint8_t next_on_index = seq_.looper_tape.PeekNextOn();
+      const looper::Note& next_on_note = seq_.looper_tape.NoteAt(next_on_index);
+      SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
+      next_step = BuildArpState(next_step).step;
+      if (next_step.is_continuation()) {
+        // Leave this pitch in the care of the next looper note
+        arp_pitch_for_looper_note_[next_on_index] = arp_pitch;
+      } else {
+        InternalNoteOff(arp_pitch);
+      }
+    } else if (!pressed_keys_.Find(pitch)) {
+      InternalNoteOff(pitch);
+    }
   }
+
   inline void LooperRecordNoteOn(uint8_t pressed_key_index, uint8_t pitch, uint8_t velocity) {
+    pitch = ArpUndoTransposeInputPitch(pitch);
     uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
       this, looper_pos_, pitch, velocity
     );
     looper_note_index_for_pressed_key_index_[pressed_key_index] = looper_note_index;
-    LooperPlayNoteOn(looper_note_index, pitch, velocity);
-    InternalNoteOn(pitch, velocity);
-  }
-
-  inline uint8_t GeneratedNoteOn(uint8_t pitch, uint8_t velocity) {
-    uint8_t index = generated_notes_.NoteOn(pitch, velocity);
-    if (!pressed_keys_.Find(pitch)) {
-      InternalNoteOn(pitch, velocity);
-    }
-    return index;
-  }
-  inline uint8_t GeneratedNoteOff(uint8_t pitch) {
-    uint8_t index = generated_notes_.NoteOff(pitch);
-    if (!pressed_keys_.Find(pitch)) {
-      InternalNoteOff(pitch);
-    }
-    return index;
-  }
-
-  inline void AllGeneratedNotesOff() { // TODO should this replace StopSequencerArpeggiatorNotes?
-    while (generated_notes_.size()) {
-      GeneratedNoteOff(generated_notes_.sorted_note(0).note);
-    }
+    LooperPlayNoteOn(looper_note_index, pitch, velocity, true);
   }
 
   inline bool RecordsLoops() const {
@@ -438,22 +450,27 @@ class Part {
   }
   
   inline void DeleteRecording() {
-    if (RecordsLoops()) {
-      seq_.looper_tape.RemoveAll();
-    } else {
+    if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
+    StopSequencerArpeggiatorNotes();
+    if (seq_.clock_quantization) {
       DeleteSequence();
+    } else {
+      seq_.looper_tape.RemoveAll();
     }
-    AllGeneratedNotesOff();
+  }
+
+  inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) {
+    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
+      // This is an arpeggiation control step, so undo input transpose
+      pitch = TransposeInputPitch(pitch, -midi_.transpose_octaves);
+    }
+    return pitch;
   }
 
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
       SequencerStep* target = &seq_.step[seq_rec_step_];
-      target->data[0] = step.data[0];
-      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && step.has_note()) {
-        // This is an arpeggiation control step, so undo input transpose
-        target->data[0] = TransposeInputPitch(target->data[0], -midi_.transpose_octaves);
-      }
+      target->data[0] = ArpUndoTransposeInputPitch(step.data[0]);
       target->data[1] |= step.data[1];
       ++seq_rec_step_;
       uint8_t last_step = seq_overdubbing_ ? seq_.num_steps : kNumSteps;
@@ -643,6 +660,7 @@ class Part {
   bool release_latched_keys_on_next_note_on_;
   
   stmlib::NoteStack<kNoteStackSize> pressed_keys_;
+  stmlib::NoteStack<kNoteStackSize> arp_keys_;
   stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
   stmlib::NoteStack<kNoteStackSize> mono_allocator_;
   stmlib::VoiceAllocator<kNumMaxVoicesPerPart * 2> poly_allocator_;
@@ -661,8 +679,14 @@ class Part {
   SyncedLFO bar_lfo_;
   uint16_t looper_pos_;
   bool looper_needs_advance_;
+
+  // Tracks which looper notes are currently being recorded
   uint8_t looper_note_index_for_pressed_key_index_[kNoteStackSize];
+
+  // Tracks which looper notes are currently playing, so they can be turned off later
   uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
+
+  uint8_t arp_pitch_for_looper_note_[kNoteStackSize];
 
   uint16_t gate_length_counter_;
   
