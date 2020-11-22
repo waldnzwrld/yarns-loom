@@ -36,6 +36,10 @@
 
 namespace yarns {
 
+enum Tempo {
+  TEMPO_EXTERNAL = 39
+};
+
 enum GlobalSetting {
   GLOBAL_ACTIVE_PART
 };
@@ -150,8 +154,8 @@ struct Setting {
     scaled_value += min_value;
     if (unit == SETTING_UNIT_TEMPO) {
       scaled_value &= 0xfe;
-      if (scaled_value <= 38) {
-        scaled_value = 39;
+      if (scaled_value < TEMPO_EXTERNAL) {
+        scaled_value = TEMPO_EXTERNAL;
       }
     }
     return scaled_value;
@@ -212,6 +216,7 @@ class Settings {
     return settings_[index];
   }
   
+  void PrintTempo(char* buffer) const;
   static void PrintInteger(char* buffer, uint8_t number);
   static void PrintSignedInteger(char* buffer, int8_t number);
   

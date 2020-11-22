@@ -61,7 +61,9 @@ enum UiMode {
   UI_MODE_FACTORY_TESTING,
   UI_MODE_SPLASH,
   UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
+  UI_MODE_TEMPO_CHANGE,
   UI_MODE_LOOPER_RECORDING,
+
   UI_MODE_LAST
 };
 
@@ -144,6 +146,11 @@ class Ui {
  private:
   void RefreshDisplay();
   void TapTempo();
+  inline void SetTempo(uint8_t value) {
+    multi.Set(MULTI_CLOCK_TEMPO, value);
+    splash_mode_ = UI_MODE_TEMPO_CHANGE;
+    show_splash_ = true;
+  }
   inline Part* mutable_recording_part() {
     return mutable_active_part();
   }
@@ -202,6 +209,7 @@ class Ui {
   void PrintRecordingStep();
   void PrintArpeggiatorMovementStep(SequencerStep step);
   void PrintActivePartAndPlayMode();
+  void PrintTempo();
   
   void ChangedActivePartOrPlayMode();
   void StartRecording();
@@ -268,6 +276,7 @@ class Ui {
   
   uint32_t tap_tempo_sum_;
   uint32_t tap_tempo_count_;
+  bool tap_tempo_resolved_;
   uint32_t previous_tap_time_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);

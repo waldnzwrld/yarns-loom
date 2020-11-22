@@ -196,7 +196,7 @@ const Setting Settings::settings_[] = {
   {
     "TE", "TEMPO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_TEMPO, 0 },
-    SETTING_UNIT_TEMPO, 39, 240, NULL,
+    SETTING_UNIT_TEMPO, TEMPO_EXTERNAL, 240, NULL,
     0, 2,
   },
   {
@@ -929,11 +929,7 @@ void Settings::Print(const Setting& setting, char* buffer) const {
       break;
 
     case SETTING_UNIT_TEMPO:
-      if (value == 39) {
-        strcpy(buffer, "EXTERNAL");
-      } else {
-        PrintInteger(buffer, value);
-      }
+      PrintTempo(buffer);
       break;
 
     case SETTING_UNIT_MIDI_CHANNEL:
@@ -1003,6 +999,15 @@ void Settings::Increment(const Setting& setting, int16_t increment) {
   }
   CONSTRAIN(value, min_value, max_value);
   Set(setting, static_cast<uint8_t>(value));
+}
+
+void Settings::PrintTempo(char* buffer) const {
+  uint8_t value = Get(settings_[SETTING_CLOCK_TEMPO]);
+  if (value == TEMPO_EXTERNAL) {
+    strcpy(buffer, "EXTERNAL");
+  } else {
+    PrintInteger(buffer, value);
+  }
 }
 
 /* static */

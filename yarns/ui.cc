@@ -144,6 +144,12 @@ Ui::Mode Ui::modes_[] = {
     UI_MODE_PARAMETER_SELECT,
     NULL, 0, 0 },
 
+  // UI_MODE_TEMPO_RESULT
+  { &Ui::OnIncrementParameterSelect, &Ui::OnClick,
+    &Ui::PrintTempo,
+    UI_MODE_PARAMETER_SELECT,
+    NULL, 0, 0 },
+
   // UI_MODE_LOOPER_RECORDING
   { &Ui::OnIncrement, &Ui::OnClick,
     &Ui::PrintLooperRecordingStatus,
@@ -166,6 +172,7 @@ void Ui::Init() {
   current_menu_category_ = &Settings::live_menus;
   previous_tap_time_ = 0;
   tap_tempo_count_ = 0;
+  tap_tempo_resolved_ = true;
   
   start_stop_press_time_ = 0;
   
@@ -317,6 +324,12 @@ void Ui::PrintActivePartAndPlayMode() {
   buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[play_mode][0];
   buffer_[2] = '\0';
   display_.Print(buffer_);
+}
+
+void Ui::PrintTempo() {
+  settings.PrintTempo(buffer_);
+  display_.Print(buffer_);
+  display_.Scroll();
 }
 
 void Ui::PrintRecordingStep() {
@@ -766,17 +779,23 @@ void Ui::DoLearnCommand() {
   multi.StartLearning();
 }
 
+const uint32_t kTapDeltaMax = 1500;
+
 void Ui::TapTempo() {
   uint32_t tap_time = system_clock.milliseconds();
   uint32_t delta = tap_time - previous_tap_time_;
-  if (delta < 1500) {
+  if (delta < kTapDeltaMax) {
+    tap_tempo_resolved_ = true;
     if (delta < 250) {
       delta = 250;
     }
     ++tap_tempo_count_;
     tap_tempo_sum_ += delta;
-    multi.Set(MULTI_CLOCK_TEMPO, tap_tempo_count_ * 60000 / tap_tempo_sum_);
+    SetTempo(tap_tempo_count_ * 60000 / tap_tempo_sum_);
+    tap_tempo_resolved_ = true;
   } else {
+    // Treat this as a first tap
+    tap_tempo_resolved_ = false;
     tap_tempo_count_ = 0;
     tap_tempo_sum_ = 0;
   }
@@ -807,11 +826,25 @@ void Ui::DoEvents() {
     }
     refresh_display = true;
   }
-  if (queue_.idle_time() > 300 && show_splash_) {
-    refresh_display = true;
-    show_splash_ = false;
-    if (mode_ == UI_MODE_PARAMETER_EDIT) {
-      scroll_display = true;
+
+  if (!tap_tempo_resolved_) {
+    uint32_t delta = system_clock.milliseconds() - previous_tap_time_;
+    if (delta > (2 * kTapDeltaMax)) {
+      // If we never got a second tap, go to external
+      tap_tempo_resolved_ = true;
+      SetTempo(TEMPO_EXTERNAL);
+      queue_.Touch();
+    }
+  }
+
+  if (show_splash_) {
+    uint32_t splash_time = splash_mode_ == UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE ? 300 : 1000;
+    if (queue_.idle_time() > splash_time) {
+      refresh_display = true;
+      show_splash_ = false;
+      if (mode_ == UI_MODE_PARAMETER_EDIT) {
+        scroll_display = true;
+      }
     }
   }
   if (queue_.idle_time() > 900) {
@@ -843,9 +876,6 @@ void Ui::DoEvents() {
   }
 
   if (show_splash_) {
-    // TODO hypothesis: UI never actually stays in CHANGED mode, just relies
-    // on residual display until something else causes an update.  Brightness
-    // also doesn't update during this period
     (this->*modes_[splash_mode_].refresh_display)();
   } else if (refresh_display) {
     queue_.Touch();
