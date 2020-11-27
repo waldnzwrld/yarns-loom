@@ -970,6 +970,7 @@ void Part::Set(uint8_t address, uint8_t value) {
       case PART_MIDI_MAX_VELOCITY:
       case PART_MIDI_INPUT_RESPONSE:
       case PART_MIDI_PLAY_MODE:
+      case PART_MIDI_TRANSPOSE_OCTAVES:
         // Shut all channels off when a MIDI parameter is changed to prevent
         // stuck notes.
         AllNotesOff();
@@ -1006,7 +1007,6 @@ void Part::Set(uint8_t address, uint8_t value) {
         break;
 
       case PART_MIDI_SUSTAIN_MODE:
-      case PART_MIDI_TRANSPOSE_OCTAVES:
         break;
     }
   }
