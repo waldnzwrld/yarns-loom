@@ -659,6 +659,7 @@ void Ui::OnSwitchPress(const Event& e) {
         if (multi.recording()) {
           if (recording_mode_is_displaying_pitch_) {
             StopRecording();
+            ChangedActivePartOrPlayMode();
           } else {
             // Toggle pitch display on
             recording_mode_is_displaying_pitch_ = true;
@@ -835,7 +836,7 @@ void Ui::DoEvents() {
     } else if (e.control_type == CONTROL_SWITCH_HOLD) {
       OnSwitchHeld(e);
     }
-    refresh_display = true; // TODO this fucks the TapTempo splash
+    refresh_display = true;
   }
 
   if (!tap_tempo_resolved_) {
