@@ -68,7 +68,8 @@ enum SettingUnit {
 };
 
 enum SettingIndex {
-  SETTING_SETUP_SUBMENU,
+  SETTING_MENU_SETUP,
+  SETTING_MENU_ENVELOPE,
 
   SETTING_LAYOUT,
   SETTING_ACTIVE_PART_4,
@@ -166,34 +167,6 @@ class Settings {
  public:
   Settings() { }
   ~Settings() { }
-
-  struct MenuCategory {
-    int8_t pos;
-    const SettingIndex* const layout_menus[LAYOUT_LAST];
-
-    inline const SettingIndex* menu() {
-      return layout_menus[multi.layout()];
-    }
-    inline const SettingIndex setting_index() {
-      return menu()[pos];
-    }
-    inline const Setting& setting() {
-      return settings_[setting_index()];
-    }
-
-    void increment_index(int32_t n) {
-      pos += n;
-      if (pos < 0) {
-        pos = 0;
-      } else if (menu()[pos] == SETTING_LAST) {
-        --pos;
-      }
-    }
-
-  };
-
-  static MenuCategory setup_menus;
-  static MenuCategory live_menus;
   
   void Init();
   void Set(const Setting& setting, uint8_t value);
