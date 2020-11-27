@@ -39,6 +39,7 @@
 #include "yarns/drivers/switches.h"
 
 #include "yarns/settings.h"
+#include "yarns/menu.h"
 #include "yarns/storage_manager.h"
 
 namespace yarns {
@@ -127,7 +128,7 @@ class Ui {
   }
   
   inline const Setting& setting() {
-    return current_menu_category_->setting();
+    return current_menu_->setting();
   }
   inline bool calibrating() const {
     return mode_ == UI_MODE_CALIBRATION_SELECT_NOTE ||
@@ -255,7 +256,11 @@ class Ui {
   UiMode splash_mode_;
   bool show_splash_;
   
-  Settings::MenuCategory* current_menu_category_;
+  Menu setup_menu_;
+  Menu envelope_menu_;
+  Menu live_menu_;
+  Menu* current_menu_;
+
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;

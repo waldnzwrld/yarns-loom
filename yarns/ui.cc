@@ -170,7 +170,12 @@ void Ui::Init() {
   splash_mode_ = UI_MODE_SPLASH;
   show_splash_ = true;
   PrintVersionNumber();
-  current_menu_category_ = &Settings::live_menus;
+
+  setup_menu_.Init(MENU_TYPE_SETUP);
+  envelope_menu_.Init(MENU_TYPE_ENVELOPE);
+  live_menu_.Init(MENU_TYPE_LIVE);
+  current_menu_ = &live_menu_;
+
   previous_tap_time_ = 0;
   tap_tempo_count_ = 0;
   tap_tempo_resolved_ = true;
@@ -488,11 +493,14 @@ void Ui::OnLongClick(const Event& e) {
 }
 
 void Ui::OnClick(const Event& e) {
-  if (current_menu_category_->setting_index() == SETTING_SETUP_SUBMENU) {
-    current_menu_category_ = &Settings::setup_menus;
+  if (&setting() == &settings.setting(SETTING_MENU_SETUP)) {
+    current_menu_ = &setup_menu_;
     return;
-  } else if (current_menu_category_ == &Settings::setup_menus && mode_ == UI_MODE_PARAMETER_EDIT) {
-    current_menu_category_ = &Settings::live_menus;
+  } else if (&setting() == &settings.setting(SETTING_MENU_ENVELOPE)) {
+    current_menu_ = &envelope_menu_;
+    return;
+  } else if (current_menu_ != &live_menu_ && mode_ == UI_MODE_PARAMETER_EDIT) {
+    current_menu_ = &live_menu_;
   }
   mode_ = modes_[mode_].next_mode; 
 }
@@ -580,11 +588,11 @@ void Ui::OnClickFactoryTesting(const Event& e) {
 }
 
 void Ui::OnIncrementParameterSelect(const Event& e) {
-  current_menu_category_->increment_index(e.data);
+  current_menu_->increment_index(e.data);
 }
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
-  settings.Increment(current_menu_category_->setting(), e.data);
+  settings.Increment(setting(), e.data);
 }
 
 void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {
@@ -917,7 +925,14 @@ void Ui::DoEvents() {
         mode_ == UI_MODE_CALIBRATION_ADJUST_LEVEL ||
         mode_ == UI_MODE_LEARNING
     );
-    if (mode_ == UI_MODE_MAIN_MENU) {
+    if (
+      mode_ == UI_MODE_MAIN_MENU || (
+        mode_ == UI_MODE_PARAMETER_SELECT && (
+          &setting() == &settings.setting(SETTING_MENU_SETUP) ||
+          &setting() == &settings.setting(SETTING_MENU_ENVELOPE)
+        )
+      )
+    ) {
       display_.set_fade(160);
     } else if (mode_ == UI_MODE_PARAMETER_EDIT &&
                setting().unit == SETTING_UNIT_TEMPO) {
