@@ -603,7 +603,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
     next.step_index = 0;
   }
 
-  // If the pattern or sequence step doesn't have a note, don't advance the arp
+  // If the pattern or sequence step doesn't have a note, rest without advancing the arp
   if (!hit) {
     return next;
   } else if (!seq_step.has_note()) {
@@ -616,51 +616,56 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
     return next;
   }
 
+  uint8_t key_with_octave = next.octave * num_keys + next.key_index;
   // Update arepggiator note/octave counter.
   switch (seq_.arp_direction) {
     case ARPEGGIATOR_DIRECTION_RANDOM:
       {
         uint16_t random = Random::GetSample();
-        next.octave = (random & 0xff) % seq_.arp_range;
-        next.key_index = (random >> 8) % num_keys;
+        next.octave = random & 0xff;
+        next.key_index = random >> 8;
       }
       break;
     case ARPEGGIATOR_DIRECTION_STEP_ROTATE:
       {
-        uint8_t new_arp_note;
+        next.key_increment = 0; // These arp directions move before playing the note
         if (seq_step.is_white()) {
-          new_arp_note = next.key_index + seq_step.white_key_distance_from_middle_c();
-        } else {
-          new_arp_note = seq_step.black_key_distance_from_middle_c();
+          next.key_index = key_with_octave + seq_step.white_key_distance_from_middle_c();
+          next.octave = next.key_index / num_keys;
+        } else { // If black key
+          next.key_index = seq_step.black_key_distance_from_middle_c();
+          next.octave = abs(next.key_index / num_keys);
+          if (next.octave >= seq_.arp_range) {
+            return next; // Rest
+          }
         }
-        next.key_index = stmlib::modulo(new_arp_note, num_keys);
-        next.key_increment = 0; // these arp directions move before playing the note
       }
       break;
     case ARPEGGIATOR_DIRECTION_STEP_SUBROTATE:
       {
-        // TODO respect arp range?
+        next.key_increment = 0; // These arp directions move before playing the note
         // Movement instructions derived from sequence step
         uint8_t limit = seq_step.octave();
         uint8_t clock;
         uint8_t spacer;
         if (seq_step.is_white()) {
-          clock = seq_step.white_key_value(); // TODO is 0 clock useful?
+          clock = seq_step.white_key_value();
           spacer = 1;
         } else {
           clock = 1;
-          spacer = seq_step.black_key_value() + 1; // TODO is 0 spacer useful?
+          spacer = seq_step.black_key_value() + 1;
         }
-        uint8_t old_pos = modulo(next.key_index / spacer, limit);
+        uint8_t old_pos = modulo(key_with_octave / spacer, limit);
         uint8_t new_pos = modulo(old_pos + clock, limit);
-        uint8_t without_wrap = next.key_index + spacer * (new_pos - old_pos);
-        if (without_wrap < num_keys) {
-          next.key_index = without_wrap;
+        int8_t key_without_wrap = key_with_octave + spacer * (new_pos - old_pos);
+        next.octave = key_without_wrap / num_keys;
+        if (next.octave < 0 || next.octave >= seq_.arp_range) {
+          // If outside octave range
+          next.key_index = key_with_octave - spacer * old_pos;
+          next.octave = next.key_index / num_keys;
         } else {
-          next.key_index -= spacer * old_pos;
-          next.key_index = modulo(next.key_index, num_keys);
+          next.key_index = key_without_wrap;
         }
-        next.key_increment = 0; // these arp directions move before playing the note
       }
       break;
     default:
@@ -692,6 +697,9 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       }
       break;
   }
+  // Invariants
+  next.octave = stmlib::modulo(next.octave, seq_.arp_range);
+  next.key_index = stmlib::modulo(next.key_index, num_keys);
 
   // Build arpeggiator step
   const NoteEntry* arpeggio_note = &arp_keys_.stack.played_note(next.key_index);
