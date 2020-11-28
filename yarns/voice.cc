@@ -227,7 +227,7 @@ void Voice::NoteOn(
     retrigger_delay_ = 3;
   }
   if (trigger) {
-    envelope_.Trigger(ENV_SEGMENT_ATTACK);
+    envelope_.GateOn();
     trigger_pulse_ = trigger_duration_ * 8;
     trigger_phase_ = 0;
     trigger_phase_increment_ = lut_portamento_increments[trigger_duration_];
@@ -237,7 +237,7 @@ void Voice::NoteOn(
 
 void Voice::NoteOff() {
   gate_ = false;
-  envelope_.Trigger(ENV_SEGMENT_RELEASE);
+  envelope_.GateOff();
 }
 
 void Voice::ControlChange(uint8_t controller, uint8_t value) {
