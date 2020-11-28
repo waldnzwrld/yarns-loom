@@ -107,7 +107,7 @@ enum TuningSystem {
 
 enum SequencerInputResponse {
   SEQUENCER_INPUT_RESPONSE_TRANSPOSE,
-  SEQUENCER_INPUT_RESPONSE_OVERRIDE,
+  SEQUENCER_INPUT_RESPONSE_REPLACE,
   SEQUENCER_INPUT_RESPONSE_DIRECT,
   SEQUENCER_INPUT_RESPONSE_OFF,
   SEQUENCER_INPUT_RESPONSE_LAST,
@@ -452,32 +452,40 @@ class Part {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
 
-  inline bool LooperCanControl(uint8_t pitch) {
-    uint8_t pressed_key = manual_keys_.stack.Find(pitch);
-    return !pressed_key || looper_note_recording_pressed_key_[pressed_key] != looper::kNullIndex;
+  inline bool looper_is_recording(uint8_t pressed_key_index) const {
+    return looper_note_recording_pressed_key_[pressed_key_index] != looper::kNullIndex;
+  }
+
+  inline bool looper_can_control(uint8_t pitch) const {
+    if (!manual_control()) { return true; }
+    uint8_t key = manual_keys_.stack.Find(pitch);
+    return !key || looper_is_recording(key);
   }
 
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
+    pitch = ApplySequencerInputResponse(pitch);
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Advance arp
       arp_ = BuildArpState(SequencerStep(pitch, velocity));
+      pitch = arp_.step.note();
       if (arp_.step.has_note()) {
-        InternalNoteOn(arp_.step.note(), arp_.step.velocity());
+        InternalNoteOn(pitch, arp_.step.velocity());
         if (arp_.step.is_slid()) {
-          InternalNoteOff(arp_pitch_for_looper_note_[looper_note_index]);
+          InternalNoteOff(output_pitch_for_looper_note_[looper_note_index]);
         }
-        arp_pitch_for_looper_note_[looper_note_index] = arp_.step.note();
+        output_pitch_for_looper_note_[looper_note_index] = pitch;
       } //  else if tie, arp_pitch_for_looper_note_ is already set to the tied pitch
-    } else if (LooperCanControl(pitch)) {
+    } else if (looper_can_control(pitch)) {
       InternalNoteOn(pitch, velocity);
+      output_pitch_for_looper_note_[looper_note_index] = pitch;
     }
   }
 
   inline void LooperPlayNoteOff(uint8_t looper_note_index, uint8_t pitch) {
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
+    pitch = output_pitch_for_looper_note_[looper_note_index];
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-      uint8_t arp_pitch = arp_pitch_for_looper_note_[looper_note_index];
       // Peek at next looper note
       uint8_t next_on_index = seq_.looper_tape.PeekNextOn();
       const looper::Note& next_on_note = seq_.looper_tape.NoteAt(next_on_index);
@@ -485,11 +493,11 @@ class Part {
       next_step = BuildArpState(next_step).step;
       if (next_step.is_continuation()) {
         // Leave this pitch in the care of the next looper note
-        arp_pitch_for_looper_note_[next_on_index] = arp_pitch;
+        output_pitch_for_looper_note_[next_on_index] = pitch;
       } else {
-        InternalNoteOff(arp_pitch);
+        InternalNoteOff(pitch);
       }
-    } else if (LooperCanControl(pitch)) {
+    } else if (looper_can_control(pitch)) {
       InternalNoteOff(pitch);
     }
   }
@@ -576,11 +584,12 @@ class Part {
     RecordStep(SequencerStep(flag, 0));
   }
   
-  inline bool SequencerDirectResponse() {
+  inline bool manual_control() const {
     return (
-      !seq_recording_ &&
-      midi_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT &&
-      midi_.play_mode == PLAY_MODE_RECORD
+      midi_.play_mode == PLAY_MODE_MANUAL || (
+        midi_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT &&
+        midi_.play_mode == PLAY_MODE_RECORD
+      )
     );
   }
 
@@ -713,6 +722,7 @@ class Part {
   void DispatchSortedNotes(bool unison);
   void KillAllInstancesOfNote(uint8_t note);
 
+  uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
   const SequencerStep BuildSeqStep() const;
   const ArpeggiatorState BuildArpState(SequencerStep seq_step) const;
   void StopSequencerArpeggiatorNotes();
@@ -753,7 +763,7 @@ class Part {
   // Tracks which looper notes are currently playing, so they can be turned off later
   uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
 
-  uint8_t arp_pitch_for_looper_note_[kNoteStackSize];
+  uint8_t output_pitch_for_looper_note_[kNoteStackSize];
 
   uint16_t gate_length_counter_;
   

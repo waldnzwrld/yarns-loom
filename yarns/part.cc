@@ -157,13 +157,11 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     }
   } else if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
     PressedKeysNoteOn(arp_keys_, note, velocity);
-  } else if (
-    midi_.play_mode == PLAY_MODE_MANUAL ||
-    sent_from_step_editor ||
-    SequencerDirectResponse()
-  ) {
+  } else {
     PressedKeysNoteOn(manual_keys_, note, velocity);
-    InternalNoteOn(note, velocity);
+    if (sent_from_step_editor || manual_control()) {
+      InternalNoteOn(note, velocity);
+    }
   }
 
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
@@ -174,8 +172,11 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
 
   uint8_t recording_pitch = ArpUndoTransposeInputPitch(note);
   uint8_t pressed_key_index = manual_keys_.stack.Find(recording_pitch);
-  if (seq_recording_ && seq_.clock_quantization == 0 && pressed_key_index) {
-    // If this pitch has a manual key
+  if (seq_recording_ && seq_.clock_quantization == 0 && looper_is_recording(pressed_key_index)) {
+    // Looper interlaces some operations here, because the manual key has to
+    // exist until LooperRecordNoteOff returns.  Directly mapping pitch to
+    // looper notes would be cleaner, but requires a data structure more
+    // sophisticated than an array
     manual_keys_.SetSustain(recording_pitch);
     if (!manual_keys_.IsSustained(recording_pitch)) {
       LooperRecordNoteOff(pressed_key_index);
@@ -183,15 +184,9 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
     }
   } else if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
     arp_keys_.SustainableNoteOff(note);
-  } else if (
-    midi_.play_mode == PLAY_MODE_MANUAL ||
-    sent_from_step_editor ||
-    SequencerDirectResponse() || (
-      RecordsSteps() &&
-      !generated_notes_.Find(note)
-    )
-  ) {
-    if (manual_keys_.SustainableNoteOff(note)) {
+  } else {
+    bool off = manual_keys_.SustainableNoteOff(note);
+    if (off && (sent_from_step_editor || manual_control())) {
       InternalNoteOff(note);
     }
   }
@@ -483,6 +478,8 @@ void Part::StopRecording() {
     for (uint8_t i = 1; i <= manual_keys_.stack.max_size(); ++i) {
       const NoteEntry& e = manual_keys_.stack.note(i);
       if (e.note == NOTE_STACK_FREE_SLOT) { continue; }
+      // This could be a transpose key that was held before StartRecording
+      if (!looper_is_recording(i)) { continue; }
       LooperRecordNoteOff(i);
     }
   }
@@ -493,7 +490,7 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  if (seq_.clock_quantization == 0) {
+  if (seq_.clock_quantization == 0 && manual_control()) {
     // Start recording any held notes
     for (uint8_t i = 1; i <= manual_keys_.stack.max_size(); ++i) {
       const NoteEntry& e = manual_keys_.stack.note(i);
@@ -527,45 +524,55 @@ void Part::StopSequencerArpeggiatorNotes() {
     generated_notes_.NoteOff(pitch);
     if (seq_.clock_quantization == 0) {
       if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-        pitch = arp_pitch_for_looper_note_[looper_note_index];
-      } else if (manual_keys_.stack.Find(pitch)) {
-        continue;
+        pitch = output_pitch_for_looper_note_[looper_note_index];
       }
+      if (!looper_can_control(pitch)) { continue; }
     }
     InternalNoteOff(pitch);
   }
 }
 
+uint8_t Part::ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch) const {
+  if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR || !transposable_) {
+    return pitch;
+  }
+
+  // Find the most recent manual key that isn't being used to record
+  uint8_t transpose_key = manual_keys_.stack.most_recent_note_index();
+  while (transpose_key && looper_is_recording(transpose_key)) {
+    transpose_key = manual_keys_.stack.note(transpose_key).next_ptr;
+  }
+  if (!transpose_key) { return pitch; }
+
+  uint8_t transpose_pitch = manual_keys_.stack.note(transpose_key).note;
+  switch (midi_.input_response) {
+    case SEQUENCER_INPUT_RESPONSE_TRANSPOSE:
+      pitch += transpose_pitch - root_pitch;
+      while (pitch > 127) { pitch -= 12; }
+      while (pitch < 0) { pitch += 12; }
+      break;
+
+    case SEQUENCER_INPUT_RESPONSE_REPLACE:
+      pitch = transpose_pitch;
+      break;
+
+    case SEQUENCER_INPUT_RESPONSE_DIRECT:
+    case SEQUENCER_INPUT_RESPONSE_OFF:
+      break;
+  }
+  return pitch;
+}
+
 const SequencerStep Part::BuildSeqStep() const {
   const SequencerStep& step = seq_.step[seq_step_];
   int16_t note = step.note();
-  if (step.has_note() && manual_keys_.stack.size() && transposable_) {
-    switch (midi_.input_response) {
-      case SEQUENCER_INPUT_RESPONSE_TRANSPOSE:
-        {
-        // When we play a monophonic sequence, we can make the guess that root
-        // note = first note.
-        // But this is not the case when we are playing several sequences at the
-        // same time. In this case, we use root note = 60.
-        int8_t root_note = !has_siblings_ ? seq_.first_note() : 60;
-        note += manual_keys_.stack.most_recent_note().note - root_note;
-        }
-        while (note > 127) {
-          note -= 12;
-        }
-        while (note < 0) {
-          note += 12;
-        }
-        break;
-
-      case SEQUENCER_INPUT_RESPONSE_OVERRIDE:
-        note = manual_keys_.stack.most_recent_note().note;
-        break;
-
-      case SEQUENCER_INPUT_RESPONSE_DIRECT:
-      case SEQUENCER_INPUT_RESPONSE_OFF:
-        break;
-    }
+  if (step.has_note()) {
+    // When we play a monophonic sequence, we can make the guess that root
+    // note = first note.
+    // But this is not the case when we are playing several sequences at the
+    // same time. In this case, we use root note = 60.
+    int8_t root_note = !has_siblings_ ? seq_.first_note() : 60;
+    note = ApplySequencerInputResponse(note, root_note);
   }
   return SequencerStep((0x80 & step.data[0]) | (0x7f & note), step.data[1]);
 }
