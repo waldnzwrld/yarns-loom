@@ -312,7 +312,8 @@ bool Part::PitchBend(uint8_t channel, uint16_t pitch_bend) {
 bool Part::Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity) {
   if (voicing_.allocation_mode != VOICE_ALLOCATION_MODE_MONO) {
     uint8_t voice_index = \
-        voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY ? \
+        (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY || \
+         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT) ? \
         poly_allocator_.Find(note) : \
         FindVoiceForNote(note);
     if (voice_index < poly_allocator_.size()) {
@@ -919,7 +920,8 @@ void Part::InternalNoteOff(uint8_t note) {
     }
   } else {
     uint8_t voice_index = \
-        voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY ? \
+        (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY ||
+         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT) ? \
         poly_allocator_.NoteOff(note) : \
         FindVoiceForNote(note);
     if (voice_index < num_voices_) {
