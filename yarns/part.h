@@ -716,7 +716,8 @@ class Part {
   void TouchVoices();
   
   void ReleaseLatchedNotes(PressedKeys &keys);
-  void DispatchSortedNotes(bool unison);
+  void DispatchSortedNotes(bool unison, bool force_legato);
+  void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;

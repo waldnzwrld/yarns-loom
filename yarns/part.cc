@@ -766,7 +766,7 @@ void Part::ReleaseLatchedNotes(PressedKeys &keys) {
   }
 }
 
-void Part::DispatchSortedNotes(bool unison) {
+void Part::DispatchSortedNotes(bool unison, bool force_legato) {
   uint8_t n = mono_allocator_.size();
   for (uint8_t i = 0; i < num_voices_; ++i) {
     uint8_t index = 0xff;
@@ -778,18 +778,23 @@ void Part::DispatchSortedNotes(bool unison) {
     }
     if (index != 0xff) {
       const NoteEntry& note_entry = priority_note(index);
-      voice_[i]->NoteOn(
-          Tune(note_entry.note),
-          note_entry.velocity,
-          voicing_.portamento,
-          active_note_[i] != note_entry.note && voicing_.legato_mode == LEGATO_MODE_OFF
-      );
+      bool legato = force_legato || active_note_[i] == note_entry.note;
+      VoiceNoteOn(voice_[i], note_entry.note, note_entry.velocity, legato);
       active_note_[i] = note_entry.note;
     } else {
       voice_[i]->NoteOff();
       active_note_[i] = VOICE_ALLOCATION_NOT_FOUND;
     }
   }
+}
+
+ void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
+  voice->NoteOn(
+    Tune(pitch),
+    velocity,
+    (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
+    (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato
+  );
 }
 
 void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
@@ -806,18 +811,14 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     if (before.note != after.note) {
       bool legato = mono_allocator_.size() > 1;
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        voice_[i]->NoteOn(
-            Tune(after.note),
-            after.velocity,
-            (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
-            (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato);
+        VoiceNoteOn(voice_[i], after.note, after.velocity, legato);
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
     DispatchSortedNotes(
-        voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED);
+        voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED, false);
   } else {
     uint8_t voice_index = 0;
     switch (voicing_.allocation_mode) {
@@ -914,7 +915,7 @@ void Part::InternalNoteOff(uint8_t note) {
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
         mono_allocator_.size() >= num_voices_
     ) {
-      DispatchSortedNotes(true);
+      DispatchSortedNotes(true, true);
     }
   } else {
     uint8_t voice_index = \
