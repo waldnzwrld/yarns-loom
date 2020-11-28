@@ -149,9 +149,9 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
 
   if (seq_recording_) {
     note = ArpUndoTransposeInputPitch(note);
-    if (seq_.clock_quantization == 1 && !sent_from_step_editor) {
+    if (Stepped() && !sent_from_step_editor) {
       RecordStep(SequencerStep(note, velocity));
-    } else if (seq_.clock_quantization == 0) {
+    } else if (!Stepped()) {
       uint8_t pressed_key_index = PressedKeysNoteOn(manual_keys_, note, velocity);
       LooperRecordNoteOn(pressed_key_index);
     }
@@ -172,7 +172,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
 
   uint8_t recording_pitch = ArpUndoTransposeInputPitch(note);
   uint8_t pressed_key_index = manual_keys_.stack.Find(recording_pitch);
-  if (seq_recording_ && seq_.clock_quantization == 0 && looper_is_recording(pressed_key_index)) {
+  if (seq_recording_ && !Stepped() && looper_is_recording(pressed_key_index)) {
     // Looper interlaces some operations here, because the manual key has to
     // exist until LooperRecordNoteOff returns.  Directly mapping pitch to
     // looper notes would be cleaner, but requires a data structure more
@@ -343,8 +343,7 @@ void Part::Clock() {
   SequencerStep step;
 
   bool clock = !arp_seq_prescaler_;
-  bool play = RecordsSteps() ||
-    (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && seq_.clock_quantization == 1);
+  bool play = Stepped() && midi_.play_mode != PLAY_MODE_MANUAL;
 
   if (clock && play) {
     step = BuildSeqStep();
@@ -455,7 +454,7 @@ void Part::LooperRewind() {
 void Part::LooperAdvance() {
   if (
     !looper_needs_advance_ ||
-    seq_.clock_quantization == 1 ||
+    Stepped() ||
     midi_.play_mode == PLAY_MODE_MANUAL
   ) { return; }
 
@@ -473,7 +472,7 @@ void Part::Stop() {
 void Part::StopRecording() {
   if (!seq_recording_) { return; }
   seq_recording_ = false;
-  if (seq_.clock_quantization == 0) {
+  if (!Stepped()) {
     // Stop recording any held notes
     for (uint8_t i = 1; i <= manual_keys_.stack.max_size(); ++i) {
       const NoteEntry& e = manual_keys_.stack.note(i);
@@ -490,7 +489,7 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  if (seq_.clock_quantization == 0 && manual_control()) {
+  if (!Stepped() && manual_control()) {
     // Start recording any held notes
     for (uint8_t i = 1; i <= manual_keys_.stack.max_size(); ++i) {
       const NoteEntry& e = manual_keys_.stack.note(i);
@@ -522,7 +521,7 @@ void Part::StopSequencerArpeggiatorNotes() {
 
     looper_note_index_for_generated_note_index_[generated_note_index] = looper::kNullIndex;
     generated_notes_.NoteOff(pitch);
-    if (seq_.clock_quantization == 0) {
+    if (!Stepped()) {
       if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
         pitch = output_pitch_for_looper_note_[looper_note_index];
       }

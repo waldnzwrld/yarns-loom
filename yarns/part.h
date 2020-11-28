@@ -520,13 +520,10 @@ class Part {
     looper_note_recording_pressed_key_[pressed_key_index] = looper::kNullIndex;
   }
 
-  inline bool RecordsLoops() const {
-    return midi_.play_mode == PLAY_MODE_RECORD && seq_.clock_quantization == 0;
+  inline bool Stepped() const {
+    return seq_.clock_quantization == 1;
   }
-  inline bool RecordsSteps() const {
-    return midi_.play_mode == PLAY_MODE_RECORD && seq_.clock_quantization == 1;
-  }
-  
+
   inline void DeleteRecording() {
     if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
     StopSequencerArpeggiatorNotes();
