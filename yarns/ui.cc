@@ -342,26 +342,8 @@ void Ui::PrintRecordingStep() {
     display_.Print("TI");
     return;
   }
-  if (active_part().midi_settings().play_mode != PLAY_MODE_ARPEGGIATOR) {
-    PrintNote(step.note());
-    return;
-  }
-  if (
-    recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_STEP_ROTATE
-  ) {
-    PrintArpeggiatorMovementStep(step);
-    return;
-  }
-  if (recording_part().sequencer_settings().arp_direction == ARPEGGIATOR_DIRECTION_STEP_SUBROTATE) {
-    if (step.is_white()) {
-      buffer_[0] = '\x90' + step.white_key_value(); // spinner 1
-    } else {
-      buffer_[0] = '\x98' + step.black_key_value(); // spinner 2
-    }
-    buffer_[1] = octave[step.octave()];
-    display_.Print(buffer_, buffer_);
-    return;
-  }
+  PrintNote(step.note());
+  return;
 }
 
 void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
