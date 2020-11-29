@@ -1,5 +1,6 @@
 
-// Copyright 2013 Emilie Gillet, 2020 Chris Rogers
+// Copyright 2013 Emilie Gillet.
+// Copyright 2020 Chris Rogers.
 //
 // Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
