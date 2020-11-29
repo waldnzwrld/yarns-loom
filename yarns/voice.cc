@@ -229,12 +229,12 @@ void Voice::NoteOn(
     retrigger_delay_ = 3;
   }
   if (trigger) {
-    envelope_.GateOn();
     trigger_pulse_ = trigger_duration_ * 8;
     trigger_phase_ = 0;
     trigger_phase_increment_ = lut_portamento_increments[trigger_duration_];
   }
   gate_ = true;
+  envelope_.GateOn();
 }
 
 void Voice::NoteOff() {

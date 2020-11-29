@@ -52,8 +52,10 @@ class Envelope {
   }
 
   inline void GateOn() {
+    if (!gate_) {
+      Trigger(ENV_SEGMENT_ATTACK);
+    }
     gate_ = true;
-    Trigger(ENV_SEGMENT_ATTACK);
   }
 
   inline void GateOff() {
