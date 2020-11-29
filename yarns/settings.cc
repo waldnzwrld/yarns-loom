@@ -427,7 +427,7 @@ const Setting Settings::settings_[] = {
   {
     "PM", "OSC PW MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_MOD, 0 },
-    SETTING_UNIT_INT8, -64, 64, NULL,
+    SETTING_UNIT_INT8, -64, 63, NULL,
     0, 0,
   },
   {

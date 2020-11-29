@@ -47,6 +47,7 @@ using namespace stmlib_midi;
 const int32_t kOctave = 12 << 7;
 const int32_t kMaxNote = 120 << 7;
 const int32_t kQuadrature = 0x40000000;
+const uint8_t kOscillatorPWMRatioBits = 7;
 
 void Voice::Init() {
   note_ = -1;
@@ -162,10 +163,11 @@ bool Voice::Refresh(uint8_t voice_index) {
   
   // Use quadrature phase for PWM LFO
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
-  // Initial and mod each have a full sweep of the PWM range
-  uint32_t pw_21bit = lfo * oscillator_pw_mod_ + (oscillator_pw_initial_ << (21 - 7));
-  // But clip combined modulation at 0-1
-  CONSTRAIN(pw_21bit, 0, (1 << 21) - 1);
+  int32_t pw_21bit = \
+    (oscillator_pw_initial_ << (21 - 7)) + // Initial range 0..1
+    lfo * oscillator_pw_mod_; // Mod range -1..1
+  int32_t min_pw = 1 << (21 - kOscillatorPWMRatioBits);
+  CONSTRAIN(pw_21bit, min_pw, (1 << 21) - min_pw)
   oscillator_.SetPulseWidth(pw_21bit << (32 - 21));
 
   if (retrigger_delay_) {
