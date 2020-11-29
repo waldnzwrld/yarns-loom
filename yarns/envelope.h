@@ -41,12 +41,35 @@ class Envelope {
   ~Envelope() { }
 
   void Init() {
+    gate_ = false;
+
     target_[ENV_SEGMENT_ATTACK] = 65535;
     target_[ENV_SEGMENT_RELEASE] = 0;
     target_[ENV_SEGMENT_DEAD] = 0;
 
     increment_[ENV_SEGMENT_SUSTAIN] = 0;
     increment_[ENV_SEGMENT_DEAD] = 0;
+  }
+
+  inline void GateOn() {
+    if (!gate_) {
+      Trigger(ENV_SEGMENT_ATTACK);
+    }
+    gate_ = true;
+  }
+
+  inline void GateOff() {
+    gate_ = false;
+    switch (segment_) {
+      case ENV_SEGMENT_ATTACK:
+        Trigger(ENV_SEGMENT_DECAY);
+        break;
+      case ENV_SEGMENT_SUSTAIN:
+        Trigger(ENV_SEGMENT_RELEASE);
+        break;
+      default:
+        break;
+    }
   }
 
   inline EnvelopeSegment segment() const {
@@ -64,6 +87,9 @@ class Envelope {
   inline void Trigger(EnvelopeSegment segment) {
     if (segment == ENV_SEGMENT_DEAD) {
       value_ = 0;
+    }
+    if (segment == ENV_SEGMENT_SUSTAIN && !gate_) {
+      segment = ENV_SEGMENT_RELEASE; // Skip sustain
     }
     a_ = value_;
     b_ = target_[segment];
@@ -87,6 +113,8 @@ class Envelope {
   inline uint16_t value() const { return value_; }
 
  private:
+  bool gate_;
+
   // Phase increments for each segment.
   uint32_t increment_[ENV_NUM_SEGMENTS];
   

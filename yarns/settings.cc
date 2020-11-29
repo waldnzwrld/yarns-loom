@@ -53,7 +53,7 @@ const char* const voicing_allocation_mode_values[] = {
 };
 
 const char* const sequencer_arp_direction_values[] = {
-  "LINEAR", "BOUNCE", "RANDOM", "CHORD", "HIT SEQ", "REST SEQ"
+  "LINEAR", "BOUNCE", "RANDOM", "ROTATE BY STEP", "SUBROTATE BY STEP"
 };
 
 const char* const voicing_aux_cv_values[] = {
@@ -118,10 +118,14 @@ const char* const tuning_system_values[] = {
 };
 
 const char* const sequencer_play_mode_values[] = {
-  "m",
-  "r",
-  "s",
-  "l",
+  "M",
+  "A",
+  "R",
+};
+
+const char* const sequencer_clock_quantization_values[] = {
+  "LOOP",
+  "STEP"
 };
 
 const char* const sequencer_input_response_values[] = {
@@ -132,6 +136,7 @@ const char* const sustain_mode_values[] = {
   "NORMAL",
   // "SOSTENUTO",
   "LATCH",
+  "MOMENTARY LATCH",
   "OFF"
 };
 
@@ -159,7 +164,13 @@ const char* const tuning_factor_values[] = {
 /* static */
 const Setting Settings::settings_[] = {
   {
-    "SE", "SETUP",
+    "\x82""S", "SETUP MENU",
+    SETTING_DOMAIN_MULTI, { 0, 0 },
+    SETTING_UNIT_UINT8, 0, 0, NULL,
+    0, 0,
+  },
+  {
+    "\x82""\x8F", "ENVELOPE MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
     0, 0,
@@ -191,7 +202,7 @@ const Setting Settings::settings_[] = {
   {
     "TE", "TEMPO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_TEMPO, 0 },
-    SETTING_UNIT_TEMPO, 39, 240, NULL,
+    SETTING_UNIT_TEMPO, TEMPO_EXTERNAL, 240, NULL,
     0, 2,
   },
   {
@@ -287,7 +298,7 @@ const Setting Settings::settings_[] = {
   {
     "VO", "VOICING",
     SETTING_DOMAIN_PART, { PART_VOICING_ALLOCATION_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 1, VOICE_ALLOCATION_MODE_LAST - 1,
+    SETTING_UNIT_ENUMERATION, 0, VOICE_ALLOCATION_MODE_LAST - 1,
     voicing_allocation_mode_values,
     18, 8,
   },
@@ -468,23 +479,15 @@ const Setting Settings::settings_[] = {
     0, 0,
   },
   {
-    // Variant without the CHORD option.
-    "AD", "ARP DIRECTION",
-    SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_DIRECTION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, ARPEGGIATOR_DIRECTION_LAST - 2,
-    sequencer_arp_direction_values,
-    105, 27,
-  },
-  {
     "AP", "ARP PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, 21, NULL,
+    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
     106, 28,
   },
   {
     "RP", "RHYTHMIC PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, 21, NULL,
+    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
     0, 0,
   },
   {
@@ -507,14 +510,20 @@ const Setting Settings::settings_[] = {
   },
   {
     "SP", "SEQUENCER PLAY MODE",
-    SETTING_DOMAIN_PART, { PART_SEQUENCER_PLAY_MODE, 0 },
+    SETTING_DOMAIN_PART, { PART_MIDI_PLAY_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
     0, 0,
   },
   {
     "SI", "SEQUENCER INPUT RESPONSE",
-    SETTING_DOMAIN_PART, { PART_SEQUENCER_INPUT_RESPONSE, 0 },
+    SETTING_DOMAIN_PART, { PART_MIDI_INPUT_RESPONSE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SEQUENCER_INPUT_RESPONSE_LAST - 1, sequencer_input_response_values,
+    0, 0,
+  },
+  {
+    "RQ", "RECORD TIME QUANTIZATION",
+    SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_QUANTIZATION, 0 },
+    SETTING_UNIT_ENUMERATION, 0, 1, sequencer_clock_quantization_values,
     0, 0,
   },
   {
@@ -537,298 +546,6 @@ const Setting Settings::settings_[] = {
     0, 0,
   }
 };
-
-#define MENU_LAYOUT_CLOCK \
-  SETTING_LAYOUT, \
-  SETTING_CLOCK_TEMPO, \
-  SETTING_CLOCK_SWING, \
-  SETTING_CLOCK_INPUT_DIVISION, \
-  SETTING_CLOCK_OUTPUT_DIVISION, \
-  SETTING_CLOCK_BAR_DURATION, \
-  SETTING_CLOCK_NUDGE_FIRST_TICK, \
-  SETTING_CLOCK_MANUAL_START
-
-#define MENU_MIDI \
-  SETTING_MIDI_CHANNEL, \
-  SETTING_MIDI_MIN_VELOCITY, \
-  SETTING_MIDI_MAX_VELOCITY, \
-  SETTING_MIDI_OUT_MODE, \
-  SETTING_MIDI_SUSTAIN_MODE
-
-#define MENU_VOICING_ALLOCATION_MONO \
-  SETTING_VOICING_ALLOCATION_PRIORITY, \
-  SETTING_VOICING_LEGATO_MODE
-
-#define MENU_VOICING_ALLOCATION_POLY \
-  SETTING_VOICING_ALLOCATION_MODE, \
-  SETTING_VOICING_ALLOCATION_PRIORITY
-
-#define MENU_VOICING_ALLOCATION_MIXED \
-  SETTING_VOICING_ALLOCATION_MODE, \
-  MENU_VOICING_ALLOCATION_MONO
-
-#define MENU_MODULATION \
-  SETTING_VOICING_PITCH_BEND_RANGE, \
-  SETTING_VOICING_VIBRATO_RANGE
-
-#define MENU_EUCLIDEAN \
-  SETTING_SEQUENCER_EUCLIDEAN_LENGTH, \
-  SETTING_SEQUENCER_EUCLIDEAN_FILL, \
-  SETTING_SEQUENCER_EUCLIDEAN_ROTATE
-
-#define MENU_OUTPUT \
-  SETTING_VOICING_AUDIO_MODE, \
-  SETTING_SEQUENCER_INPUT_RESPONSE, \
-  SETTING_VOICING_TUNING_SYSTEM, \
-  SETTING_VOICING_TUNING_ROOT, \
-  SETTING_VOICING_TUNING_FACTOR
-
-#define MENU_END \
-  SETTING_REMOTE_CONTROL_CHANNEL, \
-  SETTING_LAST
-
-const SettingIndex menu_live_mono[] = {
-  SETTING_SETUP_SUBMENU,
-  SETTING_MIDI_TRANSPOSE_OCTAVES,
-  SETTING_VOICING_PORTAMENTO,
-  SETTING_VOICING_MODULATION_RATE,
-  SETTING_VOICING_VIBRATO_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_MOD,
-  SETTING_VOICING_TUNING_TRANSPOSE,
-  SETTING_VOICING_TUNING_FINE,
-  SETTING_SEQUENCER_CLOCK_DIVISION,
-  SETTING_SEQUENCER_GATE_LENGTH,
-  SETTING_SEQUENCER_ARP_RANGE,
-  SETTING_SEQUENCER_ARP_DIRECTION_NO_CHORD,
-  SETTING_SEQUENCER_ARP_PATTERN,
-  MENU_EUCLIDEAN,
-  SETTING_LAST
-};
-
-const SettingIndex menu_live_poly[] = {
-  SETTING_SETUP_SUBMENU,
-  SETTING_MIDI_TRANSPOSE_OCTAVES,
-  SETTING_VOICING_PORTAMENTO,
-  SETTING_VOICING_MODULATION_RATE,
-  SETTING_VOICING_VIBRATO_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_MOD,
-  SETTING_VOICING_TUNING_TRANSPOSE,
-  SETTING_VOICING_TUNING_FINE,
-  SETTING_SEQUENCER_CLOCK_DIVISION,
-  SETTING_SEQUENCER_GATE_LENGTH,
-  SETTING_SEQUENCER_ARP_RANGE,
-  SETTING_SEQUENCER_ARP_DIRECTION,
-  SETTING_SEQUENCER_ARP_PATTERN,
-  MENU_EUCLIDEAN,
-  SETTING_LAST
-};
-
-const SettingIndex menu_live_para[] = {
-  SETTING_SETUP_SUBMENU,
-  SETTING_MIDI_TRANSPOSE_OCTAVES,
-  SETTING_VOICING_PORTAMENTO,
-  SETTING_VOICING_MODULATION_RATE,
-  SETTING_VOICING_VIBRATO_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_INITIAL,
-  SETTING_VOICING_OSCILLATOR_PW_MOD,
-  SETTING_VOICING_ENVELOPE_ATTACK,
-  SETTING_VOICING_ENVELOPE_DECAY,
-  SETTING_VOICING_ENVELOPE_SUSTAIN,
-  SETTING_VOICING_ENVELOPE_RELEASE,
-  SETTING_VOICING_TUNING_TRANSPOSE,
-  SETTING_VOICING_TUNING_FINE,
-  SETTING_SEQUENCER_CLOCK_DIVISION,
-  SETTING_SEQUENCER_GATE_LENGTH,
-  SETTING_SEQUENCER_ARP_RANGE,
-  SETTING_SEQUENCER_ARP_DIRECTION,
-  SETTING_SEQUENCER_ARP_PATTERN,
-  MENU_EUCLIDEAN,
-  SETTING_LAST
-};
-
-const SettingIndex menu_live_quad_triggers[] = {
-  SETTING_VOICING_TRIGGER_DURATION,
-  SETTING_VOICING_TRIGGER_SCALE,
-  SETTING_VOICING_TRIGGER_SHAPE,
-  SETTING_SEQUENCER_CLOCK_DIVISION,
-  SETTING_SEQUENCER_RHYTHM_PATTERN,
-  MENU_EUCLIDEAN,
-  SETTING_LAST
-};
-
-const SettingIndex mono_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  MENU_MIDI,
-  MENU_VOICING_ALLOCATION_MONO,
-  MENU_MODULATION,
-  SETTING_VOICING_TRIGGER_DURATION,
-  SETTING_VOICING_CV_OUT_3,
-  SETTING_VOICING_CV_OUT_4,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-const SettingIndex dual_mono_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  MENU_MIDI,
-  MENU_VOICING_ALLOCATION_MONO,
-  MENU_MODULATION,
-  SETTING_VOICING_CV_OUT,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-const SettingIndex quad_mono_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  SETTING_CLOCK_OVERRIDE,
-  MENU_MIDI,
-  MENU_VOICING_ALLOCATION_MONO,
-  MENU_MODULATION,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-const SettingIndex dual_poly_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  MENU_MIDI,
-  MENU_VOICING_ALLOCATION_POLY,
-  MENU_MODULATION,
-  SETTING_VOICING_CV_OUT_3,
-  SETTING_VOICING_CV_OUT_4,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-const SettingIndex quad_poly_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  SETTING_CLOCK_OVERRIDE,
-  MENU_MIDI,
-  MENU_VOICING_ALLOCATION_POLY,
-  MENU_MODULATION,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-#define MENU_FULL_POLYCHAINED \
-  MENU_LAYOUT_CLOCK, \
-  MENU_MIDI,\
-  SETTING_VOICING_ALLOCATION_PRIORITY, \
-  MENU_MODULATION, \
-  SETTING_VOICING_CV_OUT_3, \
-  SETTING_VOICING_CV_OUT_4, \
-  MENU_OUTPUT, \
-  MENU_END
-
-const SettingIndex dual_polychained_menu[] = {
-  MENU_FULL_POLYCHAINED
-};
-
-const SettingIndex quad_polychained_menu[] = {
-  MENU_FULL_POLYCHAINED
-};
-
-const SettingIndex octal_polychained_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  SETTING_CLOCK_OVERRIDE,
-  MENU_MIDI,
-  SETTING_VOICING_ALLOCATION_PRIORITY,
-  MENU_MODULATION,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-const SettingIndex quad_triggers_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  SETTING_MIDI_CHANNEL,
-  SETTING_MIDI_MIN_VELOCITY,
-  SETTING_MIDI_MAX_VELOCITY,
-  SETTING_MIDI_NOTE,
-  SETTING_MIDI_OUT_MODE,
-  SETTING_SEQUENCER_INPUT_RESPONSE,
-  MENU_END
-};
-
-#define MENU_FULL_HYBRID \
-  MENU_LAYOUT_CLOCK, \
-  SETTING_CLOCK_OVERRIDE, \
-  MENU_MIDI, \
-  MENU_VOICING_ALLOCATION_MIXED, \
-  MENU_MODULATION, \
-  MENU_OUTPUT, \
-  MENU_END
-
-const SettingIndex three_one_menu[] = {
-  MENU_FULL_HYBRID
-};
-
-const SettingIndex two_two_menu[] = {
-  MENU_FULL_HYBRID
-};
-
-const SettingIndex paraphonic_plus_two_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  SETTING_CLOCK_OVERRIDE,
-  MENU_MIDI,
-  MENU_VOICING_ALLOCATION_MIXED,
-  MENU_MODULATION,
-  SETTING_VOICING_CV_OUT_3,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-const SettingIndex two_one_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  MENU_MIDI,
-  MENU_VOICING_ALLOCATION_MIXED,
-  MENU_MODULATION,
-  SETTING_VOICING_CV_OUT_4,
-  MENU_OUTPUT,
-  MENU_END
-};
-
-const SettingIndex quad_voltages_menu[] = {
-  MENU_LAYOUT_CLOCK,
-  SETTING_CLOCK_OVERRIDE,
-  SETTING_MIDI_CHANNEL,
-  SETTING_VOICING_CV_OUT,
-  MENU_END
-};
-
-Settings::MenuCategory Settings::setup_menus = { 0, {
-  mono_menu,
-  dual_mono_menu,
-  quad_mono_menu,
-  dual_poly_menu,
-  quad_poly_menu,
-  dual_polychained_menu,
-  quad_polychained_menu,
-  octal_polychained_menu,
-  quad_triggers_menu,
-  quad_voltages_menu,
-  three_one_menu,
-  two_two_menu,
-  two_one_menu,
-  paraphonic_plus_two_menu,
-}};
-
-Settings::MenuCategory Settings::live_menus = { 0, {
-  menu_live_mono,
-  menu_live_mono,
-  menu_live_mono,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_quad_triggers,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_poly,
-  menu_live_para,
-}};
 
 void Settings::Init() {
   global_.active_part = 0;
@@ -944,7 +661,7 @@ void Settings::Print(const Setting& setting, char* buffer) const {
       break;
 
     case SETTING_UNIT_TEMPO:
-      if (value == 39) {
+      if (value == TEMPO_EXTERNAL) {
         strcpy(buffer, "EXTERNAL");
       } else {
         PrintInteger(buffer, value);
@@ -1002,14 +719,21 @@ void Settings::Increment(const Setting& setting, int16_t increment) {
   }
   value += increment;
   int16_t min_value = setting.min_value;
+  int16_t max_value = setting.max_value;
+  if (
+    &setting == &settings_[SETTING_VOICING_ALLOCATION_MODE] &&
+    multi.part(global_.active_part).num_voices() == 1
+  ) {
+    max_value = VOICE_ALLOCATION_MODE_MONO;
+  }
   if (
     multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
     global_.active_part == 0 &&
     &setting == &settings_[SETTING_VOICING_AUDIO_MODE]
   ) {
-    min_value = 1;
+    min_value = AUDIO_MODE_SAW;
   }
-  CONSTRAIN(value, min_value, setting.max_value);
+  CONSTRAIN(value, min_value, max_value);
   Set(setting, static_cast<uint8_t>(value));
 }
 

@@ -100,7 +100,7 @@ uint8_t Tape::PeekNextOff() const {
   return notes_[head_link_.off_index].next_link.off_index;
 }
 
-void Tape::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
+void Tape::Advance(Part* part, uint16_t old_pos, uint16_t new_pos) {
   uint8_t seen_index;
   uint8_t next_index;
 
@@ -119,9 +119,7 @@ void Tape::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
     }
     head_link_.off_index = next_index;
 
-    if (play) {
-      part->LooperNoteOff(next_index, next_note.pitch);
-    }
+    part->LooperPlayNoteOff(next_index, next_note.pitch);
   }
 
   seen_index = looper::kNullIndex;
@@ -147,9 +145,7 @@ void Tape::Advance(Part* part, bool play, uint16_t old_pos, uint16_t new_pos) {
       continue;
     }
 
-    if (play) {
-      part->LooperNoteOn(next_index, next_note.pitch, next_note.velocity);
-    }
+    part->LooperPlayNoteOn(next_index, next_note.pitch, next_note.velocity);
   }
 }
 
@@ -250,7 +246,7 @@ void Tape::RemoveNote(Part* part, uint16_t current_pos, uint8_t target_index) {
   uint8_t search_next_index;
 
   if (NoteIsPlaying(target_index, current_pos)) {
-    part->LooperNoteOff(target_index, target_note.pitch);
+    part->LooperPlayNoteOff(target_index, target_note.pitch);
   }
 
   search_prev_index = target_index;

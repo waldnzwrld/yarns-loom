@@ -62,7 +62,6 @@ void Multi::Init(bool reset_calibration) {
     cv_outputs_[i].assign_voices(&voice_[i]);
   }
   running_ = false;
-  latched_ = false;
   recording_ = false;
   
   // Put the multi in a usable state. Even if these settings will later be
@@ -75,53 +74,7 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
   settings_.clock_manual_start = 0;
-  
-  MidiSettings* midi = part_[0].mutable_midi_settings();
-  midi->channel = 0;
-  midi->min_note = 0;
-  midi->max_note = 127;
-  midi->min_velocity = 0;
-  midi->max_velocity = 127;
-  midi->out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
-  midi->sustain_mode = SUSTAIN_MODE_NORMAL;
-  midi->transpose_octaves = 0;
-  
-  VoicingSettings* voicing = part_[0].mutable_voicing_settings();
-  voicing->allocation_priority = NOTE_STACK_PRIORITY_LAST;
-  voicing->allocation_mode = VOICE_ALLOCATION_MODE_MONO;
-  voicing->legato_mode = LEGATO_MODE_OFF;
-  voicing->portamento = 0;
-  voicing->pitch_bend_range = 2;
-  voicing->vibrato_range = 1;
-  voicing->vibrato_initial = 0;
-  voicing->vibrato_control_source = VIBRATO_CONTROL_SOURCE_MODWHEEL;
-  voicing->modulation_rate = 50;
-  voicing->trigger_duration = 2;
-  voicing->aux_cv = MOD_AUX_MODULATION;
-  voicing->aux_cv_2 = MOD_AUX_VIBRATO_LFO;
-  voicing->oscillator_pw_initial = 80;
-  voicing->oscillator_pw_mod = 10;
-  voicing->envelope_attack = 40;
-  voicing->envelope_decay = 30;
-  voicing->envelope_sustain = 80;
-  voicing->envelope_release = 105;
-  voicing->tuning_transpose = 0;
-  voicing->tuning_fine = 0;
-  voicing->tuning_root = 0;
-  voicing->tuning_system = TUNING_SYSTEM_EQUAL;
-  voicing->tuning_factor = 0;
-  voicing->audio_mode = AUDIO_MODE_OFF;
 
-  SequencerSettings* seq = part_[0].mutable_sequencer_settings();
-  seq->clock_division = 6; // /4
-  seq->gate_length = 3;
-  seq->arp_range = 0;
-  seq->arp_direction = 0;
-  seq->arp_pattern = 0;
-  seq->input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
-  seq->play_mode = PLAY_MODE_MANUAL;
-  
-  part_[0].DeleteSequence();
   // A test sequence...
   // seq->num_steps = 4;
   // seq->step[0].data[0] = 48;
@@ -235,6 +188,7 @@ void Multi::Clock() {
 }
 
 void Multi::Start(bool started_by_keyboard) {
+  started_by_keyboard_ = started_by_keyboard_ && started_by_keyboard;
   if (running_) {
     return;
   }
@@ -246,7 +200,6 @@ void Multi::Start(bool started_by_keyboard) {
 
   started_by_keyboard_ = started_by_keyboard;
   running_ = true;
-  latched_ = false;
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;
   stop_count_down_ = 0;
@@ -276,7 +229,6 @@ void Multi::Stop() {
   reset_pulse_counter_ = 0;
   stop_count_down_ = 0;
   running_ = false;
-  latched_ = false;
   started_by_keyboard_ = false;
   song_pointer_ = NULL;
 }
@@ -457,14 +409,14 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      cv[0] = 0; // CV not possible for paraphonic output
+      cv[0] = 0; // Paraphonic output only outputs audio, not CV
       cv[1] = cv_outputs_[1].note_dac_code();
       cv[2] = cv_outputs_[2].aux_cv_dac_code();
       cv[3] = cv_outputs_[3].note_dac_code();
       gate[0] = cv_outputs_[0].gate();
-      gate[1] = voice_[kNumParaphonicVoices].gate();
-      gate[2] = voice_[kNumParaphonicVoices].trigger();
-      gate[3] = voice_[kNumParaphonicVoices + 1].gate();
+      gate[1] = cv_outputs_[1].gate();
+      gate[2] = settings_.clock_override ? clock() : voice_[kNumParaphonicVoices].trigger();
+      gate[3] = cv_outputs_[3].gate();
       break;
 
     case LAYOUT_QUAD_TRIGGERS:
@@ -603,10 +555,15 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      brightness[0] = cv_outputs_[0].gate() ? (cv_outputs_[0].main_voice()->velocity() << 1) : 0; //TODO use velocity of newest note?
-      brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
-      brightness[2] = voice_[kNumParaphonicVoices].aux_cv();
-      brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;
+      {
+        const NoteEntry& last_note = part_[0].priority_note(NOTE_STACK_PRIORITY_LAST);
+        const uint8_t last_voice_index = part_[0].FindVoiceForNote(last_note.note);
+        brightness[0] = (cv_outputs_[0].gate() && last_voice_index != VOICE_ALLOCATION_NOT_FOUND) ? (part_[0].voice(last_voice_index)->velocity() << 1) : 0;
+        brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
+        bool on_2 = settings_.clock_override ? clock() : voice_[kNumParaphonicVoices].trigger();
+        brightness[2] = on_2 ? voice_[kNumParaphonicVoices].aux_cv() : 0;
+        brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;
+      }
       break;
 
     case LAYOUT_QUAD_VOLTAGES:

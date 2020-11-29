@@ -144,7 +144,7 @@ class Voice {
   void Init();
   void ResetAllControllers();
 
-  bool Refresh();
+  bool Refresh(uint8_t voice_index);
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
   void ControlChange(uint8_t controller, uint8_t value);
@@ -264,10 +264,10 @@ class Voice {
   uint32_t portamento_phase_increment_;
   bool portamento_exponential_shape_;
   
-  // This counter is used to artificially create a 500µs dip at LOW level when
-  // the gate is currently HIGH and a new note arrive with a retrigger command.
-  // This happens with note-stealing; or when sending a MIDI sequence with
-  // overlapping notes.
+  // This counter is used to artificially create a 750µs (3-systick) dip at LOW
+  // level when the gate is currently HIGH and a new note arrive with a
+  // retrigger command. This happens with note-stealing; or when sending a MIDI
+  // sequence with overlapping notes.
   uint16_t retrigger_delay_;
   
   uint16_t trigger_pulse_;
@@ -292,15 +292,12 @@ class CVOutput {
 
   void Calibrate(uint16_t* calibrated_dac_code);
 
-  inline void assign_voices(Voice* list, uint8_t num) {
+  inline void assign_voices(Voice* list, uint8_t num = 1) {
     num_voices_ = num;
     for (uint8_t i = 0; i < num_voices_; ++i) {
       voices_[i] = list + i;
       voices_[i]->oscillator()->Init(scale() / num_voices_, offset());
     }
-  }
-  inline void assign_voices(Voice* list) {
-    return assign_voices(list, 1);
   }
 
   inline bool gate() const {

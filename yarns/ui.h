@@ -39,6 +39,7 @@
 #include "yarns/drivers/switches.h"
 
 #include "yarns/settings.h"
+#include "yarns/menu.h"
 #include "yarns/storage_manager.h"
 
 namespace yarns {
@@ -61,7 +62,9 @@ enum UiMode {
   UI_MODE_FACTORY_TESTING,
   UI_MODE_SPLASH,
   UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
+  UI_MODE_TEMPO_CHANGE,
   UI_MODE_LOOPER_RECORDING,
+
   UI_MODE_LAST
 };
 
@@ -125,7 +128,7 @@ class Ui {
   }
   
   inline const Setting& setting() {
-    return current_menu_category_->setting();
+    return current_menu_->setting();
   }
   inline bool calibrating() const {
     return mode_ == UI_MODE_CALIBRATION_SELECT_NOTE ||
@@ -144,6 +147,7 @@ class Ui {
  private:
   void RefreshDisplay();
   void TapTempo();
+  void SetTempo(uint8_t value);
   inline Part* mutable_recording_part() {
     return mutable_active_part();
   }
@@ -252,7 +256,11 @@ class Ui {
   UiMode splash_mode_;
   bool show_splash_;
   
-  Settings::MenuCategory* current_menu_category_;
+  Menu setup_menu_;
+  Menu envelope_menu_;
+  Menu live_menu_;
+  Menu* current_menu_;
+
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;
@@ -260,7 +268,6 @@ class Ui {
   int8_t active_program_;
   bool push_it_;
   int16_t push_it_note_;
-  uint8_t displayed_recording_step_index_;
   bool recording_mode_is_displaying_pitch_;
   
   UiFactoryTestingDisplay factory_testing_display_;
@@ -269,6 +276,7 @@ class Ui {
   
   uint32_t tap_tempo_sum_;
   uint32_t tap_tempo_count_;
+  bool tap_tempo_resolved_;
   uint32_t previous_tap_time_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
