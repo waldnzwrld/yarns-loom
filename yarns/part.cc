@@ -146,7 +146,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   
   // scale velocity to compensate for its min/max range, so that voices using
   // velocity filtering can still have a full velocity range
-  velocity = (128 * (velocity - midi_.min_velocity)) / (midi_.max_velocity - midi_.min_velocity + 1);
+  velocity = ((velocity - midi_.min_velocity) << 7) / (midi_.max_velocity - midi_.min_velocity + 1);
 
   if (seq_recording_) {
     note = ArpUndoTransposeInputPitch(note);
