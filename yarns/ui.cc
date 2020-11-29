@@ -171,9 +171,9 @@ void Ui::Init() {
   show_splash_ = true;
   PrintVersionNumber();
 
-  setup_menu_.Init(MENU_TYPE_SETUP);
-  envelope_menu_.Init(MENU_TYPE_ENVELOPE);
-  live_menu_.Init(MENU_TYPE_LIVE);
+  setup_menu_.Init(SETTING_MENU_SETUP);
+  envelope_menu_.Init(SETTING_MENU_ENVELOPE);
+  live_menu_.Init(SETTING_LAST);
   current_menu_ = &live_menu_;
 
   previous_tap_time_ = 0;

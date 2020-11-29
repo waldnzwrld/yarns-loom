@@ -36,12 +36,6 @@
 
 namespace yarns {
 
-enum MenuType {
-  MENU_TYPE_LIVE,
-  MENU_TYPE_SETUP,
-  MENU_TYPE_ENVELOPE,
-};
-
 #define MENU_LAYOUT_CLOCK \
   SETTING_LAYOUT, \
   SETTING_CLOCK_TEMPO, \
@@ -305,20 +299,20 @@ static const SettingIndex* setup_setting_list_for_layout[] = {
 
 class Menu {
  public:
-  void Init(MenuType t) {
+  void Init(SettingIndex t) {
     menu_type_ = t;
     pos_ = 0;
   }
 
   const SettingIndex* setting_list() {
     switch (menu_type_) {
-      case MENU_TYPE_SETUP:
+      case SETTING_MENU_SETUP:
         return setup_setting_list_for_layout[multi.layout()];
 
-      case MENU_TYPE_ENVELOPE:
+      case SETTING_MENU_ENVELOPE:
         return menu_envelope;
 
-      case MENU_TYPE_LIVE:
+      default:
         switch (multi.layout()) {
           case LAYOUT_QUAD_TRIGGERS:
             return menu_live_quad_triggers;
@@ -327,9 +321,6 @@ class Menu {
           default:
             return menu_live;
         }
-
-      default:
-        return menu_live;
     }
   }
 
@@ -347,7 +338,7 @@ class Menu {
   }
 
  private:
-  MenuType menu_type_;
+  SettingIndex menu_type_;
   int8_t pos_;
 
 };
