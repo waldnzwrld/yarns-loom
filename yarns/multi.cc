@@ -188,6 +188,7 @@ void Multi::Clock() {
 }
 
 void Multi::Start(bool started_by_keyboard) {
+  started_by_keyboard_ = started_by_keyboard_ && started_by_keyboard;
   if (running_) {
     return;
   }

@@ -36,10 +36,6 @@
 
 namespace yarns {
 
-enum Tempo {
-  TEMPO_EXTERNAL = 39
-};
-
 enum GlobalSetting {
   GLOBAL_ACTIVE_PART
 };

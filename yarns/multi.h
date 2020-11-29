@@ -60,6 +60,10 @@ struct MultiSettings {
   uint8_t padding[10];
 };
 
+enum Tempo {
+  TEMPO_EXTERNAL = 39
+};
+
 enum MultiSetting {
   MULTI_LAYOUT,
   MULTI_CLOCK_TEMPO,
@@ -314,7 +318,7 @@ class Multi {
   }
   
   inline Layout layout() const { return static_cast<Layout>(settings_.layout); }
-  inline bool internal_clock() const { return settings_.clock_tempo >= 40; }
+  inline bool internal_clock() const { return settings_.clock_tempo > TEMPO_EXTERNAL; }
   inline uint8_t tempo() const { return settings_.clock_tempo; }
   inline bool running() const { return running_; }
   inline bool recording() const { return recording_; }
