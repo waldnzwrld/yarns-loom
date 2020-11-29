@@ -328,7 +328,7 @@ const Setting Settings::settings_[] = {
     21, 12,
   },
   {
-    "VR", "VIBRATO RANGE",
+    "VR", "VIBRATO AMP RANGE",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_RANGE, 0 },
     SETTING_UNIT_UINT8, 0, 12, NULL,
     22, 13,
@@ -340,7 +340,7 @@ const Setting Settings::settings_[] = {
     23, 14,
   },
   {
-    "VI", "VIBRATO INITIAL",
+    "VI", "VIBRATO AMP INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_INITIAL, 0 },
     SETTING_UNIT_UINT8, 0, 127, NULL,
     0, 0,
