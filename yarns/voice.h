@@ -228,8 +228,8 @@ class Voice {
     return &envelope_;
   }
 
-  inline void RenderAudio() {
-    oscillator_.Render(audio_mode_, note_, gate_, envelope_.value());
+  inline void RenderAudio(bool use_envelope) {
+    oscillator_.Render(audio_mode_, note_, gate_, use_envelope ? envelope_.value() : UINT16_MAX);
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -375,9 +375,9 @@ class CVOutput {
     return calibration_dac_code(volts + 3);
   }
 
-  inline void RenderAudio() {
+  inline void RenderAudio(bool use_envelope) {
     for (uint8_t i = 0; i < num_voices_; ++i) {
-      voices_[i]->RenderAudio();
+      voices_[i]->RenderAudio(use_envelope);
     }
   }
 
