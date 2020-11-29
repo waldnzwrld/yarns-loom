@@ -45,6 +45,7 @@ using namespace stmlib_midi;
 
 const int32_t kOctave = 12 << 7;
 const int32_t kMaxNote = 120 << 7;
+const int32_t kQuadrature = 0x40000000;
 
 void Voice::Init() {
   note_ = -1;
@@ -110,7 +111,7 @@ void Voice::ResetAllControllers() {
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
-bool Voice::Refresh() {
+bool Voice::Refresh(uint8_t voice_index) {
   // Compute base pitch with portamento.
   portamento_phase_ += portamento_phase_increment_;
   if (portamento_phase_ < portamento_phase_increment_) {
@@ -138,7 +139,8 @@ bool Voice::Refresh() {
   } else {
     synced_lfo_.Refresh();
   }
-  int32_t lfo = synced_lfo_.Triangle(synced_lfo_.GetPhase());
+  uint32_t lfo_phase = synced_lfo_.GetPhase() + voice_index * kQuadrature;
+  int32_t lfo = synced_lfo_.Triangle(lfo_phase);
   uint16_t vibrato_control_value = 0;
   switch (vibrato_control_source_) {
     case VIBRATO_CONTROL_SOURCE_MODWHEEL:
@@ -158,7 +160,7 @@ bool Voice::Refresh() {
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
   
   // Use quadrature phase for PWM LFO
-  lfo = synced_lfo_.Triangle(synced_lfo_.GetPhase() + 0x40000000);
+  lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
   // Initial and mod each have a full sweep of the PWM range
   uint32_t pw_21bit = lfo * oscillator_pw_mod_ + (oscillator_pw_initial_ << (21 - 7));
   // But clip combined modulation at 0-1
@@ -190,7 +192,7 @@ bool Voice::Refresh() {
 
 void CVOutput::Refresh() {
   for (uint8_t i = 0; i < num_voices_; ++i) {
-    bool changed = voices_[i]->Refresh();
+    bool changed = voices_[i]->Refresh(i);
     if (i == 0 && (changed || dirty_)) {
       NoteToDacCode();
       dirty_ = false;

@@ -405,7 +405,6 @@ void Part::Clock() {
 
   if (voicing_.modulation_rate >= 100) {
     num_ticks = clock_division::num_ticks[voicing_.modulation_rate - 100];
-    // TODO decipher this math -- how much to add so that the voices are in quadrature?
     for (uint8_t i = 0; i < num_voices_; ++i) {
       voice_[i]->synced_lfo_.Tap(num_ticks);
     }
@@ -943,7 +942,11 @@ void Part::TouchVoices() {
   CONSTRAIN(voicing_.aux_cv_2, 0, MOD_AUX_LAST - 1);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
-    voice_[i]->set_modulation_rate(voicing_.modulation_rate * pow(1.123, (int) i));
+    uint8_t mod_rate = voicing_.modulation_rate;
+    if (mod_rate < 100) {
+      mod_rate = mod_rate * pow(1.123f, (int) i);
+    }
+    voice_[i]->set_modulation_rate(mod_rate);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_initial(voicing_.vibrato_initial);
     voice_[i]->set_vibrato_control_source(voicing_.vibrato_control_source);
