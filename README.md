@@ -1,5 +1,5 @@
 # Loom
-An alternate firmware for the [Yarns MIDI interface by Mutable Instruments](https://mutable-instruments.net/modules/yarns/).
+An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](https://mutable-instruments.net/modules/yarns/).
 
 ### Objectives
 - Enhance Yarns as a tool for solo and collaborative musical composition
