@@ -7,7 +7,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - Expand Yarns' abilities as a digital synthesis voice
 
 ### Features
-- New layouts, including a paraphonic layout with internal envelopes
+- New layouts, including a layout that features a 3-voice paraphonic part with internal envelopes
 - Looper with real-time recording
 - Global control and display of the active part and its play mode
 - Oscillator PWM
