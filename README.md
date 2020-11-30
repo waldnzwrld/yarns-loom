@@ -28,3 +28,8 @@ An alternate firmware for the [Yarns MIDI interface by Mutable Instruments](http
 
 ### Contributing
 Forks, pull requests, feature ideas, and bug reports are welcome.  Responses and merges are at my discretion.
+
+### Acknowledgements
+- Thanks to [forum user `Airell`](https://forum.mutable-instruments.net/t/yarns-firmware-wish-list/8051/39) for the idea of per-part latching
+- Thanks to [forum user `sdejesus13`](https://forum.mutable-instruments.net/t/yarns-firmware-wish-list/8051/24) for encouraging the exploration of clock-based recording
+- And above all, thanks to Émilie Gillet for making a great module and then open-sourcing it!
