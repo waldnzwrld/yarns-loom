@@ -8,7 +8,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 
 ### Features
 - New layouts, including a layout that features a 3-voice paraphonic part with internal envelopes
-- Looper with real-time recording
+- Looper with real-time recording and overdubbing
 - Global control and display of the active part and its play mode
 - Pulse-width modulation for Yarns' digital oscillator
 - Velocity filtering
