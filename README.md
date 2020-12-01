@@ -10,7 +10,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - New layouts, including a layout that features a 3-voice paraphonic part with internal envelopes
 - Looper with real-time recording
 - Global control and display of the active part and its play mode
-- Oscillator PWM
+- Pulse-width modulation for Yarns' digital oscillator
 - Velocity filtering
 - More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction
 - Sequencer-driven arpeggiator
