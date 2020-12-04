@@ -498,13 +498,13 @@ const Setting Settings::settings_[] = {
     107, 29,
   },
   {
-    "EF", "EUCLIEAN FILL",
+    "EF", "EUCLIDEAN FILL",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_EUCLIDEAN_FILL, 0 },
     SETTING_UNIT_UINT8, 0, 32, NULL,
     108, 30,
   },
   {
-    "ER", "EUCLIEAN ROTATE",
+    "ER", "EUCLIDEAN ROTATE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_EUCLIDEAN_ROTATE, 0 },
     SETTING_UNIT_UINT8, 0, 32, NULL,
     109, 31,
@@ -516,13 +516,13 @@ const Setting Settings::settings_[] = {
     0, 0,
   },
   {
-    "SI", "SEQUENCER INPUT RESPONSE",
+    "SI", "SEQ INPUT RESPONSE",
     SETTING_DOMAIN_PART, { PART_MIDI_INPUT_RESPONSE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SEQUENCER_INPUT_RESPONSE_LAST - 1, sequencer_input_response_values,
     0, 0,
   },
   {
-    "RQ", "RECORD TIME QUANTIZATION",
+    "SC", "SEQ CLOCK QUANTIZATION",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_QUANTIZATION, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, sequencer_clock_quantization_values,
     0, 0,
