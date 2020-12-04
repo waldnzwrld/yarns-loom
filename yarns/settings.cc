@@ -477,7 +477,7 @@ const Setting Settings::settings_[] = {
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_DIRECTION, 0 },
     SETTING_UNIT_ENUMERATION, 0, ARPEGGIATOR_DIRECTION_LAST - 1,
     sequencer_arp_direction_values,
-    0, 0,
+    105, 27,
   },
   {
     "AP", "ARP PATTERN",
