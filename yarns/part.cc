@@ -150,9 +150,9 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
 
   if (seq_recording_) {
     note = ArpUndoTransposeInputPitch(note);
-    if (Stepped() && !sent_from_step_editor) {
+    if (!looped() && !sent_from_step_editor) {
       RecordStep(SequencerStep(note, velocity));
-    } else if (!Stepped()) {
+    } else if (looped()) {
       uint8_t pressed_key_index = PressedKeysNoteOn(manual_keys_, note, velocity);
       LooperRecordNoteOn(pressed_key_index);
     }
@@ -173,7 +173,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
 
   uint8_t recording_pitch = ArpUndoTransposeInputPitch(note);
   uint8_t pressed_key_index = manual_keys_.stack.Find(recording_pitch);
-  if (seq_recording_ && !Stepped() && looper_is_recording(pressed_key_index)) {
+  if (seq_recording_ && looped() && looper_is_recording(pressed_key_index)) {
     // Looper interlaces some operations here, because the manual key has to
     // exist until LooperRecordNoteOff returns.  Directly mapping pitch to
     // looper notes would be cleaner, but requires a data structure more
@@ -345,7 +345,11 @@ void Part::Clock() {
   SequencerStep step;
 
   bool clock = !arp_seq_prescaler_;
-  bool play = Stepped() && midi_.play_mode != PLAY_MODE_MANUAL;
+  bool play = midi_.play_mode != PLAY_MODE_MANUAL && (
+    !looped() || (
+      midi_.play_mode == PLAY_MODE_ARPEGGIATOR && !seq_driven_arp()
+    )
+  );
 
   if (clock && play) {
     step = BuildSeqStep();
@@ -450,12 +454,17 @@ void Part::LooperRewind() {
     &looper_note_index_for_generated_note_index_[kNoteStackSize],
     looper::kNullIndex
   );
+  std::fill(
+    &output_pitch_for_looper_note_[0],
+    &output_pitch_for_looper_note_[kNoteStackSize],
+    looper::kNullIndex
+  );
 }
 
 void Part::LooperAdvance() {
   if (
     !looper_needs_advance_ ||
-    Stepped() ||
+    !looped() ||
     midi_.play_mode == PLAY_MODE_MANUAL
   ) { return; }
 
@@ -473,7 +482,7 @@ void Part::Stop() {
 void Part::StopRecording() {
   if (!seq_recording_) { return; }
   seq_recording_ = false;
-  if (!Stepped()) {
+  if (looped()) {
     // Stop recording any held notes
     for (uint8_t i = 1; i <= manual_keys_.stack.max_size(); ++i) {
       const NoteEntry& e = manual_keys_.stack.note(i);
@@ -490,7 +499,7 @@ void Part::StartRecording() {
     return;
   }
   seq_recording_ = true;
-  if (!Stepped() && manual_control()) {
+  if (looped() && manual_control()) {
     // Start recording any held notes
     for (uint8_t i = 1; i <= manual_keys_.stack.max_size(); ++i) {
       const NoteEntry& e = manual_keys_.stack.note(i);
@@ -522,7 +531,7 @@ void Part::StopSequencerArpeggiatorNotes() {
 
     looper_note_index_for_generated_note_index_[generated_note_index] = looper::kNullIndex;
     generated_notes_.NoteOff(pitch);
-    if (!Stepped()) {
+    if (looper_in_use()) {
       if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
         pitch = output_pitch_for_looper_note_[looper_note_index];
       }
@@ -579,6 +588,7 @@ const SequencerStep Part::BuildSeqStep() const {
 
 const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   ArpeggiatorState next = arp_;
+  // In case the pattern doesn't hit a note, the default output step is a REST
   next.step.data[0] = SEQUENCER_STEP_REST;
 
   // Advance pattern
@@ -586,37 +596,40 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   uint32_t pattern;
   uint8_t pattern_length;
   bool hit = false;
-  if (seq_.euclidean_length != 0) {
-    pattern_length = seq_.euclidean_length;
-    pattern_mask = 1 << ((next.step_index + seq_.euclidean_rotate) % seq_.euclidean_length);
-    // Read euclidean pattern from ROM.
-    uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) * 32;
-    pattern = lut_euclidean[offset + seq_.euclidean_fill];
-    hit = pattern_mask & pattern;
-  } else if (
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_STEP_ROTATE ||
-    seq_.arp_direction == ARPEGGIATOR_DIRECTION_STEP_SUBROTATE
-  ) {
+  if (seq_driven_arp()) {
     pattern_length = seq_.num_steps;
-    hit = true;
+    if (seq_step.has_note()) {
+      hit = true;
+    } else { // Here, the output step can also be a TIE
+      next.step.data[0] = seq_step.data[0];
+    }
   } else {
-    pattern_length = 16;
-    pattern_mask = 1 << next.step_index;
-    pattern = lut_arpeggiator_patterns[seq_.arp_pattern];
-    hit = pattern_mask & pattern;
+    // Build a dummy input step for ROTATE/SUBROTATE
+    seq_step.data[0] = kC4 + seq_.arp_pattern; // Use pattern index for offset from C4
+    seq_step.data[1] = 0x7f; // Full velocity
+
+    if (seq_.euclidean_length != 0) {
+      pattern_length = seq_.euclidean_length;
+      pattern_mask = 1 << ((next.step_index + seq_.euclidean_rotate) % seq_.euclidean_length);
+      // Read euclidean pattern from ROM.
+      uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) * 32;
+      pattern = lut_euclidean[offset + seq_.euclidean_fill];
+      hit = pattern_mask & pattern;
+    } else {
+      pattern_length = 16;
+      pattern_mask = 1 << next.step_index;
+      pattern = lut_arpeggiator_patterns[seq_.arp_pattern - 1];
+      hit = pattern_mask & pattern;
+    }
   }
   ++next.step_index;
   if (next.step_index >= pattern_length) {
     next.step_index = 0;
   }
 
-  // If the pattern or sequence step doesn't have a note, rest without advancing the arp
-  if (!hit) {
-    return next;
-  } else if (!seq_step.has_note()) {
-    next.step.data[0] = seq_step.data[0];
-    return next;
-  }
+  // If the pattern didn't hit a note, return a REST/TIE output step, and don't
+  // advance the arp key
+  if (!hit) { return next; }
   uint8_t num_keys = arp_keys_.stack.size();
   if (!num_keys) {
     next.ResetKey();
@@ -973,6 +986,13 @@ void Part::Set(uint8_t address, uint8_t value) {
   uint8_t* bytes;
   bytes = static_cast<uint8_t*>(static_cast<void*>(&midi_));
   uint8_t previous_value = bytes[address];
+  if (
+    address == PART_SEQUENCER_CLOCK_QUANTIZATION ||
+    (address == PART_SEQUENCER_ARP_PATTERN && (previous_value == 0 || value == 0))
+  ) {
+    // Stop notes before changing note-control semantics
+    StopSequencerArpeggiatorNotes();
+  }
   bytes[address] = value;
   if (value != previous_value) {
     switch (address) {
@@ -1020,6 +1040,7 @@ void Part::Set(uint8_t address, uint8_t value) {
         break;
 
       case PART_MIDI_SUSTAIN_MODE:
+      default:
         break;
     }
   }

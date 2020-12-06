@@ -482,13 +482,13 @@ const Setting Settings::settings_[] = {
   {
     "AP", "ARP PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
+    SETTING_UNIT_ARP_PATTERN, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE, NULL,
     106, 28,
   },
   {
     "RP", "RHYTHMIC PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
+    SETTING_UNIT_ARP_PATTERN, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE, NULL,
     0, 0,
   },
   {
@@ -706,6 +706,14 @@ void Settings::Print(const Setting& setting, char* buffer) const {
       
     case SETTING_UNIT_ENUMERATION:
       strcpy(buffer, setting.values[value]);
+      break;
+
+    case SETTING_UNIT_ARP_PATTERN:
+      if (value == 0) {
+        strcpy(buffer, "SEQUENCER");
+      } else {
+        PrintInteger(buffer, value);
+      }
       break;
       
     default:

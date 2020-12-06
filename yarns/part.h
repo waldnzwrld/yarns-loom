@@ -48,6 +48,7 @@ const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
 
+const uint8_t kC4 = 60;
 const uint8_t whiteKeyValues[] = {
   0,    0xff, 1,    0xff,
   2,    3,    0xff, 4,
@@ -463,7 +464,23 @@ class Part {
     return !key || looper_is_recording(key);
   }
 
+  inline bool looped() const {
+    return seq_.clock_quantization == 0;
+  }
+
+  inline bool looper_in_use() const {
+    return looped() && (
+      midi_.play_mode == PLAY_MODE_RECORD ||
+      seq_driven_arp()
+    );
+  }
+
+  inline bool seq_driven_arp() const {
+    return seq_.arp_pattern == 0;
+  }
+
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
+    if (!looper_in_use()) { return; }
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
     pitch = ApplySequencerInputResponse(pitch);
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
@@ -484,6 +501,7 @@ class Part {
   }
 
   inline void LooperPlayNoteOff(uint8_t looper_note_index, uint8_t pitch) {
+    if (!looper_in_use()) { return; }
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
     pitch = output_pitch_for_looper_note_[looper_note_index];
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
@@ -521,18 +539,10 @@ class Part {
     looper_note_recording_pressed_key_[pressed_key_index] = looper::kNullIndex;
   }
 
-  inline bool Stepped() const {
-    return seq_.clock_quantization == 1;
-  }
-
   inline void DeleteRecording() {
     if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
     StopSequencerArpeggiatorNotes();
-    if (seq_.clock_quantization) {
-      DeleteSequence();
-    } else {
-      seq_.looper_tape.RemoveAll();
-    }
+    looped() ? seq_.looper_tape.RemoveAll() : DeleteSequence();
   }
 
   inline void SustainOn() {
