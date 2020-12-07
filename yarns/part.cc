@@ -606,7 +606,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
     }
   } else {
     // Build a dummy input step for ROTATE/SUBROTATE
-    seq_step.data[0] = kC4 + seq_.arp_pattern; // Use pattern index for offset from C4
+    seq_step.data[0] = kC4 + 1 + next.step_index;
     seq_step.data[1] = 0x7f; // Full velocity
 
     if (seq_.euclidean_length != 0) {
