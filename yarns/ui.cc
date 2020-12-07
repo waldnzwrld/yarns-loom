@@ -41,6 +41,7 @@ using namespace std;
 using namespace stmlib;
 
 const uint32_t kEncoderLongPressTime = 600;
+const char* const kVersion = "Loom 2_1_0";
 
 /* static */
 const Ui::Command Ui::commands_[] = {
@@ -430,7 +431,8 @@ void Ui::PrintFactoryTesting() {
 }
 
 void Ui::PrintVersionNumber() {
-  display_.Print("L2"); // Loom v1.2.0
+  display_.Print(kVersion);
+  display_.Scroll();
   display_.set_brightness(UINT16_MAX);
 }
 
@@ -828,17 +830,14 @@ void Ui::DoEvents() {
 
   if (show_splash_) {
     switch (splash_mode_) {
-      case UI_MODE_SPLASH:
-        show_splash_ = queue_.idle_time() < 1000;
-        break;
-
       case UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE:
         if (multi.running()) { SetBrightnessFromBarPhase(); }
         show_splash_ = queue_.idle_time() < 500;
         break;
 
+      case UI_MODE_SPLASH:
       case UI_MODE_TEMPO_CHANGE:
-        show_splash_ = queue_.idle_time() < 500 || display_.scrolling();
+        show_splash_ = queue_.idle_time() < 1000 || display_.scrolling();
         break;
 
       default:
