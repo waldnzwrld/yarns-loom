@@ -199,7 +199,6 @@ void Multi::Start(bool started_by_keyboard) {
   }
   midi_handler.OnStart();
 
-  started_by_keyboard_ = started_by_keyboard;
   running_ = true;
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;

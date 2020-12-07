@@ -277,7 +277,7 @@ class Multi {
       }
       has_notes = has_notes || part_[i].has_notes();
     }
-    if (!has_notes && internal_clock()) {
+    if (!has_notes && internal_clock() && started_by_keyboard_) {
       Stop();
     }
   }
