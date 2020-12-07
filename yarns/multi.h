@@ -439,7 +439,6 @@ class Multi {
   void ChangeLayout(Layout old_layout, Layout new_layout);
   void AllocateParts();
   void ClockSong();
-  void HandleRemoteControlCC(uint8_t controller, uint8_t value);
   
   MultiSettings settings_;
   
