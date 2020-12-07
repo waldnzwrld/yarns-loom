@@ -56,15 +56,12 @@ enum UiMode {
   UI_MODE_CALIBRATION_SELECT_VOICE,
   UI_MODE_CALIBRATION_SELECT_NOTE,
   UI_MODE_CALIBRATION_ADJUST_LEVEL,
-  UI_MODE_RECORDING,
-  UI_MODE_OVERDUBBING,
   UI_MODE_PUSH_IT_SELECT_NOTE,
   UI_MODE_LEARNING,
   UI_MODE_FACTORY_TESTING,
   UI_MODE_SPLASH,
   UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
   UI_MODE_TEMPO_CHANGE,
-  UI_MODE_LOOPER_RECORDING,
 
   UI_MODE_LAST
 };
@@ -149,12 +146,6 @@ class Ui {
   void RefreshDisplay();
   void TapTempo();
   void SetTempo(uint8_t value);
-  inline Part* mutable_recording_part() {
-    return mutable_active_part();
-  }
-  inline const Part& recording_part() const {
-    return active_part();
-  }
   inline Part* mutable_active_part() {
     return multi.mutable_part(settings.Get(GLOBAL_ACTIVE_PART));
   }
@@ -175,7 +166,6 @@ class Ui {
   void OnClickCalibrationSelectVoice(const stmlib::Event& e);
   void OnClickCalibrationSelectNote(const stmlib::Event& e);
   void OnClickRecording(const stmlib::Event& e);
-  void OnClickOverdubbing(const stmlib::Event& e);
   void OnClickLearning(const stmlib::Event& event);
   void OnClickFactoryTesting(const stmlib::Event& event);
 
@@ -183,7 +173,6 @@ class Ui {
   void OnIncrementParameterEdit(const stmlib::Event& e);
   void OnIncrementCalibrationAdjustment(const stmlib::Event& e);
   void OnIncrementRecording(const stmlib::Event& e);
-  void OnIncrementOverdubbing(const stmlib::Event& e);
   void OnIncrementPushItNote(const stmlib::Event& e);
   void OnIncrementFactoryTesting(const stmlib::Event& event);
   

@@ -521,6 +521,7 @@ void Part::DeleteSequence() {
   seq_rec_step_ = 0;
   seq_step_ = 0;
   seq_.num_steps = 0;
+  seq_overdubbing_ = false;
 }
 
 void Part::StopSequencerArpeggiatorNotes() {
