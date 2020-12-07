@@ -431,8 +431,6 @@ void Part::Start() {
   
   arp_.ResetKey();
   arp_.step_index = 0;
-  CONSTRAIN(seq_.arp_range, 1, 4);
-  CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
   
   bar_lfo_.Init();
   LooperRewind();
