@@ -394,11 +394,11 @@ class Part {
   uint8_t PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t velocity);
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
   bool NoteOff(uint8_t channel, uint8_t note);
-  uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) {
+  uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) const {
     CONSTRAIN(transpose_octaves, (0 - pitch) / 12, (127 - pitch) / 12);
     return pitch + 12 * transpose_octaves;
   }
-  uint8_t TransposeInputPitch(uint8_t pitch) {
+  uint8_t TransposeInputPitch(uint8_t pitch) const {
     return TransposeInputPitch(pitch, midi_.transpose_octaves);
   }
   void InternalNoteOn(uint8_t note, uint8_t velocity);
@@ -556,7 +556,7 @@ class Part {
   void PressedKeysSustainOn(PressedKeys &keys);
   void PressedKeysSustainOff(PressedKeys &keys);
 
-  inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) {
+  inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
       // This is an arpeggiation control step, so undo input transpose
       pitch = TransposeInputPitch(pitch, -midi_.transpose_octaves);

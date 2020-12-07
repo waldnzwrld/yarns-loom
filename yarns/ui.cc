@@ -164,7 +164,7 @@ void Ui::Init() {
   
   start_stop_press_time_ = 0;
   
-  push_it_note_ = 60;
+  push_it_note_ = kC4;
   modes_[UI_MODE_MAIN_MENU].incremented_variable = &command_index_;
   modes_[UI_MODE_LOAD_SELECT_PROGRAM].incremented_variable = &program_index_;
   modes_[UI_MODE_SAVE_SELECT_PROGRAM].incremented_variable = &program_index_;
@@ -533,10 +533,11 @@ void Ui::OnClickRecording(const Event& e) {
     push_it_ = false;
     mutable_active_part()->RecordStep(SequencerStep(push_it_note_, 100));
   } else {
-    if (active_part().overdubbing()) {
-      push_it_note_ = active_part().sequencer_settings().step[active_part().recording_step()].note();
+    SequencerStep step = active_part().sequencer_settings().step[active_part().recording_step()];
+    if (step.has_note()) {
+      push_it_note_ = step.note();
     } else {
-      push_it_note_ = kC4;
+      push_it_note_ = active_part().TransposeInputPitch(kC4);
       multi.PushItNoteOn(push_it_note_);
     }
     push_it_ = true;
@@ -699,6 +700,7 @@ void Ui::OnSwitchHeld(const Event& e) {
           } else {
             mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
             push_it_ = true;
+            push_it_note_ = kC4;
             multi.PushItNoteOn(push_it_note_);
           }
         }
