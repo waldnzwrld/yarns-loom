@@ -864,12 +864,15 @@ void Ui::DoEvents() {
   bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > 600) {
     if (print_part) {
+      display_.set_fade(0);
       PrintActivePartAndPlayMode();
     } else if (print_latch) {
+      display_.set_fade(0);
       display_.Print("//");
     }
   } else if (queue_.idle_time() > 300) {
     if (print_latch && print_part) {
+      display_.set_fade(0);
       display_.Print("//");
     }
   }
