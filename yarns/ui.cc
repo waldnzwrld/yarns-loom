@@ -424,14 +424,14 @@ void Ui::SplashOn(Splash s) {
   display_.set_brightness(UINT16_MAX);
   switch (splash_) {
     case SPLASH_ACTIVE_PART:
-      PrintActivePartAndPlayMode();
-      break;
-
-    case SPLASH_RECORDING_PART:
-      strcpy(buffer_, "1R");
-      buffer_[0] += multi.recording_part();
-      buffer_[2] = '\0';
-      display_.Print(buffer_);
+      if (multi.recording()) {
+        strcpy(buffer_, "1R");
+        buffer_[0] += multi.recording_part();
+        buffer_[2] = '\0';
+        display_.Print(buffer_);
+      } else {
+        PrintActivePartAndPlayMode();
+      }
       break;
 
     case SPLASH_VERSION:
@@ -629,7 +629,6 @@ void Ui::OnSwitchPress(const Event& e) {
             SplashOn(SPLASH_ACTIVE_PART);
           } else {
             // Toggle pitch display on
-            // TODO should this be an exception to adopting rec part?
             recording_mode_is_displaying_pitch_ = true;
           }
         } else {
@@ -716,12 +715,10 @@ void Ui::OnSwitchHeld(const Event& e) {
       // Increment active part
       active_part_ = (1 + active_part_) % multi.num_active_parts();
       SetPlayMode();
-      if (recording_any && multi.StartRecording(active_part_)) {
-        // If the new active part was able to take over recording
-        SplashOn(SPLASH_RECORDING_PART);
-      } else {
-        SplashOn(SPLASH_ACTIVE_PART);
+      if (recording_any) {
+        multi.StartRecording(active_part_);
       }
+      SplashOn(SPLASH_ACTIVE_PART);
       break;
 
     case UI_SWITCH_TAP_TEMPO:
@@ -784,24 +781,18 @@ void Ui::DoEvents() {
     // Handle layout change
     active_part_ = multi.num_active_parts() - 1;
   }
-  if (SetPlayMode()) {
-    // Play mode was changed by CC
-    // TODO multi may need to stop recording if this happens
+  if (
+    active_part_ != multi.recording_part() || SetPlayMode()) {
+    // If recording state or play mode was changed by CC
+    active_part_ = multi.recording_part();
     SplashOn(SPLASH_ACTIVE_PART);
+    recording_mode_is_displaying_pitch_ = false;
   }
-  // TODO need to SPLASH_RECORDING_PART if multi has just started recording a part that's not our active part
-  // and set recording_mode_is_displaying_pitch_ = false ?
   
   while (queue_.available()) {
     Event e = queue_.PullEvent();
     const Mode& mode = modes_[mode_];
     splash_ = SPLASH_NONE; // Exit splash on any input
-    if (multi.recording()) {
-      // If any panel controls are used during a recording session, adopt the
-      // recording part as the active part -- the recording session is no longer
-      // considered to have been initiated via CC
-      active_part_ = multi.recording_part();
-    }
     if (e.control_type == CONTROL_ENCODER_CLICK) {
       if (multi.recording()) {
         OnClickRecording(e);
@@ -849,10 +840,6 @@ void Ui::DoEvents() {
     switch (splash_) {
       case SPLASH_ACTIVE_PART:
         if (multi.running()) { SetBrightnessFromBarPhase(active_part()); }
-        keep_splash = queue_.idle_time() < 500;
-        break;
-
-      case SPLASH_RECORDING_PART:
         keep_splash = queue_.idle_time() < 500;
         break;
 

@@ -68,7 +68,6 @@ enum Splash {
   SPLASH_VERSION,
   SPLASH_TEMPO,
   SPLASH_ACTIVE_PART,
-  SPLASH_RECORDING_PART,
 };
 
 enum MainMenuEntry {

@@ -216,13 +216,13 @@ class Multi {
     Start(false);
   }
   
-  bool StartRecording(uint8_t part) {
+  void StartRecording(uint8_t part) {
     if (part_[part].midi_settings().play_mode == PLAY_MODE_MANUAL) {
-      return false;
+      return;
     }
     if (recording_) {
       if (recording_part_ == part) {
-        return false;
+        return;
       } else {
         StopRecording(recording_part_);
       }
@@ -250,7 +250,6 @@ class Multi {
     }
     recording_ = true;
     recording_part_ = part;
-    return true;
   }
   
   void StopRecording(uint8_t part) {
