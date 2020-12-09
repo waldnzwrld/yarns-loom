@@ -168,8 +168,7 @@ class Settings {
   ~Settings() { }
   
   void Init();
-  void Set(const Setting& setting, uint8_t value);
-  void Set(const Setting& setting, uint8_t* part, uint8_t value);
+  void ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
   void SetFromCC(uint8_t part, uint8_t controller, uint8_t value);
 
   uint8_t Get(const Setting& setting) const;

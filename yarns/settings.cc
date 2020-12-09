@@ -585,11 +585,30 @@ void Settings::SetFromCC(
   uint8_t setting_index = map[controller];
   if (setting_index != 0xff) {
     const Setting& setting = settings_[setting_index];
-    Set(setting, &part, setting.Scale(value));
+    ApplySetting(setting, part, setting.Scale(value));
   }
 }
 
-void Settings::Set(const Setting& setting, uint8_t* part, uint8_t value) {
+void Settings::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value) {
+  // Apply dynamic min/max as needed
+  int16_t min_value = setting.min_value;
+  int16_t max_value = setting.max_value;
+  if (
+    &setting == &settings_[SETTING_VOICING_ALLOCATION_MODE] &&
+    multi.part(part).num_voices() == 1
+  ) {
+    max_value = VOICE_ALLOCATION_MODE_MONO;
+  }
+  if (
+    multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
+    part == 0 &&
+    &setting == &settings_[SETTING_VOICING_AUDIO_MODE]
+  ) {
+    min_value = AUDIO_MODE_SAW;
+  }
+  CONSTRAIN(raw_value, min_value, max_value);
+  uint8_t value = static_cast<uint8_t>(raw_value);
+
   switch (setting.domain) {
     case SETTING_DOMAIN_GLOBAL:
       Set(setting.address[0], value);
@@ -597,27 +616,23 @@ void Settings::Set(const Setting& setting, uint8_t* part, uint8_t value) {
 
     case SETTING_DOMAIN_MULTI:
       multi.Set(setting.address[0], value);
-      if (*part >= multi.num_active_parts()) {
-        *part = multi.num_active_parts() - 1;
+      if (global_.active_part >= multi.num_active_parts()) {
+        global_.active_part = multi.num_active_parts() - 1;
       }
       break;
 
     case SETTING_DOMAIN_PART:
-      multi.mutable_part(*part)->Set(setting.address[0], value);
+      multi.mutable_part(part)->Set(setting.address[0], value);
       // When the module is configured in *triggers* mode, each part is mapped
       // to a single note. To edit this setting, both the "note min" and
       // "note max" parameters are simultaneously changed to the same value.
       // This is a bit more user friendly than letting the user set note min
       // and note max to the same value.
       if (setting.address[1]) {
-        multi.mutable_part(*part)->Set(setting.address[1], value);
+        multi.mutable_part(part)->Set(setting.address[1], value);
       }
       break;
   }
-}
-
-void Settings::Set(const Setting& setting, uint8_t value) {
-  Set(setting, &global_.active_part, value);
 }
 
 uint8_t Settings::Get(const Setting& setting) const {
@@ -727,23 +742,7 @@ void Settings::Increment(const Setting& setting, int16_t increment) {
     value = static_cast<int8_t>(value);
   }
   value += increment;
-  int16_t min_value = setting.min_value;
-  int16_t max_value = setting.max_value;
-  if (
-    &setting == &settings_[SETTING_VOICING_ALLOCATION_MODE] &&
-    multi.part(global_.active_part).num_voices() == 1
-  ) {
-    max_value = VOICE_ALLOCATION_MODE_MONO;
-  }
-  if (
-    multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
-    global_.active_part == 0 &&
-    &setting == &settings_[SETTING_VOICING_AUDIO_MODE]
-  ) {
-    min_value = AUDIO_MODE_SAW;
-  }
-  CONSTRAIN(value, min_value, max_value);
-  Set(setting, static_cast<uint8_t>(value));
+  ApplySetting(setting, global_.active_part, value);
 }
 
 /* static */
