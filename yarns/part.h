@@ -709,10 +709,6 @@ class Part {
   inline bool IsLatched() const {
     return manual_keys_.ignore_note_off_messages;
   }
-  
-  inline void SetMultiIsRecording(bool b) {
-    multi_is_recording_ = b;
-  }
 
   void set_siblings(bool has_siblings) {
     has_siblings_ = has_siblings;

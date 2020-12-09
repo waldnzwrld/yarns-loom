@@ -59,11 +59,16 @@ enum UiMode {
   UI_MODE_PUSH_IT_SELECT_NOTE,
   UI_MODE_LEARNING,
   UI_MODE_FACTORY_TESTING,
-  UI_MODE_SPLASH,
-  UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
-  UI_MODE_TEMPO_CHANGE,
 
   UI_MODE_LAST
+};
+
+enum Splash {
+  SPLASH_NONE = 0,
+  SPLASH_VERSION,
+  SPLASH_TEMPO,
+  SPLASH_ACTIVE_PART,
+  SPLASH_RECORDING_PART,
 };
 
 enum MainMenuEntry {
@@ -104,6 +109,7 @@ class Ui {
   ~Ui() { }
   
   void Init();
+  bool SetPlayMode();
   void Poll();
   void PollSwitch(const UiSwitch ui_switch, uint32_t& press_time, bool& long_press_event_sent);
   void PollFast() {
@@ -146,11 +152,17 @@ class Ui {
   void RefreshDisplay();
   void TapTempo();
   void SetTempo(uint8_t value);
+  inline Part* mutable_recording_part() {
+    return multi.mutable_part(multi.recording_part());
+  }
+  inline const Part& recording_part() const {
+    return multi.part(multi.recording_part());
+  }
   inline Part* mutable_active_part() {
-    return multi.mutable_part(settings.Get(GLOBAL_ACTIVE_PART));
+    return multi.mutable_part(active_part_);
   }
   inline const Part& active_part() const {
-    return multi.part(settings.Get(GLOBAL_ACTIVE_PART));
+    return multi.part(active_part_);
   }
   
   // Generic Handler.
@@ -185,20 +197,18 @@ class Ui {
   void PrintCalibrationNote();
   void PrintRecordingPart();
   void PrintDeleteSequence();
-  void SetBrightnessFromBarPhase();
+  void SetBrightnessFromBarPhase(const Part& part);
   void PrintLooperRecordingStatus();
   void PrintRecordingStatus();
   void PrintNote(int16_t note);
   void PrintPushItNote();
   void PrintLearning();
   void PrintFactoryTesting();
-  void PrintVersionNumber();
   void PrintRecordingStep();
   void PrintArpeggiatorMovementStep(SequencerStep step);
   void PrintActivePartAndPlayMode();
   
-  void ChangedActivePartOrPlayMode();
-  void StartRecording();
+  void SplashOn(Splash s);
   void StopRecording();
 
   void DoInitCommand();
@@ -243,14 +253,15 @@ class Ui {
   
   UiMode mode_;
   UiMode previous_mode_;
-  UiMode splash_mode_;
-  bool show_splash_;
+  Splash splash_;
   
   Menu setup_menu_;
   Menu envelope_menu_;
   Menu live_menu_;
   Menu* current_menu_;
 
+  uint8_t active_part_;
+  uint8_t active_part_play_mode_;
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;

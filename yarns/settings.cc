@@ -183,24 +183,6 @@ const Setting Settings::settings_[] = {
     0, 1,
   },
   {
-    "PA", "PART",
-    SETTING_DOMAIN_GLOBAL, { GLOBAL_ACTIVE_PART, 0 },
-    SETTING_UNIT_INDEX, 0, 3, NULL,
-    0, 0,
-  },
-  {
-    "PA", "PART",
-    SETTING_DOMAIN_GLOBAL, { GLOBAL_ACTIVE_PART, 0 },
-    SETTING_UNIT_INDEX, 0, 2, NULL,
-    0, 0,
-  },
-  {
-    "PA", "PART",
-    SETTING_DOMAIN_GLOBAL, { GLOBAL_ACTIVE_PART, 0 },
-    SETTING_UNIT_INDEX, 0, 1, NULL,
-    0, 0,
-  },
-  {
     "TE", "TEMPO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_TEMPO, 0 },
     SETTING_UNIT_TEMPO, TEMPO_EXTERNAL, 240, NULL,
@@ -549,8 +531,6 @@ const Setting Settings::settings_[] = {
 };
 
 void Settings::Init() {
-  global_.active_part = 0;
-  
   // Build tables used to convert from a CC to a parameter number.
   std::fill(&part_cc_map_[0], &part_cc_map_[128], 0xff);
   std::fill(&remote_control_cc_map_[0], &remote_control_cc_map_[128], 0xff);
@@ -568,12 +548,6 @@ void Settings::Init() {
       }
     }
   }
-}
-
-void Settings::Set(uint8_t address, uint8_t value) {
-  uint8_t* bytes;
-  bytes = static_cast<uint8_t*>(static_cast<void*>(&global_));
-  bytes[address] = value;
 }
 
 void Settings::SetFromCC(
@@ -610,15 +584,8 @@ void Settings::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_va
   uint8_t value = static_cast<uint8_t>(raw_value);
 
   switch (setting.domain) {
-    case SETTING_DOMAIN_GLOBAL:
-      Set(setting.address[0], value);
-      break;
-
     case SETTING_DOMAIN_MULTI:
       multi.Set(setting.address[0], value);
-      if (global_.active_part >= multi.num_active_parts()) {
-        global_.active_part = multi.num_active_parts() - 1;
-      }
       break;
 
     case SETTING_DOMAIN_PART:
@@ -635,26 +602,22 @@ void Settings::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_va
   }
 }
 
-uint8_t Settings::Get(const Setting& setting) const {
+uint8_t Settings::Get(const Setting& setting, uint8_t active_part) const {
   uint8_t value = 0;
   switch (setting.domain) {
-    case SETTING_DOMAIN_GLOBAL:
-      value = Get(setting.address[0]);
-      break;
-      
     case SETTING_DOMAIN_MULTI:
       value = multi.Get(setting.address[0]);
       break;
       
     case SETTING_DOMAIN_PART:
-      value = multi.part(global_.active_part).Get(setting.address[0]);
+      value = multi.part(active_part).Get(setting.address[0]);
       break;
   }
   return value;
 }
 
-void Settings::Print(const Setting& setting, char* buffer) const {
-  uint8_t value = Get(setting);
+void Settings::Print(const Setting& setting, uint8_t active_part, char* buffer) const {
+  uint8_t value = Get(setting, active_part);
   switch (setting.unit) {
     case SETTING_UNIT_UINT8:
       PrintInteger(buffer, value);
@@ -736,13 +699,13 @@ void Settings::Print(const Setting& setting, char* buffer) const {
   }
 }
 
-void Settings::Increment(const Setting& setting, int16_t increment) {
-  int16_t value = Get(setting);
+void Settings::Increment(const Setting& setting, uint8_t active_part, int16_t increment) {
+  int16_t value = Get(setting, active_part);
   if (setting.unit == SETTING_UNIT_INT8) {
     value = static_cast<int8_t>(value);
   }
   value += increment;
-  ApplySetting(setting, global_.active_part, value);
+  ApplySetting(setting, active_part, value);
 }
 
 /* static */

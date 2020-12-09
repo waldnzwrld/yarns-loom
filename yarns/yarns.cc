@@ -173,6 +173,7 @@ void Init() {
   // Load multi 0 on boot.
   storage_manager.LoadMulti(0);
   storage_manager.LoadCalibration();
+  ui.SetPlayMode();
   
   system_clock.Init();
   gate_output.Init();

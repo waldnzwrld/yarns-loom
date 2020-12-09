@@ -64,6 +64,7 @@ void Multi::Init(bool reset_calibration) {
   }
   running_ = false;
   recording_ = false;
+  recording_part_ = 0;
   
   // Put the multi in a usable state. Even if these settings will later be
   // overriden with some data retrieved from Flash (presets).
@@ -784,7 +785,9 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       return true;
     }
   }
-  
+
+  // TODO if starting recording, make sure part is within bounds
+  // TODO if changing play mode to manual, StopRecording that part
   for (uint8_t i = 0; i < num_active_parts_; ++i) {
     if (part_[i].accepts(channel) && \
         channel + 1 != settings_.remote_control_channel) {

@@ -216,31 +216,45 @@ class Multi {
     Start(false);
   }
   
-  void StartRecording(uint8_t part) {
-    if (!recording_) {
-      part_[part].StartRecording();
-      uint8_t channel = part_[part].midi_settings().channel;
-      bool has_velocity_filtering = part_[part].has_velocity_filtering();
-      for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        bool same_channel = (
-          part_[i].midi_settings().channel == channel ||
-          channel == 0x10 ||
-          part_[i].midi_settings().channel == 0x10
-        );
-        bool both_velocity_filtering = (
-          has_velocity_filtering &&
-          part_[i].has_velocity_filtering()
-        );
-        if (same_channel && !both_velocity_filtering) {
-          part_[i].set_transposable(false);
-        }
-      }
-      recording_ = true;
+  bool StartRecording(uint8_t part) {
+    if (part_[part].midi_settings().play_mode == PLAY_MODE_MANUAL) {
+      return false;
     }
+    if (recording_) {
+      if (recording_part_ == part) {
+        return false;
+      } else {
+        StopRecording(recording_part_);
+      }
+    }
+    if (part_[part].looped()) {
+      // Looper needs a running clock
+      Start(false);
+    }
+    part_[part].StartRecording();
+    uint8_t channel = part_[part].midi_settings().channel;
+    bool has_velocity_filtering = part_[part].has_velocity_filtering();
+    for (uint8_t i = 0; i < num_active_parts_; ++i) {
+      bool same_channel = (
+        part_[i].midi_settings().channel == channel ||
+        channel == 0x10 ||
+        part_[i].midi_settings().channel == 0x10
+      );
+      bool both_velocity_filtering = (
+        has_velocity_filtering &&
+        part_[i].has_velocity_filtering()
+      );
+      if (same_channel && !both_velocity_filtering) {
+        part_[i].set_transposable(false);
+      }
+    }
+    recording_ = true;
+    recording_part_ = part;
+    return true;
   }
   
   void StopRecording(uint8_t part) {
-    if (recording_) {
+    if (recording_ && recording_part_ == part) {
       part_[part].StopRecording();
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
         part_[i].set_transposable(true);
@@ -323,6 +337,7 @@ class Multi {
   inline uint8_t tempo() const { return settings_.clock_tempo; }
   inline bool running() const { return running_; }
   inline bool recording() const { return recording_; }
+  inline uint8_t recording_part() const { return recording_part_; }
   inline bool clock() const {
     return clock_pulse_counter_ > 0 && \
         (!settings_.nudge_first_tick || \
@@ -445,6 +460,7 @@ class Multi {
   bool running_;
   bool started_by_keyboard_;
   bool recording_;
+  uint8_t recording_part_;
   
   InternalClock internal_clock_;
   uint8_t internal_clock_ticks_;

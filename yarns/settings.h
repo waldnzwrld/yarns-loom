@@ -37,16 +37,7 @@
 
 namespace yarns {
 
-enum GlobalSetting {
-  GLOBAL_ACTIVE_PART
-};
-
-struct GlobalSettings {
-  uint8_t active_part;
-};
-
 enum SettingDomain {
-  SETTING_DOMAIN_GLOBAL,
   SETTING_DOMAIN_MULTI,
   SETTING_DOMAIN_PART,
 };
@@ -171,17 +162,12 @@ class Settings {
   void ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
   void SetFromCC(uint8_t part, uint8_t controller, uint8_t value);
 
-  uint8_t Get(const Setting& setting) const;
-  void Increment(const Setting& setting, int16_t increment);
+  uint8_t Get(const Setting& setting, uint8_t active_part) const;
+  void Increment(const Setting& setting, uint8_t active_part, int16_t increment);
 
   void Set(uint8_t address, uint8_t value);
-  inline uint8_t Get(uint8_t address) const {
-    const uint8_t* bytes;
-    bytes = static_cast<const uint8_t*>(static_cast<const void*>(&global_));
-    return bytes[address];
-  }
   
-  void Print(const Setting& setting, char* buffer) const;
+  void Print(const Setting& setting, uint8_t active_part, char* buffer) const;
   
   inline const Setting& setting(uint8_t index) const {
     return settings_[index];
@@ -191,7 +177,6 @@ class Settings {
   static void PrintSignedInteger(char* buffer, int8_t number);
   
  private:
-  GlobalSettings global_;
    
   static const Setting settings_[SETTING_LAST];
 

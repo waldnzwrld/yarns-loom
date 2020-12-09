@@ -1007,7 +1007,7 @@ void Part::Set(uint8_t address, uint8_t value) {
         // stuck notes.
         AllNotesOff();
         break;
-        
+
       case PART_VOICING_ALLOCATION_MODE:
         TouchVoiceAllocation();
         break;
