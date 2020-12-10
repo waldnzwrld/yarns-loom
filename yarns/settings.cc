@@ -121,7 +121,7 @@ const char* const tuning_system_values[] = {
 const char* const sequencer_play_mode_values[] = {
   "M",
   "A",
-  "R",
+  "S",
 };
 
 const char* const sequencer_clock_quantization_values[] = {
