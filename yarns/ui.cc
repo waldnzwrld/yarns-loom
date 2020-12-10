@@ -782,7 +782,9 @@ void Ui::DoEvents() {
     active_part_ = multi.num_active_parts() - 1;
   }
   if (
-    active_part_ != multi.recording_part() || SetPlayMode()) {
+    (multi.recording() && multi.recording_part() != active_part_) ||
+    SetPlayMode()
+  ) {
     // If recording state or play mode was changed by CC
     active_part_ = multi.recording_part();
     SplashOn(SPLASH_ACTIVE_PART);
@@ -836,23 +838,12 @@ void Ui::DoEvents() {
   }
 
   if (splash_) {
-    bool keep_splash;
-    switch (splash_) {
-      case SPLASH_ACTIVE_PART:
-        if (multi.running()) { SetBrightnessFromBarPhase(active_part()); }
-        keep_splash = queue_.idle_time() < 500;
-        break;
-
-      case SPLASH_VERSION:
-      case SPLASH_TEMPO:
-        keep_splash = queue_.idle_time() < 1000 || display_.scrolling();
-        break;
-
-      default:
-        keep_splash = false;
-        break;
+    if (splash_ == SPLASH_ACTIVE_PART && multi.running()) {
+      SetBrightnessFromBarPhase(active_part());
     }
-    if (keep_splash) { return; }
+    if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
+      return; // Splash isn't over yet
+    }
     // Exit splash
     splash_ = SPLASH_NONE;
     refresh_display = true;

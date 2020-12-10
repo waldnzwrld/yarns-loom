@@ -324,7 +324,7 @@ class Multi {
     }
   }
   
-  void Set(uint8_t address, uint8_t value);
+  bool Set(uint8_t address, uint8_t value);
   inline uint8_t Get(uint8_t address) const {
     const uint8_t* bytes;
     bytes = static_cast<const uint8_t*>(static_cast<const void*>(&settings_));

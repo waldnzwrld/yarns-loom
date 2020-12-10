@@ -156,8 +156,8 @@ class Settings {
   ~Settings() { }
   
   void Init();
-  void ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
-  void SetFromCC(uint8_t part, uint8_t controller, uint8_t value);
+  bool ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
+  bool SetFromCC(uint8_t part, uint8_t controller, uint8_t value);
 
   uint8_t Get(const Setting& setting, uint8_t active_part) const;
   void Increment(const Setting& setting, uint8_t active_part, int16_t increment);

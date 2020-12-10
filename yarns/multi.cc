@@ -263,22 +263,22 @@ void Multi::Refresh() {
   }
 }
 
-void Multi::Set(uint8_t address, uint8_t value) {
+bool Multi::Set(uint8_t address, uint8_t value) {
   uint8_t* bytes;
   bytes = static_cast<uint8_t*>(static_cast<void*>(&settings_));
   uint8_t previous_value = bytes[address];
   bytes[address] = value;
-  if (value != previous_value) {
-    if (address == MULTI_LAYOUT) {
-      ChangeLayout(
-          static_cast<Layout>(previous_value),
-          static_cast<Layout>(value));
-    } else if (address == MULTI_CLOCK_TEMPO) {
-      internal_clock_.set_tempo(settings_.clock_tempo);
-    } else if (address == MULTI_CLOCK_SWING) {
-      internal_clock_.set_swing(settings_.clock_swing);
-    }
+  if (value == previous_value) { return false; }
+  if (address == MULTI_LAYOUT) {
+    ChangeLayout(
+        static_cast<Layout>(previous_value),
+        static_cast<Layout>(value));
+  } else if (address == MULTI_CLOCK_TEMPO) {
+    internal_clock_.set_tempo(settings_.clock_tempo);
+  } else if (address == MULTI_CLOCK_SWING) {
+    internal_clock_.set_swing(settings_.clock_swing);
   }
+  return true;
 }
 
 void Multi::AssignVoicesToCVOutputs() {
@@ -786,13 +786,23 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
     }
   }
 
-  // TODO if starting recording, make sure part is within bounds
-  // TODO if changing play mode to manual, StopRecording that part
   for (uint8_t i = 0; i < num_active_parts_; ++i) {
     if (part_[i].accepts(channel) && \
         channel + 1 != settings_.remote_control_channel) {
+      if (controller == 110) {
+        // Intercept this CC so multi can update its own recording state
+        value >= 64 ? StartRecording(i) : StopRecording(i);
+        continue;
+      }
       thru = part_[i].ControlChange(channel, controller, value) && thru;
-      yarns::settings.SetFromCC(i, controller, value);
+      bool changed = yarns::settings.SetFromCC(i, controller, value);
+      if (!changed) { continue; }
+      if (
+        controller == yarns::settings.setting(SETTING_SEQUENCER_PLAY_MODE).part_cc
+      ) {
+        // Changing play mode forces recording to stop
+        StopRecording(i);
+      }
     }
   }
   return thru;

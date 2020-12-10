@@ -269,16 +269,20 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
     case kCCHoldPedal:
       value >= 64 ? SustainOn() : SustainOff();
       break;
-    
+
+    case 111:
+      DeleteRecording();
+      break;
+
     case 0x70:
       if (seq_recording_) {
-        RecordStep(SEQUENCER_STEP_TIE);
+        looped() ? LooperRemoveOldestNote() : RecordStep(SEQUENCER_STEP_TIE);
       }
       break;
     
     case 0x71:
       if (seq_recording_) {
-        RecordStep(SEQUENCER_STEP_REST);
+        looped() ? LooperRemoveNewestNote() : RecordStep(SEQUENCER_STEP_REST);
       }
       break;
     
@@ -981,7 +985,7 @@ void Part::TouchVoices() {
   }
 }
 
-void Part::Set(uint8_t address, uint8_t value) {
+bool Part::Set(uint8_t address, uint8_t value) {
   uint8_t* bytes;
   bytes = static_cast<uint8_t*>(static_cast<void*>(&midi_));
   uint8_t previous_value = bytes[address];
@@ -993,56 +997,56 @@ void Part::Set(uint8_t address, uint8_t value) {
     StopSequencerArpeggiatorNotes();
   }
   bytes[address] = value;
-  if (value != previous_value) {
-    switch (address) {
-      case PART_MIDI_CHANNEL:
-      case PART_MIDI_MIN_NOTE:
-      case PART_MIDI_MAX_NOTE:
-      case PART_MIDI_MIN_VELOCITY:
-      case PART_MIDI_MAX_VELOCITY:
-      case PART_MIDI_INPUT_RESPONSE:
-      case PART_MIDI_PLAY_MODE:
-      case PART_MIDI_TRANSPOSE_OCTAVES:
-        // Shut all channels off when a MIDI parameter is changed to prevent
-        // stuck notes.
-        AllNotesOff();
-        break;
+  if (value == previous_value) { return false; }
+  switch (address) {
+    case PART_MIDI_CHANNEL:
+    case PART_MIDI_MIN_NOTE:
+    case PART_MIDI_MAX_NOTE:
+    case PART_MIDI_MIN_VELOCITY:
+    case PART_MIDI_MAX_VELOCITY:
+    case PART_MIDI_INPUT_RESPONSE:
+    case PART_MIDI_PLAY_MODE:
+    case PART_MIDI_TRANSPOSE_OCTAVES:
+      // Shut all channels off when a MIDI parameter is changed to prevent
+      // stuck notes.
+      AllNotesOff();
+      break;
 
-      case PART_VOICING_ALLOCATION_MODE:
-        TouchVoiceAllocation();
-        break;
-        
-      case PART_VOICING_PITCH_BEND_RANGE:
-      case PART_VOICING_MODULATION_RATE:
-      case PART_VOICING_VIBRATO_RANGE:
-      case PART_VOICING_VIBRATO_INITIAL:
-      case PART_VOICING_VIBRATO_CONTROL_SOURCE:
-      case PART_VOICING_TRIGGER_DURATION:
-      case PART_VOICING_TRIGGER_SHAPE:
-      case PART_VOICING_TRIGGER_SCALE:
-      case PART_VOICING_AUX_CV:
-      case PART_VOICING_AUX_CV_2:
-      case PART_VOICING_AUDIO_MODE:
-      case PART_VOICING_OSCILLATOR_PW_INITIAL:
-      case PART_VOICING_OSCILLATOR_PW_MOD:
-      case PART_VOICING_ENVELOPE_ATTACK:
-      case PART_VOICING_ENVELOPE_DECAY:
-      case PART_VOICING_ENVELOPE_SUSTAIN:
-      case PART_VOICING_ENVELOPE_RELEASE:
-      case PART_VOICING_TUNING_TRANSPOSE:
-      case PART_VOICING_TUNING_FINE:
-        TouchVoices();
-        break;
-        
-      case PART_SEQUENCER_ARP_DIRECTION:
-        arp_.key_increment = 1;
-        break;
+    case PART_VOICING_ALLOCATION_MODE:
+      TouchVoiceAllocation();
+      break;
+      
+    case PART_VOICING_PITCH_BEND_RANGE:
+    case PART_VOICING_MODULATION_RATE:
+    case PART_VOICING_VIBRATO_RANGE:
+    case PART_VOICING_VIBRATO_INITIAL:
+    case PART_VOICING_VIBRATO_CONTROL_SOURCE:
+    case PART_VOICING_TRIGGER_DURATION:
+    case PART_VOICING_TRIGGER_SHAPE:
+    case PART_VOICING_TRIGGER_SCALE:
+    case PART_VOICING_AUX_CV:
+    case PART_VOICING_AUX_CV_2:
+    case PART_VOICING_AUDIO_MODE:
+    case PART_VOICING_OSCILLATOR_PW_INITIAL:
+    case PART_VOICING_OSCILLATOR_PW_MOD:
+    case PART_VOICING_ENVELOPE_ATTACK:
+    case PART_VOICING_ENVELOPE_DECAY:
+    case PART_VOICING_ENVELOPE_SUSTAIN:
+    case PART_VOICING_ENVELOPE_RELEASE:
+    case PART_VOICING_TUNING_TRANSPOSE:
+    case PART_VOICING_TUNING_FINE:
+      TouchVoices();
+      break;
+      
+    case PART_SEQUENCER_ARP_DIRECTION:
+      arp_.key_increment = 1;
+      break;
 
-      case PART_MIDI_SUSTAIN_MODE:
-      default:
-        break;
-    }
+    case PART_MIDI_SUSTAIN_MODE:
+    default:
+      break;
   }
+  return true;
 }
 
 struct Ratio { int p; int q; };

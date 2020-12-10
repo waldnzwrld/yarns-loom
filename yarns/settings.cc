@@ -495,7 +495,7 @@ const Setting Settings::settings_[] = {
     "SP", "SEQUENCER PLAY MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_PLAY_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
-    0, 0,
+    114, 0,
   },
   {
     "SI", "SEQ INPUT RESPONSE",
@@ -550,20 +550,19 @@ void Settings::Init() {
   }
 }
 
-void Settings::SetFromCC(
+bool Settings::SetFromCC(
     uint8_t part_index,
     uint8_t controller,
     uint8_t value) {
   uint8_t* map = part_index == 0xff ? remote_control_cc_map_ : part_cc_map_;
   uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
   uint8_t setting_index = map[controller];
-  if (setting_index != 0xff) {
-    const Setting& setting = settings_[setting_index];
-    ApplySetting(setting, part, setting.Scale(value));
-  }
+  if (setting_index == 0xff) { return false; }
+  const Setting& setting = settings_[setting_index];
+  return ApplySetting(setting, part, setting.Scale(value));
 }
 
-void Settings::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value) {
+bool Settings::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value) {
   // Apply dynamic min/max as needed
   int16_t min_value = setting.min_value;
   int16_t max_value = setting.max_value;
@@ -585,11 +584,9 @@ void Settings::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_va
 
   switch (setting.domain) {
     case SETTING_DOMAIN_MULTI:
-      multi.Set(setting.address[0], value);
-      break;
+      return multi.Set(setting.address[0], value);
 
     case SETTING_DOMAIN_PART:
-      multi.mutable_part(part)->Set(setting.address[0], value);
       // When the module is configured in *triggers* mode, each part is mapped
       // to a single note. To edit this setting, both the "note min" and
       // "note max" parameters are simultaneously changed to the same value.
@@ -598,7 +595,10 @@ void Settings::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_va
       if (setting.address[1]) {
         multi.mutable_part(part)->Set(setting.address[1], value);
       }
-      break;
+      return multi.mutable_part(part)->Set(setting.address[0], value);
+
+    default:
+      return false;
   }
 }
 
