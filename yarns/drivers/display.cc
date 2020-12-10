@@ -113,7 +113,7 @@ void Display::RefreshSlow() {
   }
   
   if (fading_increment_) {
-    actual_brightness_ = UINT16_MAX - fading_counter_;
+    actual_brightness_ = fading_counter_;
   } else {
     actual_brightness_ = brightness_;
   }

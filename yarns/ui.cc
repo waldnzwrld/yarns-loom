@@ -40,7 +40,8 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
-const uint32_t kEncoderLongPressTime = 600;
+const uint32_t kRefreshPeriod = 900; // msec
+const uint32_t kEncoderLongPressTime = kRefreshPeriod * 2 / 3;
 const char* const kVersion = "Loom 2_1_0";
 
 /* static */
@@ -422,6 +423,8 @@ void Ui::SplashOn(Splash s) {
   splash_ = s;
   queue_.Touch(); // Reset idle timer
   display_.set_brightness(UINT16_MAX);
+  display_.set_fade(0);
+  display_.set_blink(false);
   switch (splash_) {
     case SPLASH_ACTIVE_PART:
       if (multi.recording()) {
@@ -852,7 +855,7 @@ void Ui::DoEvents() {
     }
   }
 
-  if (queue_.idle_time() > 900) {
+  if (queue_.idle_time() > kRefreshPeriod) {
     if (!display_.scrolling()) {
       factory_testing_display_ = UI_FACTORY_TESTING_DISPLAY_EMPTY;
       refresh_display = true;
@@ -878,15 +881,18 @@ void Ui::DoEvents() {
         mode_ == UI_MODE_CALIBRATION_ADJUST_LEVEL ||
         mode_ == UI_MODE_LEARNING
     );
-    if (
+    if (multi.recording()) {
+      display_.set_fade(0);
+    } else if (
       mode_ == UI_MODE_MAIN_MENU || (
         mode_ == UI_MODE_PARAMETER_SELECT && (
           &setting() == &settings.setting(SETTING_MENU_SETUP) ||
-          &setting() == &settings.setting(SETTING_MENU_ENVELOPE)
+          &setting() == &settings.setting(SETTING_MENU_ENVELOPE) ||
+          current_menu_ != &live_menu_
         )
       )
     ) {
-      display_.set_fade(160);
+      display_.set_fade((1 << 15) / kRefreshPeriod); // 1/2 frequency
     } else if (mode_ == UI_MODE_PARAMETER_EDIT &&
                setting().unit == SETTING_UNIT_TEMPO) {
       display_.set_fade(multi.tempo() * 235 >> 8);
@@ -899,7 +905,7 @@ void Ui::DoEvents() {
   // If display is idle, flash various statuses
   bool print_latch = active_part().IsLatched();
   bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
-  if (queue_.idle_time() > 600) {
+  if (queue_.idle_time() > kRefreshPeriod * 2 / 3) {
     if (print_part) {
       display_.set_fade(0);
       PrintActivePartAndPlayMode();
@@ -907,7 +913,7 @@ void Ui::DoEvents() {
       display_.set_fade(0);
       display_.Print("//");
     }
-  } else if (queue_.idle_time() > 300) {
+  } else if (queue_.idle_time() > kRefreshPeriod / 3) {
     if (print_latch && print_part) {
       display_.set_fade(0);
       display_.Print("//");

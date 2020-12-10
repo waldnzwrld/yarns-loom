@@ -72,7 +72,6 @@ class Display {
   inline void set_blink(bool blinking) { blinking_ = blinking; }
   inline void set_fade(uint16_t increment) {
     fading_increment_ = increment;
-    fading_counter_ = 0;
   }
  
  private:
