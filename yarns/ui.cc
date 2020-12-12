@@ -909,7 +909,7 @@ void Ui::DoEvents() {
   }
 
   // If display is idle, flash various statuses
-  bool print_latch = LatchableKeys().AnySustained();
+  bool print_latch = LatchableKeys().AnyWithSustain(true);
   bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > kRefreshPeriod * 2 / 3) {
     if (print_part) {

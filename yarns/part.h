@@ -356,9 +356,9 @@ struct PressedKeys {
     return changed;
   }
 
-  bool AnySustained() const {
+  bool AnyWithSustain(bool status) const {
     for (uint8_t i = 1; i <= stack.max_size(); ++i) {
-      if (IsSustained(stack.note(i))) { return true; }
+      if (IsSustained(stack.note(i)) == status) { return true; }
     }
     return false;
   }
