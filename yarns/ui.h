@@ -108,7 +108,7 @@ class Ui {
   ~Ui() { }
   
   void Init();
-  bool SetPlayMode();
+  bool UpdatePlayMode();
   void Poll();
   void PollSwitch(const UiSwitch ui_switch, uint32_t& press_time, bool& long_press_event_sent);
   void PollFast() {

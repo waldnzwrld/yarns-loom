@@ -133,7 +133,7 @@ void Ui::Init() {
   
   mode_ = UI_MODE_PARAMETER_SELECT;
   active_part_ = 0;
-  SetPlayMode();
+  UpdatePlayMode();
 
   setup_menu_.Init(SETTING_MENU_SETUP);
   envelope_menu_.Init(SETTING_MENU_ENVELOPE);
@@ -413,7 +413,7 @@ void Ui::PrintFactoryTesting() {
   }
 }
 
-bool Ui::SetPlayMode() {
+bool Ui::UpdatePlayMode() {
   uint8_t old = active_part_play_mode_;
   active_part_play_mode_ = active_part().midi_settings().play_mode;
   return old != active_part_play_mode_;
@@ -722,7 +722,7 @@ void Ui::OnSwitchHeld(const Event& e) {
       }
       // Increment active part
       active_part_ = (1 + active_part_) % multi.num_active_parts();
-      SetPlayMode();
+      UpdatePlayMode();
       if (recording_any) {
         multi.StartRecording(active_part_);
       }
@@ -733,6 +733,7 @@ void Ui::OnSwitchHeld(const Event& e) {
       // Use this to set last step for sequencer?
       if (!recording_any) {
         mutable_active_part()->Set(PART_MIDI_PLAY_MODE, (1 + active_part().midi_settings().play_mode) % PLAY_MODE_LAST);
+        UpdatePlayMode();
         SplashOn(SPLASH_ACTIVE_PART);
       }
       break;
@@ -791,7 +792,7 @@ void Ui::DoEvents() {
   }
   if (
     (multi.recording() && multi.recording_part() != active_part_) ||
-    SetPlayMode()
+    UpdatePlayMode()
   ) {
     // If recording state or play mode was changed by CC
     active_part_ = multi.recording_part();
