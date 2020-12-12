@@ -682,6 +682,10 @@ void Ui::OnSwitchPress(const Event& e) {
   }
 }
 
+PressedKeys& Ui::LatchableKeys() {
+  return mutable_active_part()->PressedKeysForLatchUI();
+}
+
 void Ui::OnSwitchHeld(const Event& e) {
   bool recording_any = multi.recording();
   switch (e.control_id) {
@@ -690,10 +694,11 @@ void Ui::OnSwitchHeld(const Event& e) {
       if (recording_any) {
         mutable_recording_part()->DeleteRecording();
       } else {
-        if (active_part().IsLatched()) {
-          mutable_active_part()->SustainOff();
-        } else if (multi.running() && active_part().has_notes()) {
-          mutable_active_part()->SustainOn();
+        PressedKeys &keys = LatchableKeys();
+        if (keys.ignore_note_off_messages) {
+          mutable_active_part()->PressedKeysSustainOff(keys);
+        } else if (multi.running() && keys.stack.size()) {
+          mutable_active_part()->PressedKeysSustainOn(keys);
         } else {
           if (push_it_) {
             multi.PushItNoteOff(push_it_note_);
@@ -903,22 +908,27 @@ void Ui::DoEvents() {
   }
 
   // If display is idle, flash various statuses
-  bool print_latch = active_part().IsLatched();
+  bool print_latch = LatchableKeys().AnySustained();
   bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > kRefreshPeriod * 2 / 3) {
     if (print_part) {
       display_.set_fade(0);
       PrintActivePartAndPlayMode();
     } else if (print_latch) {
-      display_.set_fade(0);
-      display_.Print("//");
+      PrintLatch();
     }
   } else if (queue_.idle_time() > kRefreshPeriod / 3) {
     if (print_latch && print_part) {
-      display_.set_fade(0);
-      display_.Print("//");
+      PrintLatch();
     }
   }
+}
+
+void Ui::PrintLatch() {
+  display_.set_fade(0);
+  display_.Print(
+    LatchableKeys().release_latched_keys_on_next_note_on ? "-}" : "{-"
+  );
 }
 
 }  // namespace yarns

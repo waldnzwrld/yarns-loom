@@ -206,6 +206,9 @@ class Ui {
   void PrintRecordingStep();
   void PrintArpeggiatorMovementStep(SequencerStep step);
   void PrintActivePartAndPlayMode();
+  void PrintLatch();
+
+  PressedKeys& LatchableKeys();
   
   void SplashOn(Splash s);
   void StopRecording();

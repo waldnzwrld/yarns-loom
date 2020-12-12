@@ -127,6 +127,7 @@ enum SustainMode {
   // SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
   SUSTAIN_MODE_MOMENTARY_LATCH,
+  SUSTAIN_MODE_TOGGLE,
   SUSTAIN_MODE_OFF,
   SUSTAIN_MODE_LAST,
 };
@@ -326,20 +327,6 @@ struct PressedKeys {
 
   void Init() {
     stack.Init();
-    ResetLatch();
-  }
-
-  void ResetLatch() {
-    ignore_note_off_messages = false;
-    release_latched_keys_on_next_note_on = false;
-  }
-  void Latch() {
-    ignore_note_off_messages = true;
-    release_latched_keys_on_next_note_on = true;
-  }
-  void UnlatchOnNextNoteOn() {
-    ignore_note_off_messages = false;
-    release_latched_keys_on_next_note_on = true;
   }
 
   bool SustainableNoteOff(uint8_t pitch) {
@@ -351,26 +338,37 @@ struct PressedKeys {
 
   void SetSustain(uint8_t pitch) {
     if (!ignore_note_off_messages) { return; }
-    for (uint8_t i = 1; i <= stack.max_size(); ++i) {
-      // Flag the note so that it is removed once the sustain pedal is released.
-      stmlib::NoteEntry* e = stack.mutable_note(i);
-      if (e->note == pitch && e->velocity) {
-        e->velocity |= VELOCITY_SUSTAIN_MASK;
-      }
-    }
+    uint8_t i = stack.Find(pitch);
+    if (!i) { return; }
+    // Flag the note so that it is removed once the sustain pedal is released.
+    stack.mutable_note(i)->velocity |= VELOCITY_SUSTAIN_MASK;
   }
 
-  void SustainAll() {
+  bool SustainAll() {
+    bool changed = false;
     for (uint8_t i = 1; i <= stack.max_size(); ++i) {
       stmlib::NoteEntry* e = stack.mutable_note(i);
       if (e->note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
+      if (IsSustained(*e)) { continue; }
       e->velocity |= VELOCITY_SUSTAIN_MASK;
+      changed = true;
     }
+    return changed;
   }
 
-  bool IsSustained(uint8_t pitch) const {
+  bool AnySustained() const {
+    for (uint8_t i = 1; i <= stack.max_size(); ++i) {
+      if (IsSustained(stack.note(i))) { return true; }
+    }
+    return false;
+  }
+
+  bool IsSustained(const stmlib::NoteEntry &note_entry) const {
     // If the note is flagged, it can only be released by ReleaseLatchedNotes
-    return stack.note(stack.Find(pitch)).velocity & VELOCITY_SUSTAIN_MASK;
+    return note_entry.velocity & VELOCITY_SUSTAIN_MASK;
+  }
+  bool IsSustained(uint8_t pitch) const {
+    return IsSustained(stack.note(stack.Find(pitch)));
   }
 
 };
@@ -555,6 +553,18 @@ class Part {
   }
   void PressedKeysSustainOn(PressedKeys &keys);
   void PressedKeysSustainOff(PressedKeys &keys);
+  inline PressedKeys& PressedKeysForLatchUI() {
+    return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
+  }
+  inline void PressedKeysResetLatch(PressedKeys &keys) {
+    ReleaseLatchedNotes(keys);
+    keys.ignore_note_off_messages = false;
+    keys.release_latched_keys_on_next_note_on = false;
+  }
+  inline void ResetLatch() {
+    PressedKeysResetLatch(manual_keys_);
+    PressedKeysResetLatch(arp_keys_);
+  }
 
   inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
@@ -704,10 +714,6 @@ class Part {
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();
     TouchVoiceAllocation();
-  }
-
-  inline bool IsLatched() const {
-    return manual_keys_.ignore_note_off_messages;
   }
 
   void set_siblings(bool has_siblings) {
