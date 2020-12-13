@@ -118,7 +118,7 @@ enum SequencerInputResponse {
 enum PlayMode {
   PLAY_MODE_MANUAL,
   PLAY_MODE_ARPEGGIATOR,
-  PLAY_MODE_RECORD,
+  PLAY_MODE_SEQUENCER,
   PLAY_MODE_LAST
 };
 
@@ -478,7 +478,7 @@ class Part {
 
   inline bool looper_in_use() const {
     return looped() && (
-      midi_.play_mode == PLAY_MODE_RECORD ||
+      midi_.play_mode == PLAY_MODE_SEQUENCER ||
       seq_driven_arp()
     );
   }
@@ -621,7 +621,7 @@ class Part {
     return (
       midi_.play_mode == PLAY_MODE_MANUAL || (
         midi_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT &&
-        midi_.play_mode == PLAY_MODE_RECORD
+        midi_.play_mode == PLAY_MODE_SEQUENCER
       )
     );
   }
