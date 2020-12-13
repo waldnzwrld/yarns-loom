@@ -210,12 +210,10 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
     case SUSTAIN_MODE_NORMAL:
       keys.ignore_note_off_messages = true;
       break;
-    /*
     case SUSTAIN_MODE_SOSTENUTO:
-      // TODO should not flag these until they're actually released
-      keys.SustainAll();
+      keys.ignore_note_off_messages = false;
+      keys.SetSustainable(true);
       break;
-    */
     case SUSTAIN_MODE_LATCH:
     case SUSTAIN_MODE_MOMENTARY_LATCH:
       keys.ignore_note_off_messages = true;
@@ -224,10 +222,9 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
     case SUSTAIN_MODE_TOGGLE:
       keys.ignore_note_off_messages = false;
       {
-        bool changed = keys.SustainAll(); // TODO should wait to flag these until manually released?
-        // TODO check old latch semantics re: when flag is applied, possibly reinstate
-        // TODO should instead depend on AnyNotSustained (i.e. hands are still on keys)
-        keys.release_latched_keys_on_next_note_on = !changed;
+        bool any_held = keys.AnyWithSustain(false);
+        keys.SetSustainable(any_held);
+        keys.release_latched_keys_on_next_note_on = !any_held;
       }
       break;
     case SUSTAIN_MODE_OFF:
@@ -242,14 +239,11 @@ void Part::PressedKeysSustainOff(PressedKeys &keys) {
       keys.ignore_note_off_messages = false;
       ReleaseLatchedNotes(keys);
       break;
-    /*
     case SUSTAIN_MODE_SOSTENUTO:
-      // TODO this is busted -- these notes could still be held
-      ReleaseLatchedNotes();
+      keys.SetSustainable(false);
+      ReleaseLatchedNotes(keys);
       break;
-    */
     case SUSTAIN_MODE_LATCH:
-      keys.SustainAll(); // TODO should this happen now?
       keys.ignore_note_off_messages = false;
       keys.release_latched_keys_on_next_note_on = true;
       break;

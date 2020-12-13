@@ -135,7 +135,7 @@ const char* const sequencer_input_response_values[] = {
 
 const char* const sustain_mode_values[] = {
   "SUSTAIN",
-  // "SOSTENUTO",
+  "SOSTENUTO",
   "LATCH",
   "MOMENTARY LATCH",
   "TOGGLE",

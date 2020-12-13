@@ -124,7 +124,7 @@ enum PlayMode {
 
 enum SustainMode {
   SUSTAIN_MODE_NORMAL,
-  // SUSTAIN_MODE_SOSTENUTO,
+  SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
   SUSTAIN_MODE_MOMENTARY_LATCH,
   SUSTAIN_MODE_TOGGLE,
@@ -324,6 +324,7 @@ struct PressedKeys {
   stmlib::NoteStack<kNoteStackSize> stack;
   bool ignore_note_off_messages;
   bool release_latched_keys_on_next_note_on;
+  bool sustainable[kNoteStackSize];
 
   void Init() {
     stack.Init();
@@ -337,9 +338,10 @@ struct PressedKeys {
   }
 
   void SetSustain(uint8_t pitch) {
-    if (!ignore_note_off_messages) { return; }
     uint8_t i = stack.Find(pitch);
-    if (!i) { return; }
+    if (!i || !(
+      ignore_note_off_messages || sustainable[i]
+    )) { return; }
     // Flag the note so that it is removed once the sustain pedal is released.
     stack.mutable_note(i)->velocity |= VELOCITY_SUSTAIN_MASK;
   }
@@ -356,8 +358,16 @@ struct PressedKeys {
     return changed;
   }
 
+  void SetSustainable(bool value) {
+    for (uint8_t i = 1; i <= stack.max_size(); ++i) {
+      if (stack.note(i).note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
+      sustainable[i] = value;
+    }
+  }
+
   bool AnyWithSustain(bool status) const {
     for (uint8_t i = 1; i <= stack.max_size(); ++i) {
+      if (stack.note(i).note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
       if (IsSustained(stack.note(i)) == status) { return true; }
     }
     return false;
@@ -560,6 +570,11 @@ class Part {
     ReleaseLatchedNotes(keys);
     keys.ignore_note_off_messages = false;
     keys.release_latched_keys_on_next_note_on = false;
+    std::fill(
+      &keys.sustainable[0],
+      &keys.sustainable[kNoteStackSize],
+      false
+    );
   }
   inline void ResetLatch() {
     PressedKeysResetLatch(manual_keys_);
