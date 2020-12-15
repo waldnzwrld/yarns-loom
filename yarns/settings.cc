@@ -130,15 +130,16 @@ const char* const sequencer_clock_quantization_values[] = {
 };
 
 const char* const sequencer_input_response_values[] = {
-  "TRANSPOSE", "REPLACE", "DIRECT", "OFF"
+  "OFF", "TRANSPOSE", "REPLACE", "DIRECT"
 };
 
 const char* const sustain_mode_values[] = {
+  "OFF",
   "SUSTAIN",
-  // "SOSTENUTO",
+  "SOSTENUTO",
   "LATCH",
   "MOMENTARY LATCH",
-  "OFF"
+  "TOGGLE",
 };
 
 const char* const vibrato_control_source_values[] = {

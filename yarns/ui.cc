@@ -133,7 +133,7 @@ void Ui::Init() {
   
   mode_ = UI_MODE_PARAMETER_SELECT;
   active_part_ = 0;
-  SetPlayMode();
+  UpdatePlayMode();
 
   setup_menu_.Init(SETTING_MENU_SETUP);
   envelope_menu_.Init(SETTING_MENU_ENVELOPE);
@@ -413,7 +413,7 @@ void Ui::PrintFactoryTesting() {
   }
 }
 
-bool Ui::SetPlayMode() {
+bool Ui::UpdatePlayMode() {
   uint8_t old = active_part_play_mode_;
   active_part_play_mode_ = active_part().midi_settings().play_mode;
   return old != active_part_play_mode_;
@@ -682,6 +682,10 @@ void Ui::OnSwitchPress(const Event& e) {
   }
 }
 
+PressedKeys& Ui::LatchableKeys() {
+  return mutable_active_part()->PressedKeysForLatchUI();
+}
+
 void Ui::OnSwitchHeld(const Event& e) {
   bool recording_any = multi.recording();
   switch (e.control_id) {
@@ -690,10 +694,11 @@ void Ui::OnSwitchHeld(const Event& e) {
       if (recording_any) {
         mutable_recording_part()->DeleteRecording();
       } else {
-        if (active_part().IsLatched()) {
-          mutable_active_part()->SustainOff();
-        } else if (multi.running() && active_part().has_notes()) {
-          mutable_active_part()->SustainOn();
+        PressedKeys &keys = LatchableKeys();
+        if (keys.ignore_note_off_messages) {
+          mutable_active_part()->PressedKeysSustainOff(keys);
+        } else if (multi.running() && keys.stack.size()) {
+          mutable_active_part()->PressedKeysSustainOn(keys);
         } else {
           if (push_it_) {
             multi.PushItNoteOff(push_it_note_);
@@ -717,7 +722,7 @@ void Ui::OnSwitchHeld(const Event& e) {
       }
       // Increment active part
       active_part_ = (1 + active_part_) % multi.num_active_parts();
-      SetPlayMode();
+      UpdatePlayMode();
       if (recording_any) {
         multi.StartRecording(active_part_);
       }
@@ -728,6 +733,7 @@ void Ui::OnSwitchHeld(const Event& e) {
       // Use this to set last step for sequencer?
       if (!recording_any) {
         mutable_active_part()->Set(PART_MIDI_PLAY_MODE, (1 + active_part().midi_settings().play_mode) % PLAY_MODE_LAST);
+        UpdatePlayMode();
         SplashOn(SPLASH_ACTIVE_PART);
       }
       break;
@@ -786,7 +792,7 @@ void Ui::DoEvents() {
   }
   if (
     (multi.recording() && multi.recording_part() != active_part_) ||
-    SetPlayMode()
+    UpdatePlayMode()
   ) {
     // If recording state or play mode was changed by CC
     active_part_ = multi.recording_part();
@@ -903,22 +909,27 @@ void Ui::DoEvents() {
   }
 
   // If display is idle, flash various statuses
-  bool print_latch = active_part().IsLatched();
+  bool print_latch = LatchableKeys().AnyWithSustain(true);
   bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > kRefreshPeriod * 2 / 3) {
     if (print_part) {
       display_.set_fade(0);
       PrintActivePartAndPlayMode();
     } else if (print_latch) {
-      display_.set_fade(0);
-      display_.Print("//");
+      PrintLatch();
     }
   } else if (queue_.idle_time() > kRefreshPeriod / 3) {
     if (print_latch && print_part) {
-      display_.set_fade(0);
-      display_.Print("//");
+      PrintLatch();
     }
   }
+}
+
+void Ui::PrintLatch() {
+  display_.set_fade(0);
+  display_.Print(
+    LatchableKeys().release_latched_keys_on_next_note_on ? "-}" : "{-"
+  );
 }
 
 }  // namespace yarns
