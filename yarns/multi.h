@@ -37,6 +37,7 @@
 #include "yarns/part.h"
 #include "yarns/voice.h"
 #include "yarns/storage_manager.h"
+#include "yarns/settings.h"
 
 namespace yarns {
 
@@ -165,6 +166,9 @@ class Multi {
   }
   
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
+  void SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value);
+  uint8_t GetSetting(const Setting& setting, uint8_t part) const;
+  void ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
 
   bool PitchBend(uint8_t channel, uint16_t pitch_bend) {
     bool thru = true;
@@ -217,7 +221,10 @@ class Multi {
   }
   
   void StartRecording(uint8_t part) {
-    if (part_[part].midi_settings().play_mode == PLAY_MODE_MANUAL) {
+    if (
+      part_[part].midi_settings().play_mode == PLAY_MODE_MANUAL ||
+      part >= num_active_parts_
+    ) {
       return;
     }
     if (recording_) {

@@ -777,7 +777,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   bool thru = true;
   
   if (channel + 1 == settings_.remote_control_channel) {
-    yarns::settings.SetFromCC(0xff, controller, value);
+    SetFromCC(0xff, controller, value);
     if (num_active_parts_ >= 4 && \
         (controller == 0x78 || controller == 0x79 || controller == 0x7b)) {
       // Do not continue to avoid treating these messages as "all sound off",
@@ -789,25 +789,116 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   for (uint8_t i = 0; i < num_active_parts_; ++i) {
     if (part_[i].accepts(channel) && \
         channel + 1 != settings_.remote_control_channel) {
-      if (controller == 110) {
+      if (controller == kCCRecordOffOn) {
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);
         continue;
       }
       thru = part_[i].ControlChange(channel, controller, value) && thru;
-      bool changed = yarns::settings.SetFromCC(i, controller, value);
-      if (!changed) { continue; }
-      if (
-        controller == yarns::settings.setting(SETTING_SEQUENCER_PLAY_MODE).part_cc
-      ) {
-        // Changing play mode forces recording to stop
-        StopRecording(i);
-      }
+      SetFromCC(i, controller, value);
     }
   }
   return thru;
 }
 
+void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bits) {
+  uint8_t* map = part_index == 0xff ?
+    setting_defs.remote_control_cc_map : setting_defs.part_cc_map;
+  uint8_t setting_index = map[controller];
+  if (setting_index == 0xff) { return; }
+  const Setting& setting = setting_defs.get(setting_index);
+
+  uint8_t scaled_value;
+  uint8_t range = setting.max_value - setting.min_value + 1;
+  scaled_value = range * value_7bits >> 7;
+  scaled_value += setting.min_value;
+  if (setting.unit == SETTING_UNIT_TEMPO) {
+    scaled_value &= 0xfe;
+    if (scaled_value < TEMPO_EXTERNAL) {
+      scaled_value = TEMPO_EXTERNAL;
+    }
+  }
+
+  uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
+  ApplySetting(setting, part, scaled_value);
+}
+
+uint8_t Multi::GetSetting(const Setting& setting, uint8_t part) const {
+  uint8_t value = 0;
+  switch (setting.domain) {
+    case SETTING_DOMAIN_MULTI:
+      value = multi.Get(setting.address[0]);
+      break;
+    case SETTING_DOMAIN_PART:
+      value = multi.part(part).Get(setting.address[0]);
+      break;
+  }
+  return value;
+}
+
+void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value) {
+  // Apply dynamic min/max as needed
+  int16_t min_value = setting.min_value;
+  int16_t max_value = setting.max_value;
+  if (
+    &setting == &setting_defs.get(SETTING_VOICING_ALLOCATION_MODE) &&
+    multi.part(part).num_voices() == 1
+  ) {
+    max_value = VOICE_ALLOCATION_MODE_MONO;
+  }
+  if (
+    multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
+    part == 0 &&
+    &setting == &setting_defs.get(SETTING_VOICING_AUDIO_MODE)
+  ) {
+    min_value = AUDIO_MODE_SAW;
+  }
+  CONSTRAIN(raw_value, min_value, max_value);
+  uint8_t value = static_cast<uint8_t>(raw_value);
+
+  uint8_t prev_value = GetSetting(setting, part);
+  if (prev_value == value) { return; }
+
+  bool layout = &setting == &setting_defs.get(SETTING_LAYOUT);
+  bool restart_clock = running_ && layout;
+  bool sequencer_semantics = \
+    &setting == &setting_defs.get(SETTING_SEQUENCER_PLAY_MODE) ||
+    &setting == &setting_defs.get(SETTING_SEQUENCER_CLOCK_QUANTIZATION) || (
+      &setting == &setting_defs.get(SETTING_SEQUENCER_ARP_PATTERN) && (
+        prev_value == 0 || value == 0
+      )
+    );
+  bool restart_recording = recording_ && (
+    layout || (recording_part_ == part && sequencer_semantics)
+  );
+
+  if (restart_clock) { Stop(); }
+  if (restart_recording) { StopRecording(recording_part_); }
+  if (sequencer_semantics) { part_[part].StopSequencerArpeggiatorNotes(); }
+
+  switch (setting.domain) {
+    case SETTING_DOMAIN_MULTI:
+      multi.Set(setting.address[0], value);
+      break;
+    case SETTING_DOMAIN_PART:
+      // When the module is configured in *triggers* mode, each part is mapped
+      // to a single note. To edit this setting, both the "note min" and
+      // "note max" parameters are simultaneously changed to the same value.
+      // This is a bit more user friendly than letting the user set note min
+      // and note max to the same value.
+      if (setting.address[1]) {
+        multi.mutable_part(part)->Set(setting.address[1], value);
+      }
+      multi.mutable_part(part)->Set(setting.address[0], value);
+      break;
+
+    default:
+      break;
+  }
+
+  if (restart_clock) { Start(false); }
+  if (restart_recording) { StartRecording(recording_part_); }
+}
 
 /* extern */
 Multi multi;
