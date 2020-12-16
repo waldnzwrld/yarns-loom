@@ -158,7 +158,7 @@ class Multi {
       has_notes = has_notes || part_[i].has_notes();
     }
     
-    if (!has_notes && internal_clock() && started_by_keyboard_) {
+    if (!has_notes && CanAutoStop()) {
       stop_count_down_ = 12;
     }
     
@@ -218,6 +218,10 @@ class Multi {
   
   void Continue() {
     Start(false);
+  }
+
+  inline bool CanAutoStop() const {
+    return started_by_keyboard_ && internal_clock();
   }
   
   void StartRecording(uint8_t part) {
@@ -297,7 +301,7 @@ class Multi {
       }
       has_notes = has_notes || part_[i].has_notes();
     }
-    if (!has_notes && internal_clock() && started_by_keyboard_) {
+    if (!has_notes && CanAutoStop()) {
       Stop();
     }
   }

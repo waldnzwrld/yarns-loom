@@ -65,6 +65,7 @@ void Multi::Init(bool reset_calibration) {
   running_ = false;
   recording_ = false;
   recording_part_ = 0;
+  started_by_keyboard_ = true;
   
   // Put the multi in a usable state. Even if these settings will later be
   // overriden with some data retrieved from Flash (presets).
@@ -183,7 +184,7 @@ void Multi::Clock() {
   
   if (stop_count_down_) {
     --stop_count_down_;
-    if (!stop_count_down_ && started_by_keyboard_ && internal_clock()) {
+    if (!stop_count_down_ && CanAutoStop()) {
       Stop();
     }
   }
@@ -230,7 +231,7 @@ void Multi::Stop() {
   reset_pulse_counter_ = 0;
   stop_count_down_ = 0;
   running_ = false;
-  started_by_keyboard_ = false;
+  started_by_keyboard_ = true;
   song_pointer_ = NULL;
 }
 
