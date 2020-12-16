@@ -861,7 +861,6 @@ void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value
   if (prev_value == value) { return; }
 
   bool layout = &setting == &setting_defs.get(SETTING_LAYOUT);
-  bool restart_clock = running_ && layout;
   bool sequencer_semantics = \
     &setting == &setting_defs.get(SETTING_SEQUENCER_PLAY_MODE) ||
     &setting == &setting_defs.get(SETTING_SEQUENCER_CLOCK_QUANTIZATION) || (
@@ -869,12 +868,11 @@ void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value
         prev_value == 0 || value == 0
       )
     );
-  bool restart_recording = recording_ && (
-    layout || (recording_part_ == part && sequencer_semantics)
-  );
 
-  if (restart_clock) { Stop(); }
-  if (restart_recording) { StopRecording(recording_part_); }
+  if (running_ && layout) { Stop(); }
+  if (recording_ && (
+    layout || (recording_part_ == part && sequencer_semantics)
+  )) { StopRecording(recording_part_); }
   if (sequencer_semantics) { part_[part].StopSequencerArpeggiatorNotes(); }
 
   switch (setting.domain) {
@@ -896,9 +894,6 @@ void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value
     default:
       break;
   }
-
-  if (restart_clock) { Start(false); }
-  if (restart_recording) { StartRecording(recording_part_); }
 }
 
 /* extern */
