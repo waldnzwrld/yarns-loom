@@ -524,8 +524,8 @@ void Part::StartRecording() {
       LooperRecordNoteOn(i);
     }
   } else {
+    seq_rec_step_ = 0;
     seq_overdubbing_ = seq_.num_steps > 0;
-    if (!seq_overdubbing_) { seq_rec_step_ = 0; }
   }
 }
 
