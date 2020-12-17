@@ -448,6 +448,12 @@ void Ui::SplashOn(Splash s) {
       display_.Scroll();
       break;
 
+    case SPLASH_DELETE_RECORDING:
+      strcpy(buffer_, "1D");
+      buffer_[0] += active_part_;
+      display_.Print(buffer_);
+      break;
+
     default:
       break;
   }
@@ -698,6 +704,7 @@ void Ui::OnSwitchHeld(const Event& e) {
     case UI_SWITCH_REC:
       if (recording_any) {
         mutable_recording_part()->DeleteRecording();
+        SplashOn(SPLASH_DELETE_RECORDING);
       } else {
         PressedKeys &keys = LatchableKeys();
         if (keys.ignore_note_off_messages) {
