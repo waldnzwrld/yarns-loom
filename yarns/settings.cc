@@ -57,7 +57,7 @@ const char* const voicing_allocation_mode_values[] = {
 };
 
 const char* const sequencer_arp_direction_values[] = {
-  "LINEAR", "BOUNCE", "RANDOM", "ROTATE BY STEP", "SUBROTATE BY STEP"
+  "LINEAR", "BOUNCE", "RANDOM", "ROTATE", "SUBROTATE"
 };
 
 const char* const voicing_aux_cv_values[] = {
@@ -122,9 +122,9 @@ const char* const tuning_system_values[] = {
 };
 
 const char* const sequencer_play_mode_values[] = {
-  "M",
-  "A",
-  "S",
+  "MANUAL",
+  "ARPEGGIATOR",
+  "SEQUENCER",
 };
 
 const char* const sequencer_clock_quantization_values[] = {
@@ -496,7 +496,7 @@ const Setting Settings::settings_[] = {
     109, 31,
   },
   {
-    "SP", "SEQUENCER PLAY MODE",
+    "PM", "PLAY MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_PLAY_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
     114, 0,
