@@ -1,4 +1,5 @@
 // Copyright 2013 Emilie Gillet.
+// Copyright 2020 Chris Rogers.
 //
 // Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
@@ -33,27 +34,42 @@ namespace yarns {
 namespace clock_division {
 
 struct ClockDivision {
-  const char* const display;
-  const uint16_t num_ticks;
+  const char* const display; // Ratio out:in
+  const uint16_t num_ticks; // PPQN
 };
 
-const uint8_t count = 15;
-const ClockDivision list[] = {
-  { "x4", 96 * 4 },
-  { "x3", 96 * 3 },
-  { "x2", 96 * 2 },
-  { "/1", 96 },
-  { "/2", 48 },
-  { "/3", 32 },
-  { "/4", 24 },
-  { "/6", 16 },
-  { "/8", 12 },
-  { "12", 8 },
-  { "16", 6 },
-  { "24", 4 },
-  { "32", 3 },
-  { "48", 2 },
-  { "96", 1 },
+const uint8_t count = 29;
+const uint8_t unity = 17;
+const ClockDivision list[count] = {
+  { "18", 192 },
+  { "29", 108 },
+  { "14", 96 },
+  { "27", 84 },
+  { "13", 72 },
+  { "38", 64 },
+  { "25", 60 },
+  { "37", 56 },
+  { "49", 54 },
+  { "12", 48 },
+  { "47", 42 },
+  { "35", 40 },
+  { "23", 36 },
+  { "34", 32 },
+  { "45", 30 },
+  { "67", 28 },
+  { "89", 27 },
+  { "11", 24 },
+  { "87", 21 },
+  { "65", 20 },
+  { "43", 18 },
+  { "32", 16 },
+  { "85", 15 },
+  { "21", 12 },
+  { "83", 9 },
+  { "31", 8 },
+  { "41", 6 },
+  { "61", 4 },
+  { "81", 3 },
 };
 
 }  // namespace clock_division

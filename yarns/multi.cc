@@ -73,7 +73,7 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_tempo = 120;
   settings_.clock_swing = 0;
   settings_.clock_input_division = 1;
-  settings_.clock_output_division = 6; // /4
+  settings_.clock_output_division = clock_division::unity;
   settings_.clock_bar_duration = 4;
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;

@@ -205,7 +205,7 @@ const Setting Settings::settings_[] = {
     0, 0,
   },
   {
-    "O/", "OUTPUT CLK DIV",
+    "O/", "OUTPUT CLK RATIO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
     SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
     0, 0,
@@ -441,7 +441,7 @@ const Setting Settings::settings_[] = {
     80, 0,
   },
   {
-    "C/", "CLOCK DIV",
+    "C/", "CLK RATIO OUT-IN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_DIVISION, 0 },
     SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
     102, 24,

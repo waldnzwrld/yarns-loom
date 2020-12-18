@@ -102,7 +102,7 @@ void Part::Init() {
   voicing_.tuning_factor = 0;
   voicing_.audio_mode = AUDIO_MODE_OFF;
 
-  seq_.clock_division = 6; // /4
+  seq_.clock_division = clock_division::unity;
   seq_.gate_length = 3;
   seq_.arp_range = 1;
   seq_.arp_direction = 0;
