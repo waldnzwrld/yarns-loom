@@ -37,6 +37,7 @@
 #include "yarns/midi_handler.h"
 #include "yarns/settings.h"
 #include "yarns/clock_division.h"
+#include "yarns/ui.h"
 
 namespace yarns {
   
@@ -774,6 +775,55 @@ void Multi::ClockSong() {
   ++song_clock_;
 }
 
+void Multi::StartRecording(uint8_t part) {
+  if (
+    part_[part].midi_settings().play_mode == PLAY_MODE_MANUAL ||
+    part >= num_active_parts_
+  ) {
+    return;
+  }
+  if (recording_) {
+    if (recording_part_ == part) {
+      return;
+    } else {
+      StopRecording(recording_part_);
+    }
+  }
+  if (part_[part].looped()) {
+    // Looper needs a running clock
+    Start(false);
+  }
+  part_[part].StartRecording();
+  uint8_t channel = part_[part].midi_settings().channel;
+  bool has_velocity_filtering = part_[part].has_velocity_filtering();
+  for (uint8_t i = 0; i < num_active_parts_; ++i) {
+    bool same_channel = (
+      part_[i].midi_settings().channel == channel ||
+      channel == 0x10 ||
+      part_[i].midi_settings().channel == 0x10
+    );
+    bool both_velocity_filtering = (
+      has_velocity_filtering &&
+      part_[i].has_velocity_filtering()
+    );
+    if (same_channel && !both_velocity_filtering) {
+      part_[i].set_transposable(false);
+    }
+  }
+  recording_ = true;
+  recording_part_ = part;
+}
+
+void Multi::StopRecording(uint8_t part) {
+  if (recording_ && recording_part_ == part) {
+    part_[part].StopRecording();
+    for (uint8_t i = 0; i < num_active_parts_; ++i) {
+      part_[i].set_transposable(true);
+    }
+    recording_ = false;
+  }
+}
+
 bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   bool thru = true;
   
@@ -793,6 +843,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       if (controller == kCCRecordOffOn) {
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);
+        ui.SplashOn(SPLASH_ACTIVE_PART);
         continue;
       }
       thru = part_[i].ControlChange(channel, controller, value) && thru;
@@ -821,20 +872,12 @@ void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bit
   }
 
   uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
-  ApplySetting(setting, part, scaled_value);
+  ApplySettingAndSplash(setting, part, scaled_value);
 }
 
-uint8_t Multi::GetSetting(const Setting& setting, uint8_t part) const {
-  uint8_t value = 0;
-  switch (setting.domain) {
-    case SETTING_DOMAIN_MULTI:
-      value = multi.Get(setting.address[0]);
-      break;
-    case SETTING_DOMAIN_PART:
-      value = multi.part(part).Get(setting.address[0]);
-      break;
-  }
-  return value;
+void Multi::ApplySettingAndSplash(const Setting& setting, uint8_t part, int16_t raw_value) {
+  ApplySetting(setting, part, raw_value);
+  ui.SplashSetting(setting, part);
 }
 
 void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value) {
@@ -894,6 +937,19 @@ void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value
     default:
       break;
   }
+}
+
+uint8_t Multi::GetSetting(const Setting& setting, uint8_t part) const {
+  uint8_t value = 0;
+  switch (setting.domain) {
+    case SETTING_DOMAIN_MULTI:
+      value = multi.Get(setting.address[0]);
+      break;
+    case SETTING_DOMAIN_PART:
+      value = multi.part(part).Get(setting.address[0]);
+      break;
+  }
+  return value;
 }
 
 /* extern */

@@ -66,7 +66,7 @@ enum UiMode {
 enum Splash {
   SPLASH_NONE = 0,
   SPLASH_VERSION,
-  SPLASH_TEMPO,
+  SPLASH_SETTING,
   SPLASH_ACTIVE_PART,
   SPLASH_DELETE_RECORDING,
 };
@@ -109,7 +109,6 @@ class Ui {
   ~Ui() { }
   
   void Init();
-  bool UpdatePlayMode();
   void Poll();
   void PollSwitch(const UiSwitch ui_switch, uint32_t& press_time, bool& long_press_event_sent);
   void PollFast() {
@@ -117,6 +116,12 @@ class Ui {
   }
   void DoEvents();
   void FlushEvents();
+  void SplashOn(Splash s);
+  inline void SplashSetting(const Setting& s, uint8_t part) {
+    splash_setting_def_ = &s;
+    splash_setting_part_ = part;
+    SplashOn(SPLASH_SETTING);
+  }
 
   void Print(const char* text) {
     display_.Print(text, text);
@@ -211,7 +216,6 @@ class Ui {
 
   PressedKeys& LatchableKeys();
   
-  void SplashOn(Splash s);
   void StopRecording();
 
   void DoInitCommand();
@@ -257,6 +261,8 @@ class Ui {
   UiMode mode_;
   UiMode previous_mode_;
   Splash splash_;
+  Setting const* splash_setting_def_;
+  uint8_t splash_setting_part_;
   
   Menu setup_menu_;
   Menu envelope_menu_;
@@ -264,7 +270,6 @@ class Ui {
   Menu* current_menu_;
 
   uint8_t active_part_;
-  uint8_t active_part_play_mode_;
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;
@@ -285,6 +290,8 @@ class Ui {
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
+
+extern Ui ui;
 
 }  // namespace yarns
 

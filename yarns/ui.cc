@@ -133,7 +133,6 @@ void Ui::Init() {
   
   mode_ = UI_MODE_PARAMETER_SELECT;
   active_part_ = 0;
-  UpdatePlayMode();
 
   setup_menu_.Init(SETTING_MENU_SETUP);
   envelope_menu_.Init(SETTING_MENU_ENVELOPE);
@@ -413,12 +412,6 @@ void Ui::PrintFactoryTesting() {
   }
 }
 
-bool Ui::UpdatePlayMode() {
-  uint8_t old = active_part_play_mode_;
-  active_part_play_mode_ = active_part().midi_settings().play_mode;
-  return old != active_part_play_mode_;
-}
-
 void Ui::SplashOn(Splash s) {
   splash_ = s;
   queue_.Touch(); // Reset idle timer
@@ -442,9 +435,13 @@ void Ui::SplashOn(Splash s) {
       display_.Scroll();
       break;
 
-    case SPLASH_TEMPO:
-      setting_defs.Print(setting_defs.get(SETTING_CLOCK_TEMPO), active_part_, buffer_);
-      display_.Print(buffer_);
+    case SPLASH_SETTING:
+      if (splash_setting_part_ == 0xff) {
+        display_.Print(splash_setting_def_->short_name, splash_setting_def_->name);
+      } else {
+        setting_defs.Print(*splash_setting_def_, splash_setting_part_, buffer_);
+        display_.Print(buffer_);
+      }
       display_.Scroll();
       break;
 
@@ -640,7 +637,6 @@ void Ui::OnSwitchPress(const Event& e) {
         if (multi.recording()) {
           if (recording_mode_is_displaying_pitch_) {
             StopRecording();
-            SplashOn(SPLASH_ACTIVE_PART);
             recording_mode_is_displaying_pitch_ = false;
           } else {
             // Toggle pitch display on
@@ -704,7 +700,6 @@ void Ui::OnSwitchHeld(const Event& e) {
     case UI_SWITCH_REC:
       if (recording_any) {
         mutable_recording_part()->DeleteRecording();
-        SplashOn(SPLASH_DELETE_RECORDING);
       } else {
         PressedKeys &keys = LatchableKeys();
         if (keys.ignore_note_off_messages) {
@@ -734,7 +729,6 @@ void Ui::OnSwitchHeld(const Event& e) {
       }
       // Increment active part
       active_part_ = (1 + active_part_) % multi.num_active_parts();
-      UpdatePlayMode();
       if (recording_any) {
         multi.StartRecording(active_part_);
       }
@@ -744,9 +738,11 @@ void Ui::OnSwitchHeld(const Event& e) {
     case UI_SWITCH_TAP_TEMPO:
       // Use this to set last step for sequencer?
       if (!recording_any) {
-        mutable_active_part()->Set(PART_MIDI_PLAY_MODE, (1 + active_part().midi_settings().play_mode) % PLAY_MODE_LAST);
-        UpdatePlayMode();
-        SplashOn(SPLASH_ACTIVE_PART);
+        multi.ApplySettingAndSplash(
+          setting_defs.get(SETTING_SEQUENCER_PLAY_MODE),
+          active_part_,
+          (1 + active_part().midi_settings().play_mode) % PLAY_MODE_LAST
+        );
       }
       break;
 
@@ -791,7 +787,7 @@ void Ui::TapTempo() {
 void Ui::SetTempo(uint8_t value) {
   tap_tempo_resolved_ = true;
   multi.Set(MULTI_CLOCK_TEMPO, value);
-  SplashOn(SPLASH_TEMPO);
+  multi.ApplySettingAndSplash(setting_defs.get(SETTING_CLOCK_TEMPO), active_part_, value);
 }
 
 void Ui::DoEvents() {
@@ -802,13 +798,9 @@ void Ui::DoEvents() {
     // Handle layout change
     active_part_ = multi.num_active_parts() - 1;
   }
-  if (
-    (multi.recording() && multi.recording_part() != active_part_) ||
-    UpdatePlayMode()
-  ) {
-    // If recording state or play mode was changed by CC
+  if (multi.recording() && multi.recording_part() != active_part_) {
+    // If recording state was changed by CC
     active_part_ = multi.recording_part();
-    SplashOn(SPLASH_ACTIVE_PART);
     recording_mode_is_displaying_pitch_ = false;
   }
   
@@ -864,6 +856,12 @@ void Ui::DoEvents() {
     }
     if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
       return; // Splash isn't over yet
+    }
+    if (splash_ == SPLASH_SETTING && splash_setting_part_ != 0xff) {
+      // If done displaying setting value, switch to displaying setting name
+      splash_setting_part_ = 0xff;
+      SplashOn(SPLASH_SETTING);
+      return;
     }
     // Exit splash
     splash_ = SPLASH_NONE;
@@ -943,5 +941,8 @@ void Ui::PrintLatch() {
     LatchableKeys().release_latched_keys_on_next_note_on ? "-}" : "{-"
   );
 }
+
+/* extern */
+Ui ui;
 
 }  // namespace yarns

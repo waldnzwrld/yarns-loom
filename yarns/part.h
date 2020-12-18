@@ -551,11 +551,7 @@ class Part {
     looper_note_recording_pressed_key_[pressed_key_index] = looper::kNullIndex;
   }
 
-  inline void DeleteRecording() {
-    if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
-    StopSequencerArpeggiatorNotes();
-    looped() ? seq_.looper_tape.RemoveAll() : DeleteSequence();
-  }
+  void DeleteRecording();
 
   inline void SustainOn() {
     PressedKeysSustainOn(manual_keys_);

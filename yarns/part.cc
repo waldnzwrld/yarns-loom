@@ -42,6 +42,7 @@
 #include "yarns/voice.h"
 #include "yarns/clock_division.h"
 #include "yarns/multi.h"
+#include "yarns/ui.h"
 
 namespace yarns {
   
@@ -527,6 +528,13 @@ void Part::StartRecording() {
     seq_rec_step_ = 0;
     seq_overdubbing_ = seq_.num_steps > 0;
   }
+}
+
+void Part::DeleteRecording() {
+  if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
+  StopSequencerArpeggiatorNotes();
+  looped() ? seq_.looper_tape.RemoveAll() : DeleteSequence();
+  ui.SplashOn(SPLASH_DELETE_RECORDING);
 }
 
 void Part::DeleteSequence() {

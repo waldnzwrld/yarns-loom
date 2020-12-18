@@ -45,7 +45,6 @@ using namespace stmlib;
 
 Dac dac;
 GateOutput gate_output;
-Ui ui;
 MidiIO midi_io;
 System sys;
 
@@ -173,7 +172,6 @@ void Init() {
   // Load multi 0 on boot.
   storage_manager.LoadMulti(0);
   storage_manager.LoadCalibration();
-  ui.UpdatePlayMode();
   
   system_clock.Init();
   gate_output.Init();
