@@ -250,7 +250,7 @@ void Ui::PrintParameterName() {
 }
 
 void Ui::PrintParameterValue() {
-  setting_defs.Print(setting(), active_part_, buffer_);
+  setting_defs.Print(setting(), multi.GetSetting(setting(), active_part_), buffer_);
   display_.Print(buffer_, buffer_);
 }
 
@@ -439,7 +439,7 @@ void Ui::SplashOn(Splash s) {
       if (splash_setting_part_ == 0xff) {
         display_.Print(splash_setting_def_->short_name, splash_setting_def_->name);
       } else {
-        setting_defs.Print(*splash_setting_def_, splash_setting_part_, buffer_);
+        setting_defs.Print(*splash_setting_def_, multi.GetSetting(*splash_setting_def_, splash_setting_part_), buffer_);
         display_.Print(buffer_);
       }
       display_.Scroll();

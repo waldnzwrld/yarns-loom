@@ -144,7 +144,7 @@ class Settings {
   
   void Init();
   
-  void Print(const Setting& setting, uint8_t active_part, char* buffer) const;
+  void Print(const Setting& setting, uint8_t value, char* buffer) const;
   
   inline const Setting& get(uint8_t index) const {
     return settings_[index];

@@ -554,8 +554,7 @@ void Settings::Init() {
   }
 }
 
-void Settings::Print(const Setting& setting, uint8_t active_part, char* buffer) const {
-  uint8_t value = multi.GetSetting(setting, active_part);
+void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const {
   switch (setting.unit) {
     case SETTING_UNIT_UINT8:
       PrintInteger(buffer, value);
