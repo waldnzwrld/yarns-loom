@@ -508,7 +508,7 @@ const Setting Settings::settings_[] = {
     76, 0,
   },
   {
-    "ST", "SEQ TYPE",
+    "SM", "SEQ MODE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_QUANTIZATION, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, sequencer_clock_quantization_values,
     75, 0,
