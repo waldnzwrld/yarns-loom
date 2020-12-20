@@ -38,18 +38,16 @@ struct ClockDivision {
   const uint16_t num_ticks; // PPQN
 };
 
-const uint8_t count = 29;
-const uint8_t unity = 17;
+const uint8_t count = 26;
+const uint8_t unity = 14;
 const ClockDivision list[count] = {
   { "18", 192 },
-  { "29", 108 },
   { "14", 96 },
   { "27", 84 },
   { "13", 72 },
   { "38", 64 },
   { "25", 60 },
   { "37", 56 },
-  { "49", 54 },
   { "12", 48 },
   { "47", 42 },
   { "35", 40 },
@@ -57,7 +55,6 @@ const ClockDivision list[count] = {
   { "34", 32 },
   { "45", 30 },
   { "67", 28 },
-  { "89", 27 },
   { "11", 24 },
   { "87", 21 },
   { "65", 20 },
