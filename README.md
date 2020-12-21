@@ -14,7 +14,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - Velocity filtering
 - More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction
 - Sequencer-driven arpeggiator
-- [Check the changelog for more!](https://github.com/rcrogers/mutable-instruments-eurorack/releases)
+- [Check the manual for more!](yarns/MANUAL.md)
 
 ### Caveats
 - Installation of this firmware is at your own risk
