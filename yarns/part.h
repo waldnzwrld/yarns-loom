@@ -441,12 +441,12 @@ class Part {
   }
 
   inline void Refresh() {
-    uint16_t new_pos = bar_lfo_.Refresh() >> 16;
+    uint16_t new_pos = looper_lfo_.Refresh() >> 16;
     if (
       // phase has definitely changed, or
       looper_pos_ != new_pos ||
       // phase has wrapped exactly around
-      bar_lfo_.GetPhaseIncrement() > UINT16_MAX
+      looper_lfo_.GetPhaseIncrement() > UINT16_MAX
     ) {
       looper_needs_advance_ = true;
     }
@@ -459,8 +459,8 @@ class Part {
   inline void LooperRemoveNewestNote() {
     seq_.looper_tape.RemoveNewestNote(this, looper_pos_);
   }
-  inline uint32_t BarPhase() const {
-    return bar_lfo_.GetPhase();
+  inline uint32_t LooperPhase() const {
+    return looper_lfo_.GetPhase();
   }
   inline uint8_t LooperCurrentNoteIndex() const {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
@@ -780,7 +780,7 @@ class Part {
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
   
-  SyncedLFO bar_lfo_;
+  SyncedLFO looper_lfo_;
   uint16_t looper_pos_;
   bool looper_needs_advance_;
 

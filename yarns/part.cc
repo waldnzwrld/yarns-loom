@@ -65,7 +65,7 @@ void Part::Init() {
   seq_recording_ = false;
   transposable_ = true;
   seq_.looper_tape.RemoveAll();
-  bar_lfo_.Init();
+  looper_lfo_.Init();
   LooperRewind();
 
   midi_.channel = 0;
@@ -441,7 +441,7 @@ void Part::Clock() {
   // looper
   num_ticks = clock_division::list[seq_.clock_division].num_ticks;
   uint8_t bar_duration = multi.settings().clock_bar_duration;
-  bar_lfo_.Tap(num_ticks * (bar_duration ? bar_duration : 1));
+  looper_lfo_.Tap(num_ticks * (bar_duration ? bar_duration : 1));
 }
 
 void Part::Start() {
@@ -452,7 +452,7 @@ void Part::Start() {
   arp_.ResetKey();
   arp_.step_index = 0;
   
-  bar_lfo_.Init();
+  looper_lfo_.Init();
   LooperRewind();
 
   generated_notes_.Clear();
@@ -486,7 +486,7 @@ void Part::LooperAdvance() {
     midi_.play_mode == PLAY_MODE_MANUAL
   ) { return; }
 
-  uint16_t new_pos = bar_lfo_.GetPhase() >> 16;
+  uint16_t new_pos = looper_lfo_.GetPhase() >> 16;
   seq_.looper_tape.Advance(this, looper_pos_, new_pos);
   looper_pos_ = new_pos;
   looper_needs_advance_ = false;

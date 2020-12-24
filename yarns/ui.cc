@@ -287,7 +287,7 @@ void Ui::PrintCalibrationNote() {
 void Ui::PrintActivePartAndPlayMode() {
   uint8_t play_mode = active_part().midi_settings().play_mode;
   if (multi.running()) {
-    SetBrightnessFromBarPhase(active_part());
+    SetBrightnessFromSequencerPhase(active_part());
   }
   strcpy(buffer_, "1x");
   buffer_[0] += active_part_;
@@ -323,15 +323,21 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
   display_.Print(buffer_, buffer_);
 }
 
-void Ui::SetBrightnessFromBarPhase(const Part& part) {
-  display_.set_brightness(UINT16_MAX - (part.BarPhase() >> 16));
+void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
+  uint16_t phase;
+  if (part.looped()) {
+    phase = UINT16_MAX - (part.LooperPhase() >> 16);
+  } else {
+    phase = (1 + part.playing_step()) * (UINT16_MAX / part.sequencer_settings().num_steps);
+  }
+  display_.set_brightness(phase);
 }
 
 void Ui::PrintLooperRecordingStatus() {
   uint8_t note_index = recording_part().LooperCurrentNoteIndex();
-  uint32_t pos = recording_part().BarPhase();
+  uint32_t pos = recording_part().LooperPhase();
   if (note_index == looper::kNullIndex) {
-    SetBrightnessFromBarPhase(recording_part());
+    SetBrightnessFromSequencerPhase(recording_part());
     display_.Print("__");
     return;
   }
@@ -852,7 +858,7 @@ void Ui::DoEvents() {
 
   if (splash_) {
     if (splash_ == SPLASH_ACTIVE_PART && multi.running()) {
-      SetBrightnessFromBarPhase(active_part());
+      SetBrightnessFromSequencerPhase(active_part());
     }
     if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
       return; // Splash isn't over yet

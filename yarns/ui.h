@@ -202,7 +202,7 @@ class Ui {
   void PrintCalibrationNote();
   void PrintRecordingPart();
   void PrintDeleteSequence();
-  void SetBrightnessFromBarPhase(const Part& part);
+  void SetBrightnessFromSequencerPhase(const Part& part);
   void PrintLooperRecordingStatus();
   void PrintRecordingStatus();
   void PrintNote(int16_t note);
