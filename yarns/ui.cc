@@ -442,6 +442,7 @@ void Ui::SplashOn(Splash s) {
       break;
 
     case SPLASH_SETTING:
+      SetFadeForSetting(*splash_setting_def_);
       if (splash_setting_part_ == 0xff) {
         display_.Print(splash_setting_def_->short_name, splash_setting_def_->name);
       } else {
@@ -915,9 +916,8 @@ void Ui::DoEvents() {
       )
     ) {
       display_.set_fade((1 << 15) / kRefreshPeriod); // 1/2 frequency
-    } else if (mode_ == UI_MODE_PARAMETER_EDIT &&
-               setting().unit == SETTING_UNIT_TEMPO) {
-      display_.set_fade(multi.tempo() * 235 >> 8);
+    } else if (mode_ == UI_MODE_PARAMETER_EDIT) {
+      SetFadeForSetting(setting());
     } else {
       display_.set_fade(0);
     }

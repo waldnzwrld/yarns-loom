@@ -213,6 +213,7 @@ class Ui {
   void PrintArpeggiatorMovementStep(SequencerStep step);
   void PrintActivePartAndPlayMode();
   void PrintLatch();
+  void SetFadeForSetting(const Setting& setting);
 
   PressedKeys& LatchableKeys();
   
