@@ -711,7 +711,7 @@ void Ui::OnSwitchHeld(const Event& e) {
         PressedKeys &keys = LatchableKeys();
         if (keys.ignore_note_off_messages) {
           mutable_active_part()->PressedKeysSustainOff(keys);
-        } else if (multi.running() && keys.stack.size()) {
+        } else if (multi.running() && keys.stack.most_recent_note_index()) {
           mutable_active_part()->PressedKeysSustainOn(keys);
         } else {
           if (push_it_) {

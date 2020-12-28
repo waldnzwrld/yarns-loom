@@ -706,7 +706,8 @@ class Part {
   inline SequencerSettings* mutable_sequencer_settings() { return &seq_; }
 
   inline bool has_notes() const {
-    return manual_keys_.stack.size() || arp_keys_.stack.size();
+    return arp_keys_.stack.most_recent_note_index() ||
+      manual_keys_.stack.most_recent_note_index();
   }
   
   inline bool recording() const { return seq_recording_; }

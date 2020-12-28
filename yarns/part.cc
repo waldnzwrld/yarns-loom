@@ -410,7 +410,7 @@ void Part::Clock() {
       }
     } else if (gate_length_counter_) {
       --gate_length_counter_;
-    } else if (generated_notes_.size()) {
+    } else if (generated_notes_.most_recent_note_index()) {
       // Peek at next step to see if it's a continuation
       step = BuildSeqStep();
       if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
@@ -552,7 +552,7 @@ void Part::DeleteSequence() {
 }
 
 void Part::StopSequencerArpeggiatorNotes() {
-  while (generated_notes_.size()) {
+  while (generated_notes_.most_recent_note_index()) {
     uint8_t generated_note_index = generated_notes_.most_recent_note_index();
     uint8_t pitch = generated_notes_.note(generated_note_index).note;
     uint8_t looper_note_index = looper_note_index_for_generated_note_index_[generated_note_index];
