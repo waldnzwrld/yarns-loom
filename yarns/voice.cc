@@ -54,7 +54,7 @@ void Voice::Init() {
   note_source_ = note_target_ = note_portamento_ = 60 << 7;
   gate_ = false;
   
-  mod_velocity_ = 0;
+  mod_velocity_ = 0x7f;
   ResetAllControllers();
   
   modulation_rate_ = 0;
