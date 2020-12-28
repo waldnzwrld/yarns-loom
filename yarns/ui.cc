@@ -962,10 +962,6 @@ const uint8_t kNotesPerDisplayChar = 3;
 void Ui::PrintLatch() {
   display_.set_fade(0);
   const PressedKeys& keys = LatchableKeys();
-  if (keys.release_latched_keys_on_next_note_on) {
-    display_.Print("//");
-    return;
-  }
   uint16_t masks[kDisplayWidth];
   std::fill(&masks[0], &masks[kDisplayWidth], 0);
   uint8_t note_ordinal = 0, display_pos = 0;
@@ -979,8 +975,16 @@ void Ui::PrintLatch() {
     note_entry = keys.stack.note(note_index);
     bool sustained = keys.IsSustained(note_entry);
 
+    bool top;
+    if (sustained) {
+      top = keys.release_latched_keys_on_next_note_on ?
+        queue_.idle_time() % 160 < 80 :
+        true;
+    } else {
+      top = keys.IsSustainable(note_index);
+    }
     // See characters.py for mask-to-segment mapping
-    if (sustained || keys.IsSustainable(note_index)) {
+    if (top) {
       switch (note_ordinal % kNotesPerDisplayChar) {
         case 0: mask = 0x0400; break;
         case 1: mask = 0x0100; break;
