@@ -726,8 +726,7 @@ class Part {
   void Touch() {
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);
-    seq_.loop_length = seq_.loop_length || 4;
-    CONSTRAIN(seq_.loop_length, 1, 64);
+    CONSTRAIN(seq_.loop_length, 1, 127);
     CONSTRAIN(seq_.arp_range, 1, 4);
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();

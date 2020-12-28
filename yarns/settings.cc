@@ -517,7 +517,7 @@ const Setting Settings::settings_[] = {
   {
     "L-", "LOOP LENGTH",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_LOOP_LENGTH, 0 },
-    SETTING_UNIT_UINT8, 1, 64, NULL,
+    SETTING_UNIT_UINT8, 1, 127, NULL,
     84, 0,
   },
   {
