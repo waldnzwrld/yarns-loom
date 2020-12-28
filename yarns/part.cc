@@ -110,6 +110,7 @@ void Part::Init() {
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   midi_.play_mode = PLAY_MODE_MANUAL;
   seq_.clock_quantization = 0;
+  seq_.loop_length = 4; // 1 bar
 
   StopRecording();
   DeleteSequence();
@@ -442,8 +443,7 @@ void Part::Clock() {
 
   // looper
   num_ticks = clock_division::list[seq_.clock_division].num_ticks;
-  uint8_t bar_duration = multi.settings().clock_bar_duration;
-  looper_lfo_.Tap(num_ticks * (bar_duration ? bar_duration : 1));
+  looper_lfo_.Tap(num_ticks * seq_.loop_length);
 }
 
 void Part::Start() {

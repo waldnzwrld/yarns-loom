@@ -237,7 +237,7 @@ enum PartSetting {
   PART_SEQUENCER_EUCLIDEAN_ROTATE,
   PART_SEQUENCER_NUM_STEPS,
   PART_SEQUENCER_CLOCK_QUANTIZATION,
-  // PART_SEQUENCER_LOOPER_CLOCK_DIVISION,
+  PART_SEQUENCER_LOOP_LENGTH,
 };
 
 enum SequencerStepFlags {
@@ -294,7 +294,7 @@ struct SequencerSettings {
   uint8_t euclidean_rotate;
   uint8_t num_steps;
   uint8_t clock_quantization;
-  uint8_t padding[1];
+  uint8_t loop_length;
   SequencerStep step[kNumSteps];
   looper::Tape looper_tape;
   
@@ -726,6 +726,8 @@ class Part {
   void Touch() {
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);
+    seq_.loop_length = seq_.loop_length || 4;
+    CONSTRAIN(seq_.loop_length, 1, 64);
     CONSTRAIN(seq_.arp_range, 1, 4);
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();

@@ -515,6 +515,12 @@ const Setting Settings::settings_[] = {
     75, 0,
   },
   {
+    "L-", "LOOP LENGTH",
+    SETTING_DOMAIN_PART, { PART_SEQUENCER_LOOP_LENGTH, 0 },
+    SETTING_UNIT_UINT8, 1, 64, NULL,
+    84, 0,
+  },
+  {
     "HM", "HOLD PEDAL MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SUSTAIN_MODE_LAST - 1, sustain_mode_values,
