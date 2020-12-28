@@ -332,6 +332,17 @@ struct PressedKeys {
 
   void Init() {
     stack.Init();
+    Reset();
+  }
+
+  void Reset() {
+    ignore_note_off_messages = false;
+    release_latched_keys_on_next_note_on = false;
+    std::fill(
+      &sustainable[0],
+      &sustainable[kNoteStackSize],
+      false
+    );
   }
 
   bool SustainableNoteOff(uint8_t pitch) {
@@ -363,17 +374,17 @@ struct PressedKeys {
   void SetSustainable(bool value) {
     for (uint8_t i = 1; i <= stack.max_size(); ++i) {
       if (stack.note(i).note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
-      sustainable[i] = value;
+      sustainable[i - 1] = value;
     }
   }
 
-  void Clutch(bool value) {
-    release_latched_keys_on_next_note_on = value;
-    SetSustainable(!value);
+  void Clutch(bool on) {
+    release_latched_keys_on_next_note_on = on;
+    SetSustainable(!on);
   }
 
   bool IsSustainable(uint8_t index) const {
-    return ignore_note_off_messages || sustainable[index];
+    return ignore_note_off_messages || sustainable[index - 1];
   }
 
   bool IsSustained(const stmlib::NoteEntry &note_entry) const {
@@ -568,13 +579,7 @@ class Part {
   }
   inline void PressedKeysResetLatch(PressedKeys &keys) {
     ReleaseLatchedNotes(keys);
-    keys.ignore_note_off_messages = false;
-    keys.release_latched_keys_on_next_note_on = false;
-    std::fill(
-      &keys.sustainable[0],
-      &keys.sustainable[kNoteStackSize],
-      false
-    );
+    keys.Reset();
   }
   inline void ResetLatch() {
     PressedKeysResetLatch(manual_keys_);
