@@ -923,12 +923,13 @@ void Ui::DoEvents() {
     }
     return;
   }
+  if (display_.scrolling()) { return; }
 
   // If display is idle, flash various statuses
   bool print_latch =
     active_part().midi_settings().sustain_mode != SUSTAIN_MODE_OFF &&
     LatchableKeys().stack.most_recent_note_index();
-  bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
+  bool print_part = mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > kRefreshPeriod * 2 / 3) {
     if (print_part) {
       display_.set_fade(0);
