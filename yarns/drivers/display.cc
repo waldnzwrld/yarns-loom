@@ -71,6 +71,7 @@ void Display::Init() {
   brightness_pwm_cycle_ = 0;
   memset(short_buffer_, ' ', kDisplayWidth);
   memset(long_buffer_, ' ', kScrollBufferSize);
+  use_mask_ = false;
   fading_counter_ = 0;
   fading_increment_ = 0;
   
@@ -136,8 +137,12 @@ void Display::RefreshFast() {
       && (!blinking_ || blink_counter_ < kBlinkMask)) {
     GPIOB->BRR = kCharacterEnablePins[active_position_];
     active_position_ = (active_position_ + 1) % kDisplayWidth;
-    Shift14SegmentsWord(chr_characters[
+    if (use_mask_) {
+      Shift14SegmentsWord(mask_[active_position_]);
+    } else {
+      Shift14SegmentsWord(chr_characters[
         static_cast<uint8_t>(displayed_buffer_[active_position_])]);
+    }
     GPIOB->BSRR = kCharacterEnablePins[active_position_];
   } else {
     GPIOB->BRR = kCharacterEnablePins[active_position_];
@@ -154,6 +159,7 @@ void Display::Print(const char* short_buffer, const char* long_buffer) {
 #endif  // APPLICATION
 
   scrolling_ = false;
+  use_mask_ = false;
 }
 
 # define SHIFT_BIT \

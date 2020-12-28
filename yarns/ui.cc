@@ -925,7 +925,9 @@ void Ui::DoEvents() {
   }
 
   // If display is idle, flash various statuses
-  bool print_latch = LatchableKeys().AnyWithSustain(true);
+  bool print_latch =
+    active_part().midi_settings().sustain_mode != SUSTAIN_MODE_OFF &&
+    LatchableKeys().stack.most_recent_note_index();
   bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > kRefreshPeriod * 2 / 3) {
     if (print_part) {
@@ -941,11 +943,66 @@ void Ui::DoEvents() {
   }
 }
 
+void Ui::SetFadeForSetting(const Setting& setting) {
+if (setting.unit == SETTING_UNIT_TEMPO) {
+    /*
+    increment
+      = (bpm / 60) * (2^16 / 1000)
+      = bpm * 2^16 / 60000
+      = bpm * 2^11 / (60000 / 2^5)
+      = bpm * 2^11 / 1875
+    */
+    display_.set_fade((multi.tempo() << 11) / 1875);
+  } else {
+    display_.set_fade(0);
+  }
+}
+
+const uint8_t kNotesPerDisplayChar = 3;
 void Ui::PrintLatch() {
   display_.set_fade(0);
-  display_.Print(
-    LatchableKeys().release_latched_keys_on_next_note_on ? "-}" : "{-"
-  );
+  const PressedKeys& keys = LatchableKeys();
+  if (keys.release_latched_keys_on_next_note_on) {
+    display_.Print("//");
+    return;
+  }
+  uint16_t masks[kDisplayWidth];
+  std::fill(&masks[0], &masks[kDisplayWidth], 0);
+  uint8_t note_ordinal = 0, display_pos = 0;
+  uint8_t note_index = keys.stack.most_recent_note_index();
+  stmlib::NoteEntry note_entry;
+  while (note_index) {
+    display_pos = note_ordinal / kNotesPerDisplayChar;
+    if (display_pos > kDisplayWidth) { break; }
+    uint16_t mask = 0;
+
+    note_entry = keys.stack.note(note_index);
+    bool sustained = keys.IsSustained(note_entry);
+
+    // See characters.py for mask-to-segment mapping
+    if (sustained || keys.IsSustainable(note_index)) {
+      switch (note_ordinal % kNotesPerDisplayChar) {
+        case 0: mask = 0x0400; break;
+        case 1: mask = 0x0100; break;
+        case 2: mask = 0x4000; break;
+        default: break;
+      }
+      masks[display_pos] |= mask;
+    }
+    if (!sustained) {
+      switch (note_ordinal % kNotesPerDisplayChar) {
+        case 0: mask = 0x0800; break;
+        case 1: mask = 0x0010; break;
+        case 2: mask = 0x2000; break;
+        default: break;
+      }
+      masks[display_pos] |= mask;
+    }
+
+    note_index = note_entry.next_ptr;
+    ++note_ordinal;
+  }
+  display_.PrintMasks(masks);
 }
 
 /* extern */

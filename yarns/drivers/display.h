@@ -31,6 +31,7 @@
 #define YARNS_DRIVERS_DISPLAY_H_
 
 #include <cmath>
+#include <algorithm>
 #include "stmlib/stmlib.h"
 
 namespace yarns {
@@ -59,6 +60,11 @@ class Display {
     Print(string, string);
   }
   void Print(const char* short_string, const char* long_string);
+
+  inline void PrintMasks(const uint16_t* masks) {
+    std::copy(&masks[0], &masks[kDisplayWidth], &mask_[0]);
+    use_mask_ = true;
+  }
   
   char* mutable_buffer() { return short_buffer_; }
   void set_brightness(uint16_t fraction) {
@@ -80,6 +86,8 @@ class Display {
   char short_buffer_[kDisplayWidth];
   char long_buffer_[kScrollBufferSize];
   char* displayed_buffer_;
+  uint16_t mask_[kDisplayWidth];
+  bool use_mask_;
   uint8_t long_buffer_size_;
   uint16_t actual_brightness_;
 

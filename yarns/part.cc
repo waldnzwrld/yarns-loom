@@ -212,7 +212,6 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
       keys.ignore_note_off_messages = true;
       break;
     case SUSTAIN_MODE_SOSTENUTO:
-      keys.ignore_note_off_messages = false;
       keys.SetSustainable(true);
       break;
     case SUSTAIN_MODE_LATCH:
@@ -220,13 +219,11 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
       keys.ignore_note_off_messages = true;
       keys.release_latched_keys_on_next_note_on = true;
       break;
-    case SUSTAIN_MODE_TOGGLE:
-      keys.ignore_note_off_messages = false;
-      {
-        bool any_held = keys.AnyWithSustain(false);
-        keys.SetSustainable(any_held);
-        keys.release_latched_keys_on_next_note_on = !any_held;
-      }
+    case SUSTAIN_MODE_CLUTCH_UP:
+      keys.Clutch(false);
+      break;
+    case SUSTAIN_MODE_CLUTCH_DOWN:
+      keys.Clutch(true);
       break;
     case SUSTAIN_MODE_OFF:
     default:
@@ -250,7 +247,12 @@ void Part::PressedKeysSustainOff(PressedKeys &keys) {
       break;
     case SUSTAIN_MODE_MOMENTARY_LATCH:
       PressedKeysResetLatch(keys);
-    case SUSTAIN_MODE_TOGGLE:
+    case SUSTAIN_MODE_CLUTCH_UP:
+      keys.Clutch(true);
+      break;
+    case SUSTAIN_MODE_CLUTCH_DOWN:
+      keys.Clutch(false);
+      break;
     case SUSTAIN_MODE_OFF:
     default:
       break;

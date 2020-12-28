@@ -142,7 +142,8 @@ const char* const sustain_mode_values[] = {
   "SOSTENUTO",
   "LATCH",
   "MOMENTARY LATCH",
-  "TOGGLE",
+  "C\x83 CLUTCH UP",
+  "C\x82 CLUTCH DOWN",
 };
 
 const char* const vibrato_control_source_values[] = {
