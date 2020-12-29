@@ -71,12 +71,14 @@
   - When vibrato speed is synced to clock, each voice's LFO uses the quadrature of the previous voice
   - When vibrato speed is free-running, each voice's LFO frequency is slighter higher than the previous voice
   
-### Changes to behavior while a part is recording
-- Part now responds to MIDI start
+### Sequence recording changes
+- Hold `REC` to clear sequence
+- First `REC` press switches the display to show the pitch instead of the step number (press again to exit recording)
 - Flash note (or RS/TI) for the selected step
 - Brighten display while the selected step is being played
 - Wrap around around when using encoder to scroll through steps
-- Allow other parts on the same channel to keep accepting input IFF both the recording part and the accepting part are using velocity filtering
+- Allow non-recording parts on the same channel to keep accepting input IFF both the recording part and the accepting part are using velocity filtering
+- Recording part now responds to MIDI start
 
 ### Tap tempo changes
 - If a single tap is received without follow-up, the tempo is set to use external clocking
@@ -84,9 +86,6 @@
 
 ### Interface tweaks
 - Moved configuration-type settings into a submenu, accessed by opening `▽S (SETUP MENU)`.  Settings relevant to live performance remain in the top-level menu
-- Changes to interface while recording:
-  - Hold `REC` to clear sequence
-  - First `REC` press switches the display to show the pitch instead of the step number (press again to exit recording)
 - Print flat notes as lowercase character (instead of denoting flatness with `b`) so that octave can always be displayed
 
 ### Other tweaks
