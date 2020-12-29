@@ -146,6 +146,11 @@ const char* const sustain_mode_values[] = {
   "C\x82 CLUTCH DOWN",
 };
 
+const char* const hold_pedal_polarity_values[] = {
+  "- NEG YAMAHA ROLAND",
+  "+ POS CASIO KORG",
+};
+
 const char* const vibrato_control_source_values[] = {
   "MODWHEEL", "AFTERTOUCH"
 };
@@ -525,6 +530,12 @@ const Setting Settings::settings_[] = {
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SUSTAIN_MODE_LAST - 1, sustain_mode_values,
     74, 0,
+  },
+  {
+    "HP", "HOLD PEDAL POLARITY",
+    SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_POLARITY, 0 },
+    SETTING_UNIT_ENUMERATION, 0, 1, hold_pedal_polarity_values,
+    85, 0,
   },
   {
     "RC", "REMOTE CONTROL CHANNEL",

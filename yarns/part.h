@@ -154,7 +154,8 @@ struct MidiSettings {
   int8_t transpose_octaves;
   uint8_t play_mode;
   uint8_t input_response;
-  uint8_t padding[6];
+  uint8_t sustain_polarity;
+  uint8_t padding[5];
 };
 
 struct VoicingSettings {
@@ -199,6 +200,7 @@ enum PartSetting {
   PART_MIDI_TRANSPOSE_OCTAVES,
   PART_MIDI_PLAY_MODE,
   PART_MIDI_INPUT_RESPONSE,
+  PART_MIDI_SUSTAIN_POLARITY,
   PART_MIDI_LAST = PART_MIDI_CHANNEL + sizeof(MidiSettings) - 1,
   PART_VOICING_ALLOCATION_MODE,
   PART_VOICING_ALLOCATION_PRIORITY,

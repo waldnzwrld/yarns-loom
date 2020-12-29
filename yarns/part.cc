@@ -75,6 +75,7 @@ void Part::Init() {
   midi_.max_velocity = 127;
   midi_.out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
   midi_.sustain_mode = SUSTAIN_MODE_NORMAL;
+  midi_.sustain_polarity = 0;
   midi_.transpose_octaves = 0;
 
   voicing_.allocation_priority = NOTE_STACK_PRIORITY_LAST;
@@ -289,7 +290,8 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       break;
       
     case kCCHoldPedal:
-      value >= 64 ? SustainOn() : SustainOff();
+      (value >= 64) == (midi_.sustain_polarity == 0) ?
+        SustainOn() : SustainOff();
       break;
 
     case kCCDeleteRecording:
@@ -1061,6 +1063,7 @@ bool Part::Set(uint8_t address, uint8_t value) {
       break;
 
     case PART_MIDI_SUSTAIN_MODE:
+    case PART_MIDI_SUSTAIN_POLARITY:
       ResetLatch();
 
     default:
