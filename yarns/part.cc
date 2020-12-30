@@ -140,16 +140,9 @@ uint8_t Part::PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t veloci
     keys.release_latched_keys_on_next_note_on = still_latched;
     keys.ignore_note_off_messages = still_latched;
   }
-  uint8_t index = keys.stack.Find(pitch);
-  if (index) {
-    NoteEntry *note = keys.stack.mutable_note(index);
-    // Unset all bits except sustain flag, then apply new velocity
-    note->velocity &= PressedKeys::VELOCITY_SUSTAIN_MASK;
-    note->velocity |= (velocity & 0x7f);
-  } else {
-    // TODO don't allow if full?
-    index = keys.stack.NoteOn(pitch, velocity);
-  }
+  bool sustained = keys.IsSustained(pitch);
+  uint8_t index = keys.stack.NoteOn(pitch, velocity);
+  if (sustained) { keys.SetSustain(pitch); }
   return index;
 }
 
