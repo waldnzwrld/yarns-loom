@@ -29,8 +29,6 @@
 
 #include "yarns/part.h"
 
-#include <cmath>
-
 #include <algorithm>
 
 #include "stmlib/midi/midi.h"

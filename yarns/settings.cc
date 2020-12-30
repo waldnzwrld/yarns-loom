@@ -34,7 +34,6 @@
 #include "yarns/multi.h"
 #include "yarns/part.h"
 
-#include <algorithm>
 #include <cstring>
 
 namespace yarns {
