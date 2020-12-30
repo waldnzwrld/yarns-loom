@@ -36,6 +36,7 @@
 #include "yarns/envelope.h"
 #include "yarns/synced_lfo.h"
 #include "yarns/part.h"
+#include "yarns/clock_division.h"
 
 namespace yarns {
 
@@ -138,9 +139,6 @@ class Voice {
  public:
   Voice() { }
   ~Voice() { }
-  
-  // Clock-synced LFO.
-  SyncedLFO synced_lfo_;
 
   void Init();
   void ResetAllControllers();
@@ -156,9 +154,11 @@ class Voice {
     mod_aux_[MOD_AUX_AFTERTOUCH] = velocity << 9;
   }
 
-  inline void set_modulation_rate(uint8_t modulation_rate) {
-    modulation_rate_ = modulation_rate;
+  inline void Clock() {
+    if (!modulation_sync_ticks_) { return; }
+    synced_lfo_.Tap(modulation_sync_ticks_);
   }
+  void set_modulation_rate(uint8_t modulation_rate, uint8_t index);
   inline void set_pitch_bend_range(uint8_t pitch_bend_range) {
     pitch_bend_range_ = pitch_bend_range;
   }
@@ -236,6 +236,8 @@ class Voice {
   }
   
  private:
+  // Clock-synced LFO.
+  SyncedLFO synced_lfo_;
 
   int32_t note_source_;
   int32_t note_target_;
@@ -250,7 +252,8 @@ class Voice {
   uint8_t mod_velocity_;
   
   uint8_t pitch_bend_range_;
-  uint8_t modulation_rate_;
+  uint32_t modulation_increment_;
+  uint16_t modulation_sync_ticks_;
   uint8_t vibrato_range_;
   uint8_t vibrato_initial_;
   uint8_t vibrato_control_source_;

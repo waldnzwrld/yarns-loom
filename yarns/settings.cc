@@ -172,6 +172,9 @@ const char* const tuning_factor_values[] = {
   "ALPHA"
 };
 
+const uint8_t kVibratoSpeedMax = LUT_LFO_INCREMENTS_SIZE + clock_division::count - 1;
+STATIC_ASSERT(kVibratoSpeedMax <= 127, overflow);
+
 /* static */
 const Setting Settings::settings_[] = {
   {
@@ -328,7 +331,7 @@ const Setting Settings::settings_[] = {
   {
     "VS", "VIBRATO SPEED",
     SETTING_DOMAIN_PART, { PART_VOICING_MODULATION_RATE, 0 },
-    SETTING_UNIT_VIBRATO_SPEED, 0, 100 + clock_division::count - 1, NULL,
+    SETTING_UNIT_VIBRATO_SPEED, 0, kVibratoSpeedMax, NULL,
     23, 14,
   },
   {
@@ -623,10 +626,10 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       break;
     
     case SETTING_UNIT_VIBRATO_SPEED:
-      if (value < 100) {
+      if (value < LUT_LFO_INCREMENTS_SIZE) {
         PrintInteger(buffer, value);
       } else {
-        Print(settings_[SETTING_SEQUENCER_CLOCK_DIVISION], value - 100, buffer);
+        Print(settings_[SETTING_SEQUENCER_CLOCK_DIVISION], value - LUT_LFO_INCREMENTS_SIZE, buffer);
       }
       break;
       

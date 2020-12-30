@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cmath>
 
 #include "stmlib/midi/midi.h"
 #include "stmlib/utils/dsp.h"
@@ -57,7 +58,8 @@ void Voice::Init() {
   mod_velocity_ = 0x7f;
   ResetAllControllers();
   
-  modulation_rate_ = 0;
+  modulation_increment_ = lut_lfo_increments[50];
+  modulation_sync_ticks_ = 0;
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
   
@@ -113,6 +115,17 @@ void Voice::ResetAllControllers() {
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
+void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
+  if (modulation_rate < LUT_LFO_INCREMENTS_SIZE) {
+    modulation_increment_ = lut_lfo_increments[modulation_rate];
+    modulation_increment_ *= pow(1.123f, (int) index);
+    modulation_sync_ticks_ = 0;
+  } else {
+    modulation_increment_ = 0;
+    modulation_sync_ticks_ = clock_division::list[modulation_rate - LUT_LFO_INCREMENTS_SIZE].num_ticks;
+  }
+}
+
 bool Voice::Refresh(uint8_t voice_index) {
   // Compute base pitch with portamento.
   portamento_phase_ += portamento_phase_increment_;
@@ -136,8 +149,8 @@ bool Voice::Refresh(uint8_t voice_index) {
   note += tuning_;
   
   // Add vibrato.
-  if (modulation_rate_ < 100) {
-    synced_lfo_.Increment(lut_lfo_increments[modulation_rate_]);
+  if (modulation_increment_) {
+    synced_lfo_.Increment(modulation_increment_);
   } else {
     synced_lfo_.Refresh();
   }

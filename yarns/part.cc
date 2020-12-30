@@ -434,17 +434,12 @@ void Part::Clock() {
     arp_seq_prescaler_ = 0;
   }
   
-  uint16_t num_ticks;
-
-  if (voicing_.modulation_rate >= 100) {
-    num_ticks = clock_division::list[voicing_.modulation_rate - 100].num_ticks;
-    for (uint8_t i = 0; i < num_voices_; ++i) {
-      voice_[i]->synced_lfo_.Tap(num_ticks);
-    }
+  for (uint8_t i = 0; i < num_voices_; ++i) {
+    voice_[i]->Clock();
   }
 
   // looper
-  num_ticks = clock_division::list[seq_.clock_division].num_ticks;
+  uint16_t num_ticks = clock_division::list[seq_.clock_division].num_ticks;
   looper_lfo_.Tap(num_ticks * seq_.loop_length);
 }
 
@@ -986,11 +981,7 @@ void Part::TouchVoices() {
   CONSTRAIN(voicing_.aux_cv_2, 0, MOD_AUX_LAST - 1);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
-    uint8_t mod_rate = voicing_.modulation_rate;
-    if (mod_rate < 100) {
-      mod_rate = mod_rate * pow(1.123f, (int) i);
-    }
-    voice_[i]->set_modulation_rate(mod_rate);
+    voice_[i]->set_modulation_rate(voicing_.modulation_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_initial(voicing_.vibrato_initial);
     voice_[i]->set_vibrato_control_source(voicing_.vibrato_control_source);
