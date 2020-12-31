@@ -8,13 +8,13 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 
 ### Features
 - New layouts, including a layout that features a 3-voice paraphonic part with internal envelopes
-- Looper with real-time recording
+- Looper with real-time recording and overdubbing
 - Global control and display of the active part and its play mode
 - Pulse-width modulation for Yarns' digital oscillator
 - Velocity filtering
 - More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction
 - Sequencer-driven arpeggiator
-- [Check the changelog for more!](https://github.com/rcrogers/mutable-instruments-eurorack/releases)
+- [Check the manual for more!](yarns/MANUAL.md)
 
 ### Caveats
 - Installation of this firmware is at your own risk
