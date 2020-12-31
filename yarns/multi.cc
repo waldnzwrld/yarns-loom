@@ -860,7 +860,7 @@ void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bit
   if (setting_index == 0xff) { return; }
   const Setting& setting = setting_defs.get(setting_index);
 
-  uint8_t scaled_value;
+  int16_t scaled_value;
   uint8_t range = setting.max_value - setting.min_value + 1;
   scaled_value = range * value_7bits >> 7;
   scaled_value += setting.min_value;
