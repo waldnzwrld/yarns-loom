@@ -18,7 +18,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 
 ### Caveats
 - Installation of this firmware is at your own risk
-- Presets saved in this firmware cannot be loaded with the manufacturer's firmware, and vice versa
+- Presets saved in this firmware cannot be loaded with the manufacturer's firmware, and vice versa.  Users are advised to run `INIT` from the main menu after switching firmware
 - Some changes are not documented in the changelog
 - Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 16 notes instead of the original 64)
 
