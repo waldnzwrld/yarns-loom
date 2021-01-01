@@ -23,7 +23,7 @@
 # Digital oscillator
 
 ### Amplitude envelopes
-- Only available for the paraphonic part in the new [`*2` layout](#new-layouts)
+- Only available for the paraphonic part in the new [`*2` layout](#layouts)
 - ADSR configured via the `▽📉 (ENVELOPE MENU)`
 
 ### Oscillator PWM
