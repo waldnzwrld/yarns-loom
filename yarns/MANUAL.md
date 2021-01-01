@@ -108,6 +108,7 @@
 - The result of a received CC is briefly displayed
 - Recording control: start/stop recording mode, delete a recording
 - CC support for all new settings
+- Fixed settings to accept a negative value via CC
 - [Implementation Chart](https://docs.google.com/spreadsheets/d/1V6CRqf_3FGTrNIjcU1ixBtzRRwqjIa1PaiqOFgf6olE/edit#gid=0)
 
 ### Clock ratios
