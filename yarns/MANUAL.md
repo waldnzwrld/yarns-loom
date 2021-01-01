@@ -21,18 +21,19 @@
     3. Part 2, modulation configurable via `3>`
     4. Part 3, monophonic CV/gate
 
-### Looper-style sequencer with real-time recording
+### Looper-style sequencer mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
 - To record or overdub, press `REC` to enter real-time recording mode, then use the keyboard
-- While in recording mode, press `START` to delete the oldest note, `TAP` for newest note
-- Uses the bar as its time basis: loop duration = notes per bar (as set by `B-`) multiplied by quarter note length (as set by `C/`) 
-- 16-bit time resolution: ¹⁄₆₅₅₃₆th of the bar
-- Can be used to "clock" the arpeggiator
+- While recording, delete the oldest note by pressing `START`, newest by `TAP`
+- Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, as applied to the part's `C/`
+- Note start/end times are recorded at 16-bit resolution (¹⁄₆₅₅₃₆th of the loop length)
 - Holds 16 notes max -- past this limit, overwrites oldest note
 - Step sequencer also reduced from 64 to 16 notes, to free up space in the preset storage
 
 ### Expanded support for the hold pedal
-- Screen flashes the active part's sustain status, showing the number of keys that are held, sustainable, sustained, or about to be released
+- Screen flashes the active part's hold status
+  - Tick marks show the number of keys that are held, sustainable, sustained, and/or about to be released
+  - Limited to the 6 most recent keys due to display size
 - New `HM (HOLD PEDAL MODE)` setting to change the part's response to the hold pedal
   - `OFF` ignores the pedal
   - `SUSTAIN` is the stock firmware behavior (no notes are released as long as the pedal is down)
@@ -43,8 +44,8 @@
   - `CLUTCH DOWN` is the same as `CLUTCH UP`, but with reversed up/down semantics
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)
 
-### Options for keyboard control
-- New `SI (SEQ INPUT RESPONSE)` setting to change how a playing sequence responds to with keyboard input
+### More options for MIDI notes
+- New `SI (SEQ INPUT RESPONSE)` setting to change how a playing sequence responds to keyboard input
   - `OFF` ignores keyboard input
   - `TRANSPOSE` is the stock firmware behavior
   - `REPLACE` retains the sequence's rhythm, but overrides its pitch
@@ -52,6 +53,10 @@
 - New `IT (INPUT TRANSPOSE OCTAVES)` setting to apply transposition to MIDI signals received by a part
   - Effectively an octave switch for the controller
   - Ignored when using the step to control arpeggiator movement
+- Parts can filter notes by velocity
+  - Added UI for previously hidden settings `V> (VELOCITY MIN)` and `V< (VELOCITY MAX)`
+  - Present for all layouts except 4V
+  - Output velocity range is scaled to compensate for the restricted range imposed by input filtering
   
 ### Expanded support for MIDI CC (Control Change) messages
 - The result of a received CC is briefly displayed
@@ -67,11 +72,6 @@
   - Notes are interpreted based on key color (black/white) and distance above/below middle C
   - `ROTATE` treats white keys as relative movement through the chord, and black keys as absolute positions in the chord
   - `SUBROTATE` generates quasi-cartesian patterns
-  
-### Velocity filtering
-- Added UI for previously unexposed settings `V> (VELOCITY MIN)` and `V< (VELOCITY MAX)`
-- Present for all layouts except 4V
-- Output velocity range is scaled to compensate for the restricted range imposed by input filtering
 
 ### Oscillator PWM
   - Replaced the "25% rectangle" wave with a pulse-width modulated rectangle wave
@@ -80,7 +80,8 @@
   - `OSC PW MOD` sets the depth of pulse width modulation by the LFO
 
 ### Clock ratios
-- TODO
+- Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
+- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./clock_division.h#L43)
   
 ### More control over vibrato
 - New setting `VC (VIBRATO CONTROL SOURCE)` that allows changing the vibrato controller from the default `MODWHEEL` to `AFTERTOUCH`
