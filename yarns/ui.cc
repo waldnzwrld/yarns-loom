@@ -341,7 +341,7 @@ void Ui::PrintLooperRecordingStatus() {
     display_.Print("__");
     return;
   }
-  const looper::Tape& looper_tape = recording_part().sequencer_settings().looper_tape;
+  const looper::Deck& looper_tape = recording_part().looper();
   uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index, pos >> 16);
   display_.set_brightness(UINT16_MAX - note_fraction_completed);
   if (recording_mode_is_displaying_pitch_) {

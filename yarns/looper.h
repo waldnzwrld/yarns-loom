@@ -58,22 +58,31 @@ struct Note {
   uint8_t velocity;
 };
 
-class Tape {
+struct Tape {
+  Note notes[kMaxNotes];
+  Link head_link;
+  uint8_t oldest_index;
+  uint8_t newest_index;
+};
+
+class Deck {
  public:
 
-  Tape() { }
-  ~Tape() { }
+  Deck() { }
+  ~Deck() { }
+
+  void Init(Part* part);
 
   void RemoveAll();
   bool IsEmpty() const {
-    return (head_link_.on_index == kNullIndex);
+    return (tape_->head_link.on_index == kNullIndex);
   }
   void ResetHead();
 
-  void RemoveOldestNote(Part* part, uint16_t current_pos);
-  void RemoveNewestNote(Part* part, uint16_t current_pos);
-  void Advance(Part* part, uint16_t old_pos, uint16_t new_pos);
-  uint8_t RecordNoteOn(Part* part, uint16_t pos, uint8_t pitch, uint8_t velocity);
+  void RemoveOldestNote(uint16_t current_pos);
+  void RemoveNewestNote(uint16_t current_pos);
+  void Advance(uint16_t old_pos, uint16_t new_pos);
+  uint8_t RecordNoteOn(uint16_t pos, uint8_t pitch, uint8_t velocity);
   bool RecordNoteOff(uint16_t pos, uint8_t index);
   uint8_t PeekNextOn() const;
   uint8_t PeekNextOff() const;
@@ -84,7 +93,7 @@ class Tape {
   uint8_t NoteAgeOrdinal(uint8_t index) const;
 
   const Note& NoteAt(uint8_t index) const {
-    return notes_[index];
+    return tape_->notes[index];
   }
 
  private:
@@ -92,14 +101,12 @@ class Tape {
   bool Passed(uint16_t target, uint16_t before, uint16_t after) const;
   void InsertOn(uint16_t pos, uint8_t index);
   void InsertOff(uint16_t pos, uint8_t index);
-  void RemoveNote(Part* part, uint16_t current_pos, uint8_t index);
+  void RemoveNote(uint16_t current_pos, uint8_t index);
 
-  Note notes_[kMaxNotes];
-  Link head_link_;
-  uint8_t oldest_index_;
-  uint8_t newest_index_;
+  Tape* tape_;
+  Part* part_;
 
-  DISALLOW_COPY_AND_ASSIGN(Tape);
+  DISALLOW_COPY_AND_ASSIGN(Deck);
 };
 
 } // namespace looper

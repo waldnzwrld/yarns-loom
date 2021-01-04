@@ -354,14 +354,15 @@ class Multi {
   void Serialize(T* stream_buffer) {
     stream_buffer->Write(settings());
     for (uint8_t i = 0; i < kNumParts; ++i) {
-      STATIC_ASSERT(kStreamBufferSize >= (
-        sizeof(settings()) + // 32 bytes
+      const uint16_t size = sizeof(settings()) + // 32 bytes
         kNumParts * ( // Max 248 bytes
           sizeof(part_[i].midi_settings()) +
           sizeof(part_[i].voicing_settings()) +
           sizeof(part_[i].sequencer_settings())
-        )
-      ), buffer_size_exceeded);
+        );
+      // char (*__kaboom)[size] = 1;
+      STATIC_ASSERT(size == 928, buffer_size_exceeded);
+      STATIC_ASSERT(kStreamBufferSize >= size, buffer_size_exceeded);
       stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
       stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
       stream_buffer->Write(part_[i].sequencer_settings()); // 176 bytes

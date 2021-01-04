@@ -464,13 +464,14 @@ class Part {
       looper_needs_advance_ = true;
     }
   }
+  inline const looper::Deck& looper() const { return looper_; }
   void LooperRewind();
   void LooperAdvance();
   inline void LooperRemoveOldestNote() {
-    seq_.looper_tape.RemoveOldestNote(this, looper_pos_);
+    looper_.RemoveOldestNote(looper_pos_);
   }
   inline void LooperRemoveNewestNote() {
-    seq_.looper_tape.RemoveNewestNote(this, looper_pos_);
+    looper_.RemoveNewestNote(looper_pos_);
   }
   inline uint32_t LooperPhase() const {
     return looper_lfo_.GetPhase();
@@ -531,8 +532,8 @@ class Part {
     pitch = output_pitch_for_looper_note_[looper_note_index];
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Peek at next looper note
-      uint8_t next_on_index = seq_.looper_tape.PeekNextOn();
-      const looper::Note& next_on_note = seq_.looper_tape.NoteAt(next_on_index);
+      uint8_t next_on_index = looper_.PeekNextOn();
+      const looper::Note& next_on_note = looper_.NoteAt(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
       next_step = BuildArpState(next_step).step;
       if (next_step.is_continuation()) {
@@ -548,8 +549,8 @@ class Part {
 
   inline void LooperRecordNoteOn(uint8_t pressed_key_index) {
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
-    uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
-      this, looper_pos_, e.note, e.velocity & 0x7f
+    uint8_t looper_note_index = looper_.RecordNoteOn(
+      looper_pos_, e.note, e.velocity & 0x7f
     );
     looper_note_recording_pressed_key_[pressed_key_index] = looper_note_index;
     LooperPlayNoteOn(looper_note_index, e.note, e.velocity & 0x7f);
@@ -558,7 +559,7 @@ class Part {
   inline void LooperRecordNoteOff(uint8_t pressed_key_index) {
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
     uint8_t looper_note_index = looper_note_recording_pressed_key_[pressed_key_index];
-    if (seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)) {
+    if (looper_.RecordNoteOff(looper_pos_, looper_note_index)) {
       LooperPlayNoteOff(looper_note_index, e.note);
     }
     looper_note_recording_pressed_key_[pressed_key_index] = looper::kNullIndex;
@@ -789,6 +790,7 @@ class Part {
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
   
+  looper::Deck looper_;
   SyncedLFO looper_lfo_;
   uint16_t looper_pos_;
   bool looper_needs_advance_;

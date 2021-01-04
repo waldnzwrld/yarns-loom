@@ -62,7 +62,9 @@ void Part::Init() {
   polychained_ = false;
   seq_recording_ = false;
   transposable_ = true;
-  seq_.looper_tape.RemoveAll();
+
+  looper_.Init(this);
+  looper_.RemoveAll();
   looper_lfo_.Init();
   LooperRewind();
 
@@ -451,7 +453,7 @@ void Part::Start() {
 void Part::LooperRewind() {
   looper_pos_ = 0;
   looper_needs_advance_ = false;
-  seq_.looper_tape.ResetHead();
+  looper_.ResetHead();
   std::fill(
     &looper_note_recording_pressed_key_[0],
     &looper_note_recording_pressed_key_[kNoteStackSize],
@@ -477,7 +479,7 @@ void Part::LooperAdvance() {
   ) { return; }
 
   uint16_t new_pos = looper_lfo_.GetPhase() >> 16;
-  seq_.looper_tape.Advance(this, looper_pos_, new_pos);
+  looper_.Advance(looper_pos_, new_pos);
   looper_pos_ = new_pos;
   looper_needs_advance_ = false;
 }
@@ -523,7 +525,7 @@ void Part::StartRecording() {
 void Part::DeleteRecording() {
   if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
   StopSequencerArpeggiatorNotes();
-  looped() ? seq_.looper_tape.RemoveAll() : DeleteSequence();
+  looped() ? looper_.RemoveAll() : DeleteSequence();
   ui.SplashOn(SPLASH_DELETE_RECORDING);
 }
 
