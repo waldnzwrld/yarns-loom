@@ -64,9 +64,6 @@ void Part::Init() {
   transposable_ = true;
 
   looper_.Init(this);
-  looper_.RemoveAll();
-  looper_lfo_.Init();
-  LooperRewind();
 
   midi_.channel = 0;
   midi_.min_note = 0;
@@ -293,13 +290,13 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
 
     case 0x70:
       if (seq_recording_) {
-        looped() ? LooperRemoveOldestNote() : RecordStep(SEQUENCER_STEP_TIE);
+        looped() ? looper_.RemoveOldestNote() : RecordStep(SEQUENCER_STEP_TIE);
       }
       break;
     
     case 0x71:
       if (seq_recording_) {
-        looped() ? LooperRemoveNewestNote() : RecordStep(SEQUENCER_STEP_REST);
+        looped() ? looper_.RemoveNewestNote() : RecordStep(SEQUENCER_STEP_REST);
       }
       break;
     
@@ -431,9 +428,7 @@ void Part::Clock() {
     voice_[i]->Clock();
   }
 
-  // looper
-  uint16_t num_ticks = clock_division::list[seq_.clock_division].num_ticks;
-  looper_lfo_.Tap(num_ticks * seq_.loop_length);
+  looper_.Clock();
 }
 
 void Part::Start() {
@@ -444,16 +439,7 @@ void Part::Start() {
   arp_.ResetKey();
   arp_.step_index = 0;
   
-  looper_lfo_.Init();
-  LooperRewind();
-
-  generated_notes_.Clear();
-}
-
-void Part::LooperRewind() {
-  looper_pos_ = 0;
-  looper_needs_advance_ = false;
-  looper_.ResetHead();
+  looper_.Rewind();
   std::fill(
     &looper_note_recording_pressed_key_[0],
     &looper_note_recording_pressed_key_[kNoteStackSize],
@@ -469,19 +455,8 @@ void Part::LooperRewind() {
     &output_pitch_for_looper_note_[kNoteStackSize],
     looper::kNullIndex
   );
-}
 
-void Part::LooperAdvance() {
-  if (
-    !looper_needs_advance_ ||
-    !looped() ||
-    midi_.play_mode == PLAY_MODE_MANUAL
-  ) { return; }
-
-  uint16_t new_pos = looper_lfo_.GetPhase() >> 16;
-  looper_.Advance(looper_pos_, new_pos);
-  looper_pos_ = new_pos;
-  looper_needs_advance_ = false;
+  generated_notes_.Clear();
 }
 
 void Part::Stop() {

@@ -32,26 +32,28 @@
 #include "stmlib/stmlib.h"
 #include <algorithm>
 
+#include "yarns/synced_lfo.h"
+
 namespace yarns {
 
 class Part;
 
 namespace looper {
 
-const uint8_t kMaxNotes = 16;
+const uint8_t kMaxNotes = 23; // TODO ugh
 const uint8_t kNullIndex = UINT8_MAX;
 
 struct Link {
   Link() {
-    on_index = off_index = kNullIndex;
+    on = off = kNullIndex;
   }
-  uint8_t on_index;
-  uint8_t off_index;
+  // Note indexes
+  uint8_t on;
+  uint8_t off;
 };
 
 struct Note {
   Note() { }
-  Link next_link;
   uint16_t on_pos;
   uint16_t off_pos;
   uint8_t pitch;
@@ -59,10 +61,9 @@ struct Note {
 };
 
 struct Tape {
-  Note notes[kMaxNotes];
-  Link head_link;
   uint8_t oldest_index;
-  uint8_t newest_index;
+  uint8_t size;
+  Note notes[kMaxNotes];
 };
 
 class Deck {
@@ -74,37 +75,68 @@ class Deck {
   void Init(Part* part);
 
   void RemoveAll();
-  bool IsEmpty() const {
-    return (tape_->head_link.on_index == kNullIndex);
-  }
-  void ResetHead();
+  void Rewind();
+  void RebuildLinks();
 
-  void RemoveOldestNote(uint16_t current_pos);
-  void RemoveNewestNote(uint16_t current_pos);
-  void Advance(uint16_t old_pos, uint16_t new_pos);
-  uint8_t RecordNoteOn(uint16_t pos, uint8_t pitch, uint8_t velocity);
-  bool RecordNoteOff(uint16_t pos, uint8_t index);
+  inline uint16_t phase() const {
+    return pos_;
+  }
+  void Clock();
+  inline void Refresh() {
+    uint16_t new_phase = lfo_.Refresh() >> 16;
+    if (
+      // phase has definitely changed, or
+      pos_ != new_phase ||
+      // The 32-bit increment is large enough to produce a 16-bit change, indicating that the phase has wrapped exactly around
+      lfo_.GetPhaseIncrement() > UINT16_MAX
+    ) {
+      needs_advance_ = true;
+    }
+  }
+
+  void RemoveOldestNote();
+  void RemoveNewestNote();
+  inline void AdvanceToPresent() {
+    if (!needs_advance_) { return; }
+    uint16_t new_pos = lfo_.GetPhase() >> 16;
+    Advance(new_pos, true);
+  }
+  uint8_t RecordNoteOn(uint8_t pitch, uint8_t velocity);
+  bool RecordNoteOff(uint8_t index);
   uint8_t PeekNextOn() const;
   uint8_t PeekNextOff() const;
 
-  bool NoteIsPlaying(uint8_t index, uint16_t pos) const;
-  uint16_t NoteFractionCompleted(uint8_t index, uint16_t pos) const;
+  bool NoteIsPlaying(uint8_t index) const;
+  uint16_t NoteFractionCompleted(uint8_t index) const;
   uint8_t NotePitch(uint8_t index) const;
   uint8_t NoteAgeOrdinal(uint8_t index) const;
 
-  const Note& NoteAt(uint8_t index) const {
+  inline const Note& note_at(uint8_t index) const {
     return tape_->notes[index];
   }
 
  private:
 
+  inline uint8_t index_mod(uint8_t i) const {
+    return stmlib::modulo(i, kMaxNotes);
+  }
+  void Advance(uint16_t new_pos, bool play);
   bool Passed(uint16_t target, uint16_t before, uint16_t after) const;
-  void InsertOn(uint16_t pos, uint8_t index);
-  void InsertOff(uint16_t pos, uint8_t index);
-  void RemoveNote(uint16_t current_pos, uint8_t index);
+  void LinkOn(uint8_t index);
+  void LinkOff(uint8_t index);
+  void RemoveNote(uint8_t index);
 
   Tape* tape_;
   Part* part_;
+
+  // Linked lists track current and upcoming notes
+  Link head_; // Points to the latest on/off
+  Link next_link_[kMaxNotes];
+
+  // Phase tracking
+  SyncedLFO lfo_;
+  uint16_t pos_;
+  bool needs_advance_;
 
   DISALLOW_COPY_AND_ASSIGN(Deck);
 };

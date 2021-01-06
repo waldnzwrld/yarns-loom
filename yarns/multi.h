@@ -261,7 +261,7 @@ class Multi {
     }
   }
   
-  void Touch();
+  void AfterDeserialize();
   void Refresh();
   void RefreshInternalClock() {
     if (running() && internal_clock() && internal_clock_.Process()) {
@@ -280,7 +280,11 @@ class Multi {
       return;
     }
     for (uint8_t j = 0; j < num_active_parts_; ++j) {
-      part_[j].LooperAdvance();
+      if (
+        !part_[j].looped() ||
+        part_[j].midi_settings().play_mode == PLAY_MODE_MANUAL
+      ) { continue; }
+      part_[j].mutable_looper().AdvanceToPresent();
     }
   }
 
@@ -360,9 +364,9 @@ class Multi {
           sizeof(part_[i].voicing_settings()) +
           sizeof(part_[i].sequencer_settings())
         );
-      // char (*__kaboom)[size] = 1;
-      STATIC_ASSERT(size == 928, buffer_size_exceeded);
-      STATIC_ASSERT(kStreamBufferSize >= size, buffer_size_exceeded);
+      // char (*__kaboom)[something] = 1;
+      STATIC_ASSERT(size == 1024, buffer_size_exceeded);
+      STATIC_ASSERT(size <= PAGE_SIZE, buffer_size_exceeded);
       stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
       stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
       stream_buffer->Write(part_[i].sequencer_settings()); // 176 bytes
@@ -378,7 +382,7 @@ class Multi {
       stream_buffer->Read(part_[i].mutable_voicing_settings());
       stream_buffer->Read(part_[i].mutable_sequencer_settings());
     }
-    Touch();
+    AfterDeserialize();
   };
   
   template<typename T>

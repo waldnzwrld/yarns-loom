@@ -37,13 +37,12 @@
 #include "stmlib/algorithms/note_stack.h"
 
 #include "yarns/looper.h"
-#include "yarns/synced_lfo.h"
 
 namespace yarns {
 
 class Voice;
 
-const uint8_t kNumSteps = 16;
+const uint8_t kNumSteps = 24;
 const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
@@ -453,29 +452,8 @@ class Part {
     voicing_.legato_mode = LEGATO_MODE_OFF;
   }
 
-  inline void Refresh() {
-    uint16_t new_pos = looper_lfo_.Refresh() >> 16;
-    if (
-      // phase has definitely changed, or
-      looper_pos_ != new_pos ||
-      // phase has wrapped exactly around
-      looper_lfo_.GetPhaseIncrement() > UINT16_MAX
-    ) {
-      looper_needs_advance_ = true;
-    }
-  }
   inline const looper::Deck& looper() const { return looper_; }
-  void LooperRewind();
-  void LooperAdvance();
-  inline void LooperRemoveOldestNote() {
-    looper_.RemoveOldestNote(looper_pos_);
-  }
-  inline void LooperRemoveNewestNote() {
-    looper_.RemoveNewestNote(looper_pos_);
-  }
-  inline uint32_t LooperPhase() const {
-    return looper_lfo_.GetPhase();
-  }
+  inline looper::Deck& mutable_looper() { return looper_; }
   inline uint8_t LooperCurrentNoteIndex() const {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
@@ -533,7 +511,7 @@ class Part {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Peek at next looper note
       uint8_t next_on_index = looper_.PeekNextOn();
-      const looper::Note& next_on_note = looper_.NoteAt(next_on_index);
+      const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
       next_step = BuildArpState(next_step).step;
       if (next_step.is_continuation()) {
@@ -549,9 +527,7 @@ class Part {
 
   inline void LooperRecordNoteOn(uint8_t pressed_key_index) {
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
-    uint8_t looper_note_index = looper_.RecordNoteOn(
-      looper_pos_, e.note, e.velocity & 0x7f
-    );
+    uint8_t looper_note_index = looper_.RecordNoteOn(e.note, e.velocity & 0x7f);
     looper_note_recording_pressed_key_[pressed_key_index] = looper_note_index;
     LooperPlayNoteOn(looper_note_index, e.note, e.velocity & 0x7f);
   }
@@ -559,7 +535,7 @@ class Part {
   inline void LooperRecordNoteOff(uint8_t pressed_key_index) {
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
     uint8_t looper_note_index = looper_note_recording_pressed_key_[pressed_key_index];
-    if (looper_.RecordNoteOff(looper_pos_, looper_note_index)) {
+    if (looper_.RecordNoteOff(looper_note_index)) {
       LooperPlayNoteOff(looper_note_index, e.note);
     }
     looper_note_recording_pressed_key_[pressed_key_index] = looper::kNullIndex;
@@ -731,7 +707,9 @@ class Part {
     seq_rec_step_ = stmlib::modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
   }
   
-  void Touch() {
+  void AfterDeserialize() {
+    looper_.RebuildLinks();
+
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);
     CONSTRAIN(seq_.loop_length, 1, 127);
@@ -791,9 +769,6 @@ class Part {
   uint8_t seq_rec_step_;
   
   looper::Deck looper_;
-  SyncedLFO looper_lfo_;
-  uint16_t looper_pos_;
-  bool looper_needs_advance_;
 
   // Tracks which looper notes are currently being recorded
   uint8_t looper_note_recording_pressed_key_[kNoteStackSize];

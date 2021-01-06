@@ -28,6 +28,7 @@
 
 #include "yarns/looper.h"
 
+#include "yarns/clock_division.h"
 #include "yarns/part.h"
 
 namespace yarns {
@@ -37,6 +38,8 @@ namespace looper {
 void Deck::Init(Part* part) {
   part_ = part;
   tape_ = &(part->mutable_sequencer_settings()->looper_tape);
+  RemoveAll();
+  Rewind();
 }
 
 void Deck::RemoveAll() {
@@ -45,67 +48,60 @@ void Deck::RemoveAll() {
     &tape_->notes[kMaxNotes],
     Note()
   );
-  tape_->head_link.on_index = kNullIndex;
-  tape_->head_link.off_index = kNullIndex;
+  head_.on = kNullIndex;
+  head_.off = kNullIndex;
   tape_->oldest_index = 0;
-  tape_->newest_index = 0;
+  tape_->size = 0;
 }
 
-void Deck::ResetHead() {
-  uint8_t next_index;
+void Deck::Rewind() {
+  lfo_.Init();
+  Advance(0, false);
+}
 
-  while (true) {
-    next_index = PeekNextOn();
-    if (
-      next_index == kNullIndex ||
-      tape_->notes[tape_->head_link.on_index].on_pos >= tape_->notes[next_index].on_pos
-    ) {
-      break;
-    }
-    tape_->head_link.on_index = next_index;
-  }
-
-  while (true) {
-    next_index = PeekNextOff();
-    if (
-      next_index == kNullIndex ||
-      tape_->notes[tape_->head_link.off_index].off_pos >= tape_->notes[next_index].off_pos
-    ) {
-      break;
-    }
-    tape_->head_link.off_index = next_index;
+void Deck::RebuildLinks() {
+  for (uint8_t i = 0; i < tape_->size; ++i) {
+    uint8_t index = index_mod(tape_->oldest_index + i);
+    Note& note = tape_->notes[index];
+    Advance(note.on_pos, false);
+    LinkOn(index);
+    Advance(note.off_pos, false);
+    LinkOff(index);
   }
 }
 
-void Deck::RemoveOldestNote(uint16_t current_pos) {
-  RemoveNote(current_pos, tape_->oldest_index);
-  if (!IsEmpty()) {
-    tape_->oldest_index = stmlib::modulo(tape_->oldest_index + 1, kMaxNotes);
+void Deck::Clock() {
+  SequencerSettings seq = part_->sequencer_settings();
+  uint16_t num_ticks = clock_division::list[seq.clock_division].num_ticks;
+  lfo_.Tap(num_ticks * seq.loop_length);
+}
+
+void Deck::RemoveOldestNote() {
+  RemoveNote(tape_->oldest_index);
+  if (tape_->size) {
+    tape_->oldest_index = index_mod(tape_->oldest_index + 1);
   }
 }
 
-void Deck::RemoveNewestNote(uint16_t current_pos) {
-  RemoveNote(current_pos, tape_->newest_index);
-  if (!IsEmpty()) {
-    tape_->newest_index = stmlib::modulo(tape_->newest_index - 1, kMaxNotes);
-  }
+void Deck::RemoveNewestNote() {
+  RemoveNote(index_mod(tape_->oldest_index + tape_->size - 1));
 }
 
 uint8_t Deck::PeekNextOn() const {
-  if (tape_->head_link.on_index == kNullIndex) {
+  if (head_.on == kNullIndex) {
     return kNullIndex;
   }
-  return tape_->notes[tape_->head_link.on_index].next_link.on_index;
+  return next_link_[head_.on].on;
 }
 
 uint8_t Deck::PeekNextOff() const {
-  if (tape_->head_link.off_index == kNullIndex) {
+  if (head_.off == kNullIndex) {
     return kNullIndex;
   }
-  return tape_->notes[tape_->head_link.off_index].next_link.off_index;
+  return next_link_[head_.off].off;
 }
 
-void Deck::Advance(uint16_t old_pos, uint16_t new_pos) {
+void Deck::Advance(uint16_t new_pos, bool play) {
   uint8_t seen_index;
   uint8_t next_index;
 
@@ -119,12 +115,14 @@ void Deck::Advance(uint16_t old_pos, uint16_t new_pos) {
       seen_index = next_index;
     }
     const Note& next_note = tape_->notes[next_index];
-    if (!Passed(next_note.off_pos, old_pos, new_pos)) {
+    if (!Passed(next_note.off_pos, pos_, new_pos)) {
       break;
     }
-    tape_->head_link.off_index = next_index;
+    head_.off = next_index;
 
-    part_->LooperPlayNoteOff(next_index, next_note.pitch);
+    if (play) {
+      part_->LooperPlayNoteOff(next_index, next_note.pitch);
+    }
   }
 
   seen_index = looper::kNullIndex;
@@ -137,62 +135,67 @@ void Deck::Advance(uint16_t old_pos, uint16_t new_pos) {
       seen_index = next_index;
     }
     const Note& next_note = tape_->notes[next_index];
-    if (!Passed(next_note.on_pos, old_pos, new_pos)) {
+    if (!Passed(next_note.on_pos, pos_, new_pos)) {
       break;
     }
-    tape_->head_link.on_index = next_index;
+    head_.on = next_index;
 
-    if (next_note.next_link.off_index == kNullIndex) {
-      // If the next 'on' note doesn't yet have an off_index, it's still held
+    if (next_link_[next_index].off == kNullIndex) {
+      // If the next 'on' note doesn't yet have an off link, it's still held
       // and has been for an entire loop -- instead of redundantly turning the
-      // note on, set an off_pos
-      InsertOff(next_note.on_pos, next_index);
+      // note on, link its off
+      LinkOff(next_index);
       continue;
     }
 
-    part_->LooperPlayNoteOn(next_index, next_note.pitch, next_note.velocity);
+    if (play) {
+      part_->LooperPlayNoteOn(next_index, next_note.pitch, next_note.velocity);
+    }
   }
+
+  pos_ = new_pos;
+  needs_advance_ = false;
 }
 
-uint8_t Deck::RecordNoteOn(uint16_t pos, uint8_t pitch, uint8_t velocity) {
-  if (!IsEmpty()) {
-    tape_->newest_index = stmlib::modulo(1 + tape_->newest_index, kMaxNotes);
+uint8_t Deck::RecordNoteOn(uint8_t pitch, uint8_t velocity) {
+  if (tape_->size == kMaxNotes) {
+    RemoveOldestNote();
   }
-  if (tape_->newest_index == tape_->oldest_index) {
-    RemoveOldestNote(pos);
-  }
+  uint8_t index = index_mod(tape_->oldest_index + tape_->size);
 
-  InsertOn(pos, tape_->newest_index);
-
-  Note& note = tape_->notes[tape_->newest_index];
+  LinkOn(index);
+  Note& note = tape_->notes[index];
   note.pitch = pitch;
   note.velocity = velocity;
-  note.off_pos = pos;
-  note.next_link.off_index = kNullIndex;
+  note.on_pos = pos_;
+  note.off_pos = pos_; // TODO wtf
+  next_link_[index].off = kNullIndex;
+  tape_->size++;
 
-  return tape_->newest_index;
+  return index;
 }
 
 // Returns whether the NoteOff should be sent
-bool Deck::RecordNoteOff(uint16_t pos, uint8_t index) {
-  if (tape_->notes[index].next_link.off_index != kNullIndex) {
-    // off_pos was already set by Advance, so the note was held for an entire
+bool Deck::RecordNoteOff(uint8_t index) {
+  if (next_link_[index].off != kNullIndex) {
+    // off link was already set by Advance, so the note was held for an entire
     // loop, so the note should play continuously and not be turned off now
     return false;
   }
-  InsertOff(pos, index);
+  LinkOff(index);
+  tape_->notes[index].off_pos = pos_;
   return true;
 }
 
-bool Deck::NoteIsPlaying(uint8_t index, uint16_t pos) const {
+bool Deck::NoteIsPlaying(uint8_t index) const {
   const Note& note = tape_->notes[index];
-  if (note.next_link.off_index == kNullIndex) { return false; }
-  return Passed(pos, note.on_pos, note.off_pos);
+  if (next_link_[index].off == kNullIndex) { return false; }
+  return Passed(pos_, note.on_pos, note.off_pos);
 }
 
-uint16_t Deck::NoteFractionCompleted(uint8_t index, uint16_t pos) const {
+uint16_t Deck::NoteFractionCompleted(uint8_t index) const {
   const Note& note = tape_->notes[index];
-  uint16_t completed = pos - note.on_pos;
+  uint16_t completed = pos_ - note.on_pos;
   uint16_t length = note.off_pos - 1 - note.on_pos;
   return (static_cast<uint32_t>(completed) << 16) / length;
 }
@@ -202,7 +205,7 @@ uint8_t Deck::NotePitch(uint8_t index) const {
 }
 
 uint8_t Deck::NoteAgeOrdinal(uint8_t index) const {
-  return stmlib::modulo(index - tape_->oldest_index, kMaxNotes);
+  return index_mod(index - tape_->oldest_index);
 }
 
 bool Deck::Passed(uint16_t target, uint16_t before, uint16_t after) const {
@@ -213,84 +216,82 @@ bool Deck::Passed(uint16_t target, uint16_t before, uint16_t after) const {
   }
 }
 
-void Deck::InsertOn(uint16_t pos, uint8_t index) {
-  Note& note = tape_->notes[index];
-  note.on_pos = pos;
-  if (tape_->head_link.on_index == kNullIndex) {
+void Deck::LinkOn(uint8_t index) {
+  if (head_.on == kNullIndex) {
     // there is no prev note to link to this one, so link it to itself
-    note.next_link.on_index = index;
+    next_link_[index].on = index;
   } else {
-    Note& head_note = tape_->notes[tape_->head_link.on_index];
-    note.next_link.on_index = head_note.next_link.on_index;
-    head_note.next_link.on_index = index;
+    next_link_[index].on = next_link_[head_.on].on;
+    next_link_[head_.on].on = index;
   }
-  tape_->head_link.on_index = index;
+  head_.on = index;
 }
 
-void Deck::InsertOff(uint16_t pos, uint8_t index) {
-  Note& note = tape_->notes[index];
-  note.off_pos = pos;
-  if (tape_->head_link.off_index == kNullIndex) {
+void Deck::LinkOff(uint8_t index) {
+  if (head_.off == kNullIndex) {
     // there is no prev note to link to this one, so link it to itself
-    note.next_link.off_index = index;
+    next_link_[index].off = index;
   } else {
-    Note& head_note = tape_->notes[tape_->head_link.off_index];
-    note.next_link.off_index = head_note.next_link.off_index;
-    head_note.next_link.off_index = index;
+    next_link_[index].off = next_link_[head_.off].off;
+    next_link_[head_.off].off = index;
   }
-  tape_->head_link.off_index = index;
+  head_.off = index;
 }
 
-void Deck::RemoveNote(uint16_t current_pos, uint8_t target_index) {
-  if (IsEmpty()) {
+void Deck::RemoveNote(uint8_t target_index) {
+  // Though this takes an arbitrary index, other methods like NoteAgeOrdinal
+  // assume that notes are stored sequentially in memory, so removing a "middle"
+  // note will cause problems
+  if (!tape_->size) {
     return;
   }
 
-  Note& target_note = tape_->notes[target_index];
+  tape_->size--;
   uint8_t search_prev_index;
   uint8_t search_next_index;
 
-  if (NoteIsPlaying(target_index, current_pos)) {
+  Note& target_note = tape_->notes[target_index];
+  if (NoteIsPlaying(target_index)) {
     part_->LooperPlayNoteOff(target_index, target_note.pitch);
   }
 
   search_prev_index = target_index;
   while (true) {
-    search_next_index = tape_->notes[search_prev_index].next_link.on_index;
+    search_next_index = next_link_[search_prev_index].on;
     if (search_next_index == target_index) {
       break;
     }
     search_prev_index = search_next_index;
   }
-  tape_->notes[search_prev_index].next_link.on_index = target_note.next_link.on_index;
-  target_note.next_link.on_index = kNullIndex; // unneeded?
+  next_link_[search_prev_index].on = next_link_[target_index].on;
+  next_link_[target_index].on = kNullIndex; // unneeded?
   if (target_index == search_prev_index) {
     // If this was the last note
-    tape_->head_link.on_index = kNullIndex;
-  } else if (target_index == tape_->head_link.on_index) {
-    tape_->head_link.on_index = search_prev_index;
+    head_.on = kNullIndex;
+  } else if (target_index == head_.on) {
+    head_.on = search_prev_index;
   }
 
-  if (target_note.next_link.off_index == kNullIndex) {
-    // Don't try to relink off_index
+  if (next_link_[target_index].off == kNullIndex) {
+    // Don't try to relink off
     return;
   }
 
   search_prev_index = target_index;
   while (true) {
-    search_next_index = tape_->notes[search_prev_index].next_link.off_index;
+    search_next_index = next_link_[search_prev_index].off;
     if (search_next_index == target_index) {
       break;
     }
     search_prev_index = search_next_index;
   }
-  tape_->notes[search_prev_index].next_link.off_index = target_note.next_link.off_index;
-  target_note.next_link.off_index = kNullIndex;
+  next_link_[search_prev_index].off = next_link_[target_index].off;
+  next_link_[target_index].off = kNullIndex;
   if (target_index == search_prev_index) {
     // If this was the last note
-    tape_->head_link.off_index = kNullIndex;
-  } else if (target_index == tape_->head_link.off_index) {
-    tape_->head_link.off_index = search_prev_index;
+    head_.off = kNullIndex;
+  } else if (target_index == head_.off) {
+    head_.off = search_prev_index;
   }
 }
 
