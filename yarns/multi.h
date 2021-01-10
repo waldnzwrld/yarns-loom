@@ -358,19 +358,17 @@ class Multi {
   void Serialize(T* stream_buffer) {
     stream_buffer->Write(settings());
     for (uint8_t i = 0; i < kNumParts; ++i) {
+      PackedPart packed;
+      part_[i].Pack(packed);
+      stream_buffer->Write(packed);
+
       const uint16_t size = sizeof(settings()) + // 32 bytes
         kNumParts * ( // Max 248 bytes
-          sizeof(part_[i].midi_settings()) +
-          sizeof(part_[i].voicing_settings()) +
-          sizeof(part_[i].sequencer_settings())
+          sizeof(PackedPart)
         );
-      char (*__kaboom)[sizeof(part_[i].sequencer_settings().looper_storage)] = 1;
-      //STATIC_ASSERT(size == 1000, buffer_size_exceeded);
-      //STATIC_ASSERT(size <= kMaxSize, buffer_size_exceeded);
-
-      stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
-      stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
-      stream_buffer->Write(part_[i].sequencer_settings()); // 200 bytes
+      // char (*__kaboom)[size] = 1;
+      STATIC_ASSERT(size == 1020, buffer_size_exceeded);
+      STATIC_ASSERT(size <= kMaxSize, buffer_size_exceeded);
     }
   };
   
@@ -379,9 +377,9 @@ class Multi {
     Stop();
     stream_buffer->Read(mutable_settings());
     for (uint8_t i = 0; i < kNumParts; ++i) {
-      stream_buffer->Read(part_[i].mutable_midi_settings());
-      stream_buffer->Read(part_[i].mutable_voicing_settings());
-      stream_buffer->Read(part_[i].mutable_sequencer_settings());
+      PackedPart packed;
+      stream_buffer->Read(&packed);
+      part_[i].Unpack(packed);
     }
     AfterDeserialize();
   };

@@ -38,7 +38,7 @@
 
 namespace yarns {
 
-const uint16_t kMaxSize = PAGE_SIZE - 2;
+const uint16_t kMaxSize = PAGE_SIZE - 2; // 2 bytes for checksum
 
 class StorageManager {
  public:

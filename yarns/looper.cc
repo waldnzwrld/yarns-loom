@@ -37,7 +37,6 @@ namespace looper {
 
 void Deck::Init(Part* part) {
   part_ = part;
-  storage_ = &(part->mutable_sequencer_settings()->looper_storage);
   RemoveAll();
   Rewind();
 }
@@ -46,12 +45,18 @@ void Deck::RemoveAll() {
   std::fill(
     &notes_[0],
     &notes_[kMaxNotes],
-    Note::Unpacked()
+    Note()
   );
   head_.on = kNullIndex;
   head_.off = kNullIndex;
-  storage_->oldest_index = 0;
-  storage_->size = 0;
+  oldest_index_ = 0;
+  size_ = 0;
+
+  std::fill(
+    &next_link_[0],
+    &next_link_[kMaxNotes],
+    Link()
+  );
 }
 
 void Deck::Rewind() {
@@ -59,45 +64,40 @@ void Deck::Rewind() {
   Advance(0, false);
 }
 
-namespace Note {
+void Deck::Unpack(PackedPart& storage) {
+  oldest_index_ = storage.looper_oldest_index;
+  size_ = storage.looper_size;
+  for (uint8_t i = 0; i < kMaxNotes; ++i) {
+    uint8_t index = index_mod(oldest_index_ + i);
+    PackedNote& packed_note = storage.looper_notes[index];
+    Note& note = notes_[index];
 
-  Unpacked Packed::Unpack() {
-    Unpacked u;
-    u.on_pos    = (maskPos & data >> ON_POS   ).to_ulong();
-    u.off_pos   = (maskPos & data >> OFF_POS  ).to_ulong();
-    u.pitch     = (maskMIDI & data >> PITCH   ).to_ulong();
-    u.velocity  = (maskMIDI & data >> VELOCITY).to_ulong();
-    return u;
+    note.on_pos   = packed_note.on_pos  << (16 - kBitsPos);
+    note.off_pos  = packed_note.off_pos << (16 - kBitsPos);
+    note.pitch    = packed_note.pitch;
+    note.velocity = packed_note.velocity;
+
+    if (index < size_) {
+      Advance(note.on_pos, false);
+      LinkOn(index);
+      Advance(note.off_pos, false);
+      LinkOff(index);
+    }
   }
+}
 
-  Packed Unpacked::Pack() {
-    Packed p;
-    p.data = (
-      tBag(on_pos    >> (8 - kBitsMIDI)) << ON_POS  |
-      tBag(off_pos   >> (8 - kBitsMIDI)) << OFF_POS |
-      tBag(pitch     >> (16 - kBitsPos)) << PITCH   |
-      tBag(velocity  >> (16 - kBitsPos)) << VELOCITY
-    );
-    return p;
-  }
+void Deck::Pack(PackedPart& storage) {
+  storage.looper_oldest_index = oldest_index_;
+  storage.looper_size = size_;
+  for (uint8_t i = 0; i < kMaxNotes; ++i) {
+    uint8_t index = index_mod(oldest_index_ + i);
+    PackedNote& packed_note = storage.looper_notes[index];
+    Note& note = notes_[index];
 
-};
-
-void Deck::UnpackNotes() {
-  for (uint8_t i = 0; i < storage_->size; ++i) {
-    uint8_t index = index_mod(storage_->oldest_index + i);
-    Note::Unpacked& note = notes_[index];
-    
-    std::bitset<kMaxNotes * Note::kBitsTotal> 
-    note.on_pos   = (maskPos & data >> ON_POS   ).to_ulong();
-    note.off_pos  = (maskPos & data >> OFF_POS  ).to_ulong();
-    note.pitch    = (maskMIDI & data >> PITCH   ).to_ulong();
-    note.velocity = (maskMIDI & data >> VELOCITY).to_ulong();
-
-    Advance(note.on_pos, false);
-    LinkOn(index);
-    Advance(note.off_pos, false);
-    LinkOff(index);
+    packed_note.on_pos    = note.on_pos   >> (16 - kBitsPos);
+    packed_note.off_pos   = note.off_pos  >> (16 - kBitsPos);
+    packed_note.pitch     = note.pitch;
+    packed_note.velocity  = note.velocity;
   }
 }
 
@@ -108,14 +108,14 @@ void Deck::Clock() {
 }
 
 void Deck::RemoveOldestNote() {
-  RemoveNote(storage_->oldest_index);
-  if (storage_->size) {
-    storage_->oldest_index = index_mod(storage_->oldest_index + 1);
+  RemoveNote(oldest_index_);
+  if (size_) {
+    oldest_index_ = index_mod(oldest_index_ + 1);
   }
 }
 
 void Deck::RemoveNewestNote() {
-  RemoveNote(index_mod(storage_->oldest_index + storage_->size - 1));
+  RemoveNote(index_mod(oldest_index_ + size_ - 1));
 }
 
 uint8_t Deck::PeekNextOn() const {
@@ -145,7 +145,7 @@ void Deck::Advance(uint16_t new_pos, bool play) {
     if (seen_index == kNullIndex) {
       seen_index = next_index;
     }
-    const Note::Unpacked& next_note = notes_[next_index];
+    const Note& next_note = notes_[next_index];
     if (!Passed(next_note.off_pos, pos_, new_pos)) {
       break;
     }
@@ -165,7 +165,7 @@ void Deck::Advance(uint16_t new_pos, bool play) {
     if (seen_index == kNullIndex) {
       seen_index = next_index;
     }
-    const Note::Unpacked& next_note = notes_[next_index];
+    const Note& next_note = notes_[next_index];
     if (!Passed(next_note.on_pos, pos_, new_pos)) {
       break;
     }
@@ -189,19 +189,19 @@ void Deck::Advance(uint16_t new_pos, bool play) {
 }
 
 uint8_t Deck::RecordNoteOn(uint8_t pitch, uint8_t velocity) {
-  if (storage_->size == kMaxNotes) {
+  if (size_ == kMaxNotes) {
     RemoveOldestNote();
   }
-  uint8_t index = index_mod(storage_->oldest_index + storage_->size);
+  uint8_t index = index_mod(oldest_index_ + size_);
 
   LinkOn(index);
-  Note::Unpacked& note = notes_[index];
+  Note& note = notes_[index];
   note.pitch = pitch;
   note.velocity = velocity;
   note.on_pos = pos_;
   note.off_pos = pos_; // TODO wtf
   next_link_[index].off = kNullIndex;
-  storage_->size++;
+  size_++;
 
   return index;
 }
@@ -219,13 +219,13 @@ bool Deck::RecordNoteOff(uint8_t index) {
 }
 
 bool Deck::NoteIsPlaying(uint8_t index) const {
-  const Note::Unpacked& note = notes_[index];
+  const Note& note = notes_[index];
   if (next_link_[index].off == kNullIndex) { return false; }
   return Passed(pos_, note.on_pos, note.off_pos);
 }
 
 uint16_t Deck::NoteFractionCompleted(uint8_t index) const {
-  const Note::Unpacked& note = notes_[index];
+  const Note& note = notes_[index];
   uint16_t completed = pos_ - note.on_pos;
   uint16_t length = note.off_pos - 1 - note.on_pos;
   return (static_cast<uint32_t>(completed) << 16) / length;
@@ -236,7 +236,7 @@ uint8_t Deck::NotePitch(uint8_t index) const {
 }
 
 uint8_t Deck::NoteAgeOrdinal(uint8_t index) const {
-  return index_mod(index - storage_->oldest_index);
+  return index_mod(index - oldest_index_);
 }
 
 bool Deck::Passed(uint16_t target, uint16_t before, uint16_t after) const {
@@ -273,15 +273,15 @@ void Deck::RemoveNote(uint8_t target_index) {
   // Though this takes an arbitrary index, other methods like NoteAgeOrdinal
   // assume that notes are stored sequentially in memory, so removing a "middle"
   // note will cause problems
-  if (!storage_->size) {
+  if (!size_) {
     return;
   }
 
-  storage_->size--;
+  size_--;
   uint8_t search_prev_index;
   uint8_t search_next_index;
 
-  Note::Unpacked& target_note = notes_[target_index];
+  Note& target_note = notes_[target_index];
   if (NoteIsPlaying(target_index)) {
     part_->LooperPlayNoteOff(target_index, target_note.pitch);
   }

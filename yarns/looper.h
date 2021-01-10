@@ -38,11 +38,16 @@
 namespace yarns {
 
 class Part;
+struct PackedPart;
 
 namespace looper {
 
-const uint8_t kMaxNotes = 22; // TODO ugh
+const uint8_t kBitsNoteIndex = 5;
+STATIC_ASSERT(kBitsNoteIndex <= 8, bits);
 const uint8_t kNullIndex = UINT8_MAX;
+
+const uint8_t kMaxNotes = 31; // TODO ugh
+STATIC_ASSERT(kMaxNotes < (1 << kBitsNoteIndex), bits);
 
 struct Link {
   Link() {
@@ -53,51 +58,25 @@ struct Link {
   uint8_t off;
 };
 
-static const uint8_t kBitsPos = 13;
-static const uint8_t kBitsMIDI = 7;
-static const uint8_t kBitsTotal = kBitsPos * 2 + kBitsMIDI * 2;
-
-typedef std::bitset<kBitsTotal> tBag;
-static const tBag maskPos = tBag((1 << kBitsPos) - 1);
-static const tBag maskMIDI = tBag((1 << kBitsMIDI) - 1);
-
-enum StartBit {
-  ON_POS = kBitsTotal - kBitsPos,
-  OFF_POS = ON_POS - kBitsPos,
-  PITCH = OFF_POS - kBitsMIDI,
-  VELOCITY = PITCH - kBitsMIDI,
-};
-STATIC_ASSERT(VELOCITY == 0, bits);
-
-namespace Note {
-
-
-
-  struct Packed;
-
-  struct Unpacked {
-    Unpacked() { }
-    Packed Pack();
-    uint16_t on_pos;
-    uint16_t off_pos;
-    uint8_t pitch;
-    uint8_t velocity;
-  };
-
-  
-  struct Packed {
-    Packed() { }
-    Unpacked Unpack();
-    tBag data;
-  };
-
+struct Note {
+  Note() { }
+  uint16_t on_pos;
+  uint16_t off_pos;
+  uint8_t pitch;
+  uint8_t velocity;
 };
 
-struct Storage {
-  uint8_t oldest_index;
-  uint8_t size;
-  std::bitset<kMaxNotes * Note::kBitsTotal> packed_notes;
-};
+const uint8_t kBitsPos = 13;
+const uint8_t kBitsMIDI = 7;
+
+struct PackedNote {
+  PackedNote() { }
+  unsigned int
+    on_pos    : kBitsPos,
+    off_pos   : kBitsPos,
+    pitch     : kBitsMIDI,
+    velocity  : kBitsMIDI;
+}__attribute__((packed));
 
 class Deck {
  public:
@@ -109,7 +88,8 @@ class Deck {
 
   void RemoveAll();
   void Rewind();
-  void UnpackNotes();
+  void Unpack(PackedPart& storage);
+  void Pack(PackedPart& storage);
 
   inline uint16_t phase() const {
     return pos_;
@@ -144,7 +124,7 @@ class Deck {
   uint8_t NotePitch(uint8_t index) const;
   uint8_t NoteAgeOrdinal(uint8_t index) const;
 
-  inline const Note::Unpacked& note_at(uint8_t index) const {
+  inline const Note& note_at(uint8_t index) const {
     return notes_[index];
   }
 
@@ -160,9 +140,10 @@ class Deck {
   void RemoveNote(uint8_t index);
 
   Part* part_;
-  Storage* storage_;
 
-  Note::Unpacked notes_[kMaxNotes];
+  Note notes_[kMaxNotes];
+  uint8_t oldest_index_;
+  uint8_t size_;
   // Linked lists track current and upcoming notes
   Link head_; // Points to the latest on/off
   Link next_link_[kMaxNotes];

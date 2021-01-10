@@ -42,7 +42,7 @@ namespace yarns {
 
 class Voice;
 
-const uint8_t kNumSteps = 24;
+const uint8_t kNumSteps = 31;
 const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
@@ -142,6 +142,84 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 
+struct PackedPart {
+  // Currently has 1 bit to spare
+
+  struct PackedSequencerStep {
+    unsigned int
+      pitch : 8,
+      velocity: 8;
+  }__attribute__((packed));
+  PackedSequencerStep sequencer_steps[kNumSteps];
+
+  looper::PackedNote looper_notes[looper::kMaxNotes];
+  unsigned int
+    looper_oldest_index : looper::kBitsNoteIndex,
+    looper_size         : looper::kBitsNoteIndex;
+
+  signed int
+    // MidiSettings
+    transpose_octaves : 5,
+    // VoicingSettings
+    tuning_transpose : 7,
+    tuning_fine : 7,
+    oscillator_pw_mod : 7;
+
+  // MidiSettings
+  unsigned int
+    channel : 5,
+    min_note : 7,
+    max_note : 7,
+    min_velocity : 7,
+    max_velocity : 7,
+    out_mode : 2,
+    sustain_mode : 3,
+    play_mode : 2,
+    input_response : 2,
+    sustain_polarity : 1;
+
+  // VoicingSettings
+  unsigned int
+    allocation_mode : 4,
+    allocation_priority : 2,
+    portamento : 7,
+    legato_mode : 2,
+    pitch_bend_range : 5,
+    vibrato_range : 4,
+    vibrato_initial : 7,
+    vibrato_control_source : 1,
+    modulation_rate : 7,
+    tuning_root : 4,
+    tuning_system : 6,
+    trigger_duration : 7, // TODO seems ridiculous -- coarsen?
+    trigger_scale : 1,
+    trigger_shape : 3,
+    aux_cv : 4, // TODO includes room for envelope
+    audio_mode : 3,
+    aux_cv_2 : 4, // TODO includes room for envelope
+    tuning_factor : 4,
+    oscillator_pw_initial : 7,
+    envelope_attack : 7,
+    envelope_decay : 7,
+    envelope_sustain : 7,
+    envelope_release : 7;
+
+  // SequencerSettings
+  unsigned int
+    clock_division : 5,
+    gate_length : 6,
+    arp_range : 3, // TODO can shave 1 by starting at 0
+    arp_direction : 3,
+    arp_pattern : 5,
+    euclidean_length : 5,
+    euclidean_fill : 5,
+    euclidean_rotate : 5,
+    num_steps : 5, // TODO see where this lands!
+    clock_quantization : 1,
+    loop_length : 7; // TODO wasteful
+
+}__attribute__((packed));
+
 struct MidiSettings {
   uint8_t channel;
   uint8_t min_note;
@@ -155,6 +233,35 @@ struct MidiSettings {
   uint8_t input_response;
   uint8_t sustain_polarity;
   uint8_t padding[5];
+
+  void Pack(PackedPart& packed) {
+    packed.channel = channel;
+    packed.min_note = min_note;
+    packed.max_note = max_note;
+    packed.min_velocity = min_velocity;
+    packed.max_velocity = max_velocity;
+    packed.out_mode = out_mode;
+    packed.sustain_mode = sustain_mode;
+    packed.transpose_octaves = transpose_octaves;
+    packed.play_mode = play_mode;
+    packed.input_response = input_response;
+    packed.sustain_polarity = sustain_polarity;
+  }
+
+  void Unpack(PackedPart& packed) {
+    channel = packed.channel;
+    min_note = packed.min_note;
+    max_note = packed.max_note;
+    min_velocity = packed.min_velocity;
+    max_velocity = packed.max_velocity;
+    out_mode = packed.out_mode;
+    sustain_mode = packed.sustain_mode;
+    transpose_octaves = packed.transpose_octaves;
+    play_mode = packed.play_mode;
+    input_response = packed.input_response;
+    sustain_polarity = packed.sustain_polarity;
+  }
+
 };
 
 struct VoicingSettings {
@@ -185,6 +292,65 @@ struct VoicingSettings {
   uint8_t envelope_sustain;
   uint8_t envelope_release;
   uint8_t padding[6];
+
+  void Pack(PackedPart& packed) {
+    packed.allocation_mode = allocation_mode;
+    packed.allocation_priority = allocation_priority;
+    packed.portamento = portamento;
+    packed.legato_mode = legato_mode;
+    packed.pitch_bend_range = pitch_bend_range;
+    packed.vibrato_range = vibrato_range;
+    packed.vibrato_initial = vibrato_initial;
+    packed.vibrato_control_source = vibrato_control_source;
+    packed.modulation_rate = modulation_rate;
+    packed.tuning_transpose = tuning_transpose;
+    packed.tuning_fine = tuning_fine;
+    packed.tuning_root = tuning_root;
+    packed.tuning_system = tuning_system;
+    packed.trigger_duration = trigger_duration;
+    packed.trigger_scale = trigger_scale;
+    packed.trigger_shape = trigger_shape;
+    packed.aux_cv = aux_cv;
+    packed.audio_mode = audio_mode;
+    packed.aux_cv_2 = aux_cv_2;
+    packed.tuning_factor = tuning_factor;
+    packed.oscillator_pw_initial = oscillator_pw_initial;
+    packed.oscillator_pw_mod = oscillator_pw_mod;
+    packed.envelope_attack = envelope_attack;
+    packed.envelope_decay = envelope_decay;
+    packed.envelope_sustain = envelope_sustain;
+    packed.envelope_release = envelope_release;
+  }
+
+  void Unpack(PackedPart& packed) {
+    allocation_mode = packed.allocation_mode;
+    allocation_priority = packed.allocation_priority;
+    portamento = packed.portamento;
+    legato_mode = packed.legato_mode;
+    pitch_bend_range = packed.pitch_bend_range;
+    vibrato_range = packed.vibrato_range;
+    vibrato_initial = packed.vibrato_initial;
+    vibrato_control_source = packed.vibrato_control_source;
+    modulation_rate = packed.modulation_rate;
+    tuning_transpose = packed.tuning_transpose;
+    tuning_fine = packed.tuning_fine;
+    tuning_root = packed.tuning_root;
+    tuning_system = packed.tuning_system;
+    trigger_duration = packed.trigger_duration;
+    trigger_scale = packed.trigger_scale;
+    trigger_shape = packed.trigger_shape;
+    aux_cv = packed.aux_cv;
+    audio_mode = packed.audio_mode;
+    aux_cv_2 = packed.aux_cv_2;
+    tuning_factor = packed.tuning_factor;
+    oscillator_pw_initial = packed.oscillator_pw_initial;
+    oscillator_pw_mod = packed.oscillator_pw_mod;
+    envelope_attack = packed.envelope_attack;
+    envelope_decay = packed.envelope_decay;
+    envelope_sustain = packed.envelope_sustain;
+    envelope_release = packed.envelope_release;
+  }
+
 };
 
 
@@ -296,8 +462,50 @@ struct SequencerSettings {
   uint8_t num_steps;
   uint8_t clock_quantization;
   uint8_t loop_length;
+  uint8_t padding_fields[5];
+
   SequencerStep step[kNumSteps];
-  looper::Storage looper_storage;
+  uint8_t padding_steps[2];
+
+  void Pack(PackedPart& packed) {
+    for (uint8_t i = 0; i < kNumSteps; i++) {
+      PackedPart::PackedSequencerStep& packed_step = packed.sequencer_steps[i];
+      packed_step.pitch = step[i].data[0];
+      packed_step.velocity = step[i].data[1];
+    }
+
+    packed.clock_division = clock_division;
+    packed.gate_length = gate_length;
+    packed.arp_range = arp_range;
+    packed.arp_direction = arp_direction;
+    packed.arp_pattern = arp_pattern;
+    packed.euclidean_length = euclidean_length;
+    packed.euclidean_fill = euclidean_fill;
+    packed.euclidean_rotate = euclidean_rotate;
+    packed.num_steps = num_steps;
+    packed.clock_quantization = clock_quantization;
+    packed.loop_length = loop_length;
+  }
+
+  void Unpack(PackedPart& packed) {
+    for (uint8_t i = 0; i < kNumSteps; i++) {
+      PackedPart::PackedSequencerStep& packed_step = packed.sequencer_steps[i];
+      step[i].data[0] = packed_step.pitch;
+      step[i].data[1] = packed_step.velocity;
+    }
+
+    clock_division = packed.clock_division;
+    gate_length = packed.gate_length;
+    arp_range = packed.arp_range;
+    arp_direction = packed.arp_direction;
+    arp_pattern = packed.arp_pattern;
+    euclidean_length = packed.euclidean_length;
+    euclidean_fill = packed.euclidean_fill;
+    euclidean_rotate = packed.euclidean_rotate;
+    num_steps = packed.num_steps;
+    clock_quantization = packed.clock_quantization;
+    loop_length = packed.loop_length;
+  }
   
   int16_t first_note() const {
     for (uint8_t i = 0; i < num_steps; ++i) {
@@ -511,7 +719,7 @@ class Part {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Peek at next looper note
       uint8_t next_on_index = looper_.PeekNextOn();
-      const looper::Note::Unpacked& next_on_note = looper_.note_at(next_on_index);
+      const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
       next_step = BuildArpState(next_step).step;
       if (next_step.is_continuation()) {
@@ -706,10 +914,22 @@ class Part {
     seq_rec_step_ += n;
     seq_rec_step_ = stmlib::modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
   }
+
+  void Pack(PackedPart& packed) {
+    looper_.Pack(packed);
+    midi_.Pack(packed);
+    voicing_.Pack(packed);
+    seq_.Pack(packed);
+  }
+
+  void Unpack(PackedPart& packed) {
+    looper_.Unpack(packed);
+    midi_.Unpack(packed);
+    voicing_.Unpack(packed);
+    seq_.Unpack(packed);
+  }
   
   void AfterDeserialize() {
-    looper_.UnpackNotes();
-
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);
     CONSTRAIN(seq_.loop_length, 1, 127);
