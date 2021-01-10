@@ -297,7 +297,7 @@ struct SequencerSettings {
   uint8_t clock_quantization;
   uint8_t loop_length;
   SequencerStep step[kNumSteps];
-  looper::Tape looper_tape;
+  looper::Storage looper_storage;
   
   int16_t first_note() const {
     for (uint8_t i = 0; i < num_steps; ++i) {
@@ -511,7 +511,7 @@ class Part {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Peek at next looper note
       uint8_t next_on_index = looper_.PeekNextOn();
-      const looper::Note& next_on_note = looper_.note_at(next_on_index);
+      const looper::Note::Unpacked& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
       next_step = BuildArpState(next_step).step;
       if (next_step.is_continuation()) {
@@ -708,7 +708,7 @@ class Part {
   }
   
   void AfterDeserialize() {
-    looper_.RebuildLinks();
+    looper_.UnpackNotes();
 
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);

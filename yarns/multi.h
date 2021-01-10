@@ -364,12 +364,13 @@ class Multi {
           sizeof(part_[i].voicing_settings()) +
           sizeof(part_[i].sequencer_settings())
         );
-      // char (*__kaboom)[something] = 1;
-      STATIC_ASSERT(size == 1024, buffer_size_exceeded);
-      STATIC_ASSERT(size <= PAGE_SIZE, buffer_size_exceeded);
+      char (*__kaboom)[sizeof(part_[i].sequencer_settings().looper_storage)] = 1;
+      //STATIC_ASSERT(size == 1000, buffer_size_exceeded);
+      //STATIC_ASSERT(size <= kMaxSize, buffer_size_exceeded);
+
       stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
       stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
-      stream_buffer->Write(part_[i].sequencer_settings()); // 176 bytes
+      stream_buffer->Write(part_[i].sequencer_settings()); // 200 bytes
     }
   };
   

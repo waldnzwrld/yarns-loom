@@ -31,6 +31,7 @@
 
 #include "stmlib/stmlib.h"
 #include <algorithm>
+#include <bitset> 
 
 #include "yarns/synced_lfo.h"
 
@@ -40,7 +41,7 @@ class Part;
 
 namespace looper {
 
-const uint8_t kMaxNotes = 23; // TODO ugh
+const uint8_t kMaxNotes = 22; // TODO ugh
 const uint8_t kNullIndex = UINT8_MAX;
 
 struct Link {
@@ -52,18 +53,50 @@ struct Link {
   uint8_t off;
 };
 
-struct Note {
-  Note() { }
-  uint16_t on_pos;
-  uint16_t off_pos;
-  uint8_t pitch;
-  uint8_t velocity;
+static const uint8_t kBitsPos = 13;
+static const uint8_t kBitsMIDI = 7;
+static const uint8_t kBitsTotal = kBitsPos * 2 + kBitsMIDI * 2;
+
+typedef std::bitset<kBitsTotal> tBag;
+static const tBag maskPos = tBag((1 << kBitsPos) - 1);
+static const tBag maskMIDI = tBag((1 << kBitsMIDI) - 1);
+
+enum StartBit {
+  ON_POS = kBitsTotal - kBitsPos,
+  OFF_POS = ON_POS - kBitsPos,
+  PITCH = OFF_POS - kBitsMIDI,
+  VELOCITY = PITCH - kBitsMIDI,
+};
+STATIC_ASSERT(VELOCITY == 0, bits);
+
+namespace Note {
+
+
+
+  struct Packed;
+
+  struct Unpacked {
+    Unpacked() { }
+    Packed Pack();
+    uint16_t on_pos;
+    uint16_t off_pos;
+    uint8_t pitch;
+    uint8_t velocity;
+  };
+
+  
+  struct Packed {
+    Packed() { }
+    Unpacked Unpack();
+    tBag data;
+  };
+
 };
 
-struct Tape {
+struct Storage {
   uint8_t oldest_index;
   uint8_t size;
-  Note notes[kMaxNotes];
+  std::bitset<kMaxNotes * Note::kBitsTotal> packed_notes;
 };
 
 class Deck {
@@ -76,7 +109,7 @@ class Deck {
 
   void RemoveAll();
   void Rewind();
-  void RebuildLinks();
+  void UnpackNotes();
 
   inline uint16_t phase() const {
     return pos_;
@@ -111,8 +144,8 @@ class Deck {
   uint8_t NotePitch(uint8_t index) const;
   uint8_t NoteAgeOrdinal(uint8_t index) const;
 
-  inline const Note& note_at(uint8_t index) const {
-    return tape_->notes[index];
+  inline const Note::Unpacked& note_at(uint8_t index) const {
+    return notes_[index];
   }
 
  private:
@@ -126,9 +159,10 @@ class Deck {
   void LinkOff(uint8_t index);
   void RemoveNote(uint8_t index);
 
-  Tape* tape_;
   Part* part_;
+  Storage* storage_;
 
+  Note::Unpacked notes_[kMaxNotes];
   // Linked lists track current and upcoming notes
   Link head_; // Points to the latest on/off
   Link next_link_[kMaxNotes];

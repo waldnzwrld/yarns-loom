@@ -38,6 +38,8 @@
 
 namespace yarns {
 
+const uint16_t kMaxSize = PAGE_SIZE - 2;
+
 class StorageManager {
  public:
   StorageManager() { }
@@ -59,7 +61,7 @@ class StorageManager {
   void DeserializeMulti();
 
  private:
-  stmlib::StreamBuffer<PAGE_SIZE> stream_buffer_;
+  stmlib::StreamBuffer<kMaxSize> stream_buffer_;
   stmlib::Storage<0x8020000, 9> storage_;
   
   DISALLOW_COPY_AND_ASSIGN(StorageManager);

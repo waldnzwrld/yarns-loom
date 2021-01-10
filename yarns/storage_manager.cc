@@ -44,6 +44,7 @@ bool StorageManager::LoadMulti(uint8_t slot) {
   stream_buffer_.Rewind();
   multi.Serialize(&stream_buffer_);
   uint32_t expected_size = stream_buffer_.position();
+  // TODO did this wrap to 0? no evidence but: reducing by 1 loop step makes preset save/load work again
   
   if (!storage_.Load(stream_buffer_.mutable_bytes(), expected_size, 1 + slot)) {
     return false;
