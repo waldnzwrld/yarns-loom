@@ -31,7 +31,6 @@
 
 #include "stmlib/stmlib.h"
 #include <algorithm>
-#include <bitset> 
 
 #include "yarns/synced_lfo.h"
 
@@ -43,10 +42,10 @@ struct PackedPart;
 namespace looper {
 
 const uint8_t kBitsNoteIndex = 5;
-STATIC_ASSERT(kBitsNoteIndex <= 8, bits);
+STATIC_ASSERT(kBitsNoteIndex <= 7, bits); // Leave room for kNullIndex
 const uint8_t kNullIndex = UINT8_MAX;
 
-const uint8_t kMaxNotes = 31; // TODO ugh
+const uint8_t kMaxNotes = 31;
 STATIC_ASSERT(kMaxNotes < (1 << kBitsNoteIndex), bits);
 
 struct Link {
@@ -100,8 +99,9 @@ class Deck {
     if (
       // phase has definitely changed, or
       pos_ != new_phase ||
-      // The 32-bit increment is large enough to produce a 16-bit change, indicating that the phase has wrapped exactly around
-      lfo_.GetPhaseIncrement() > UINT16_MAX
+      // Increment is large enough to produce a 16-bit change, indicating that
+      // the phase has wrapped exactly around
+      (lfo_.GetPhaseIncrement() >> 16) > 0
     ) {
       needs_advance_ = true;
     }
