@@ -799,7 +799,7 @@ class Part {
   // Tracks which looper notes are currently playing, so they can be turned off later
   uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
 
-  uint8_t output_pitch_for_looper_note_[kNoteStackSize];
+  uint8_t output_pitch_for_looper_note_[looper::kMaxNotes];
 
   uint16_t gate_length_counter_;
   
