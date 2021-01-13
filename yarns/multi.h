@@ -62,6 +62,24 @@ struct MultiSettings {
   uint8_t padding[10];
 };
 
+struct PackedSettings {
+  unsigned int
+    layout : 4,
+    clock_tempo : 8,
+    clock_swing : 7,
+    clock_input_division : 3, // can 0-index
+    clock_output_division : 5,
+    clock_bar_duration : 6, // barely
+    clock_override : 1,
+    remote_control_channel : 5, // barely
+    nudge_first_tick : 1,
+    clock_manual_start : 1;
+
+  int8_t custom_pitch_table[12]; // 7 each, looks like?
+
+  PackedPart parts[kNumParts];
+}__attribute__((packed));
+
 enum Tempo {
   TEMPO_EXTERNAL = 39
 };
@@ -354,33 +372,62 @@ class Multi {
   void GetAudioSource(bool* audio_source);
   void GetLedsBrightness(uint8_t* brightness);
 
+  void Pack(PackedSettings& packed) {
+    packed.layout = settings_.layout;
+    packed.clock_tempo = settings_.clock_tempo;
+    packed.clock_swing = settings_.clock_swing;
+    packed.clock_input_division = settings_.clock_input_division;
+    packed.clock_output_division = settings_.clock_output_division;
+    packed.clock_bar_duration = settings_.clock_bar_duration;
+    packed.clock_override = settings_.clock_override;
+    packed.remote_control_channel = settings_.remote_control_channel;
+    packed.nudge_first_tick = settings_.nudge_first_tick;
+    packed.clock_manual_start = settings_.clock_manual_start;
+    for (uint8_t i = 0; i < 12; i++) {
+      packed.custom_pitch_table[i] = settings_.custom_pitch_table[i];
+    }
+    for (uint8_t i = 0; i < kNumParts; i++) {
+      part_[i].Pack(packed.parts[i]);
+    }
+  }
+
+  void Unpack(PackedSettings& packed) {
+    settings_.layout = packed.layout;
+    settings_.clock_tempo = packed.clock_tempo;
+    settings_.clock_swing = packed.clock_swing;
+    settings_.clock_input_division = packed.clock_input_division;
+    settings_.clock_output_division = packed.clock_output_division;
+    settings_.clock_bar_duration = packed.clock_bar_duration;
+    settings_.clock_override = packed.clock_override;
+    settings_.remote_control_channel = packed.remote_control_channel;
+    settings_.nudge_first_tick = packed.nudge_first_tick;
+    settings_.clock_manual_start = packed.clock_manual_start;
+    for (uint8_t i = 0; i < 12; i++) {
+      settings_.custom_pitch_table[i] = packed.custom_pitch_table[i];
+    }
+    for (uint8_t i = 0; i < kNumParts; i++) {
+      part_[i].Unpack(packed.parts[i]);
+    }
+  }
+
   template<typename T>
   void Serialize(T* stream_buffer) {
-    stream_buffer->Write(settings());
-    for (uint8_t i = 0; i < kNumParts; ++i) {
-      PackedPart packed;
-      part_[i].Pack(packed);
-      stream_buffer->Write(packed);
+    const uint16_t size = sizeof(PackedSettings);
+    // char (*__kaboom)[size] = 1;
+    STATIC_ASSERT(size == 1006, buffer_size_exceeded);
+    STATIC_ASSERT(size <= kMaxSize, buffer_size_exceeded);
 
-      const uint16_t size = sizeof(settings()) + // 32 bytes
-        kNumParts * ( // Max 248 bytes
-          sizeof(PackedPart)
-        );
-      // char (*__kaboom)[size] = 1;
-      STATIC_ASSERT(size == 1020, buffer_size_exceeded);
-      STATIC_ASSERT(size <= kMaxSize, buffer_size_exceeded);
-    }
+    PackedSettings packed;
+    Pack(packed);
+    stream_buffer->Write(&packed);
   };
   
   template<typename T>
   void Deserialize(T* stream_buffer) {
     Stop();
-    stream_buffer->Read(mutable_settings());
-    for (uint8_t i = 0; i < kNumParts; ++i) {
-      PackedPart packed;
-      stream_buffer->Read(&packed);
-      part_[i].Unpack(packed);
-    }
+    PackedSettings packed;
+    stream_buffer->Read(&packed);
+    Unpack(packed);
     AfterDeserialize();
   };
   
