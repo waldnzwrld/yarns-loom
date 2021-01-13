@@ -298,10 +298,7 @@ class Multi {
       return;
     }
     for (uint8_t j = 0; j < num_active_parts_; ++j) {
-      if (
-        !part_[j].looped() ||
-        part_[j].midi_settings().play_mode == PLAY_MODE_MANUAL
-      ) { continue; }
+      if (!part_[j].looper_in_use()) { continue; }
       part_[j].mutable_looper().AdvanceToPresent();
     }
   }

@@ -789,7 +789,7 @@ void Multi::StartRecording(uint8_t part) {
       StopRecording(recording_part_);
     }
   }
-  if (part_[part].looped()) {
+  if (part_[part].looper_in_use()) {
     // Looper needs a running clock
     Start(false);
   }
