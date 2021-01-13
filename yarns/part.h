@@ -142,6 +142,7 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 
+const uint8_t kEnvelopeModBits = 5;
 struct PackedPart {
   // Currently has 1 bit to spare
 
@@ -199,10 +200,14 @@ struct PackedPart {
     aux_cv_2 : 4, // TODO includes room for envelope
     tuning_factor : 4,
     oscillator_pw_initial : 7,
-    envelope_attack : 7,
-    envelope_decay : 7,
-    envelope_sustain : 7,
-    envelope_release : 7;
+    env_init_attack : 7,
+    env_init_decay : 7,
+    env_init_sustain : 7,
+    env_init_release : 7,
+    env_mod_attack : kEnvelopeModBits,
+    env_mod_decay : kEnvelopeModBits,
+    env_mod_sustain : kEnvelopeModBits,
+    env_mod_release : kEnvelopeModBits;
 
   // SequencerSettings
   unsigned int
@@ -287,11 +292,15 @@ struct VoicingSettings {
   uint8_t tuning_factor;
   uint8_t oscillator_pw_initial;
   int8_t oscillator_pw_mod;
-  uint8_t envelope_attack;
-  uint8_t envelope_decay;
-  uint8_t envelope_sustain;
-  uint8_t envelope_release;
-  uint8_t padding[6];
+  uint8_t env_init_attack;
+  uint8_t env_init_decay;
+  uint8_t env_init_sustain;
+  uint8_t env_init_release;
+  uint8_t env_mod_attack;
+  uint8_t env_mod_decay;
+  uint8_t env_mod_sustain;
+  uint8_t env_mod_release;
+  uint8_t padding[2];
 
   void Pack(PackedPart& packed) {
     packed.allocation_mode = allocation_mode;
@@ -316,10 +325,14 @@ struct VoicingSettings {
     packed.tuning_factor = tuning_factor;
     packed.oscillator_pw_initial = oscillator_pw_initial;
     packed.oscillator_pw_mod = oscillator_pw_mod;
-    packed.envelope_attack = envelope_attack;
-    packed.envelope_decay = envelope_decay;
-    packed.envelope_sustain = envelope_sustain;
-    packed.envelope_release = envelope_release;
+    packed.env_init_attack = env_init_attack;
+    packed.env_init_decay = env_init_decay;
+    packed.env_init_sustain = env_init_sustain;
+    packed.env_init_release = env_init_release;
+    packed.env_mod_attack = env_mod_attack;
+    packed.env_mod_decay = env_mod_decay;
+    packed.env_mod_sustain = env_mod_sustain;
+    packed.env_mod_release = env_mod_release;
   }
 
   void Unpack(PackedPart& packed) {
@@ -345,10 +358,14 @@ struct VoicingSettings {
     tuning_factor = packed.tuning_factor;
     oscillator_pw_initial = packed.oscillator_pw_initial;
     oscillator_pw_mod = packed.oscillator_pw_mod;
-    envelope_attack = packed.envelope_attack;
-    envelope_decay = packed.envelope_decay;
-    envelope_sustain = packed.envelope_sustain;
-    envelope_release = packed.envelope_release;
+    env_init_attack = packed.env_init_attack;
+    env_init_decay = packed.env_init_decay;
+    env_init_sustain = packed.env_init_sustain;
+    env_init_release = packed.env_init_release;
+    env_mod_attack = packed.env_mod_attack;
+    env_mod_decay = packed.env_mod_decay;
+    env_mod_sustain = packed.env_mod_sustain;
+    env_mod_release = packed.env_mod_release;
   }
 
 };
@@ -389,10 +406,14 @@ enum PartSetting {
   PART_VOICING_TUNING_FACTOR,
   PART_VOICING_OSCILLATOR_PW_INITIAL,
   PART_VOICING_OSCILLATOR_PW_MOD,
-  PART_VOICING_ENVELOPE_ATTACK,
-  PART_VOICING_ENVELOPE_DECAY,
-  PART_VOICING_ENVELOPE_SUSTAIN,
-  PART_VOICING_ENVELOPE_RELEASE,
+  PART_VOICING_ENV_INIT_ATTACK,
+  PART_VOICING_ENV_INIT_DECAY,
+  PART_VOICING_ENV_INIT_SUSTAIN,
+  PART_VOICING_ENV_INIT_RELEASE,
+  PART_VOICING_ENV_MOD_ATTACK,
+  PART_VOICING_ENV_MOD_DECAY,
+  PART_VOICING_ENV_MOD_SUSTAIN,
+  PART_VOICING_ENV_MOD_RELEASE,
   PART_VOICING_LAST = PART_VOICING_ALLOCATION_MODE + sizeof(VoicingSettings) - 1,
   PART_SEQUENCER_CLOCK_DIVISION,
   PART_SEQUENCER_GATE_LENGTH,
@@ -956,6 +977,7 @@ class Part {
   void ReleaseLatchedNotes(PressedKeys &keys);
   void DispatchSortedNotes(bool unison, bool force_legato);
   void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato);
+  void VoiceNoteOnWithADSR(Voice* voice, uint8_t pitch, uint8_t velocity, uint8_t portamento, bool trigger);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;

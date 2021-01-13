@@ -411,7 +411,7 @@ class Multi {
   void Serialize(T* stream_buffer) {
     const uint16_t size = sizeof(PackedSettings);
     // char (*__kaboom)[size] = 1;
-    STATIC_ASSERT(size == 1006, buffer_size_exceeded);
+    STATIC_ASSERT(size == 1018, buffer_size_exceeded);
     STATIC_ASSERT(size <= kMaxSize, buffer_size_exceeded);
 
     PackedSettings packed;
