@@ -132,6 +132,8 @@ static const SettingIndex menu_live_para[] = {
 };
 
 static const SettingIndex menu_live_quad_triggers[] = {
+  SETTING_MENU_SETUP,
+  SETTING_MENU_ENVELOPE,
   SETTING_VOICING_TRIGGER_DURATION,
   SETTING_VOICING_TRIGGER_SCALE,
   SETTING_VOICING_TRIGGER_SHAPE,
