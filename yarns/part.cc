@@ -96,14 +96,14 @@ void Part::Init() {
   voicing_.tuning_factor = 0;
   voicing_.audio_mode = AUDIO_MODE_OFF;
 
-  voicing_.env_init_attack = 40;
+  voicing_.env_init_attack = 60;
   voicing_.env_init_decay = 30;
   voicing_.env_init_sustain = 80;
-  voicing_.env_init_release = 105;
-  voicing_.env_mod_attack = -4;
+  voicing_.env_init_release = 80;
+  voicing_.env_mod_attack = -8;
   voicing_.env_mod_decay = -4;
-  voicing_.env_mod_sustain = 2;
-  voicing_.env_mod_release = -1;
+  voicing_.env_mod_sustain = 4;
+  voicing_.env_mod_release = 8;
 
   seq_.clock_division = clock_division::unity;
   seq_.gate_length = 3;
