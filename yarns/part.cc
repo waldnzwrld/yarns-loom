@@ -95,6 +95,8 @@ void Part::Init() {
   voicing_.tuning_factor = 0;
   voicing_.audio_mode = AUDIO_MODE_OFF;
 
+  voicing_.envelope_amplitude_init = 16;
+  voicing_.envelope_amplitude_mod = 24;
   voicing_.env_init_attack = 30;
   voicing_.env_init_decay = 20;
   voicing_.env_init_sustain = 40;
@@ -816,12 +818,17 @@ void Part::VoiceNoteOnWithADSR(
   uint8_t portamento,
   bool trigger
 ) {
+  int32_t amplitude_12bit = (voicing_.envelope_amplitude_init << 6) + vel * voicing_.envelope_amplitude_mod;
+  CONSTRAIN(amplitude_12bit, 0, (1 << 12) - 1)
+  voice->set_envelope_amplitude(amplitude_12bit << 4);
+
   voice->envelope()->SetADSR(
     modulate_7bit(voicing_.env_init_attack << 1, voicing_.env_mod_attack << 1, vel),
     modulate_7bit(voicing_.env_init_decay << 1, voicing_.env_mod_decay << 1, vel),
     modulate_7bit(voicing_.env_init_sustain << 1, voicing_.env_mod_sustain << 1, vel),
     modulate_7bit(voicing_.env_init_release << 1, voicing_.env_mod_release << 1, vel)
   );
+
   voice->NoteOn(pitch, vel, portamento, trigger);
 }
 

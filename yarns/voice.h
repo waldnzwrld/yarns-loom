@@ -219,8 +219,18 @@ class Voice {
     return &envelope_;
   }
 
+  inline void set_envelope_amplitude(uint16_t a) {
+    envelope_amplitude_ = a;
+  }
+
+  inline uint16_t scaled_envelope() {
+    uint32_t value = envelope_.value();
+    value = (value * envelope_amplitude_) >> 16;
+    return value;
+  }
+
   inline void RenderAudio(bool use_envelope) {
-    oscillator_.Render(audio_mode_, note_, gate_, use_envelope ? envelope_.value() : UINT16_MAX);
+    oscillator_.Render(audio_mode_, note_, gate_, use_envelope ? scaled_envelope() : UINT16_MAX);
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -273,6 +283,7 @@ class Voice {
   int8_t oscillator_pw_mod_;
   Oscillator oscillator_;
   Envelope envelope_;
+  uint16_t envelope_amplitude_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };

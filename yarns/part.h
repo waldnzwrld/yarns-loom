@@ -141,8 +141,6 @@ enum LegatoMode {
   LEGATO_MODE_ON,
   LEGATO_MODE_LAST
 };
-
-const uint8_t kEnvelopeModBits = 5;
 struct PackedPart {
   // Currently has 0 bits to spare
 
@@ -167,7 +165,7 @@ struct PackedPart {
     tuning_transpose : 7,
     tuning_fine : 7,
     oscillator_pw_mod : kTimbreBits,
-    oscillator_amp_mod : kTimbreBits,
+    envelope_amplitude_mod : kTimbreBits,
     env_mod_attack : kTimbreBits,
     env_mod_decay : kTimbreBits,
     env_mod_sustain : kTimbreBits,
@@ -206,7 +204,7 @@ struct PackedPart {
     aux_cv_2 : 4, // barely
     tuning_factor : 4,
     oscillator_pw_initial : kTimbreBits,
-    oscillator_amp_init : kTimbreBits,
+    envelope_amplitude_init : kTimbreBits,
     env_init_attack : kTimbreBits,
     env_init_decay : kTimbreBits,
     env_init_sustain : kTimbreBits,
@@ -294,6 +292,8 @@ struct VoicingSettings {
   uint8_t tuning_factor;
   uint8_t oscillator_pw_initial;
   int8_t oscillator_pw_mod;
+  uint8_t envelope_amplitude_init;
+  int8_t envelope_amplitude_mod;
   uint8_t env_init_attack;
   uint8_t env_init_decay;
   uint8_t env_init_sustain;
@@ -302,7 +302,7 @@ struct VoicingSettings {
   int8_t env_mod_decay;
   int8_t env_mod_sustain;
   int8_t env_mod_release;
-  uint8_t padding[2];
+  uint8_t padding[1];
 
   void Pack(PackedPart& packed) {
     packed.allocation_mode = allocation_mode;
@@ -405,6 +405,8 @@ enum PartSetting {
   PART_VOICING_TUNING_FACTOR,
   PART_VOICING_OSCILLATOR_PW_INITIAL,
   PART_VOICING_OSCILLATOR_PW_MOD,
+  PART_VOICING_ENVELOPE_AMPLITUDE_INIT,
+  PART_VOICING_ENVELOPE_AMPLITUDE_MOD,
   PART_VOICING_ENV_INIT_ATTACK,
   PART_VOICING_ENV_INIT_DECAY,
   PART_VOICING_ENV_INIT_SUSTAIN,
