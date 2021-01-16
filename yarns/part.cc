@@ -71,7 +71,7 @@ void Part::Init() {
   midi_.min_velocity = 0;
   midi_.max_velocity = 127;
   midi_.out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
-  midi_.sustain_mode = SUSTAIN_MODE_NORMAL;
+  midi_.sustain_mode = SUSTAIN_MODE_LATCH;
   midi_.sustain_polarity = 0;
   midi_.transpose_octaves = 0;
 
@@ -109,7 +109,7 @@ void Part::Init() {
   seq_.gate_length = 3;
   seq_.arp_range = 0;
   seq_.arp_direction = 0;
-  seq_.arp_pattern = 0;
+  seq_.arp_pattern = 1;
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   midi_.play_mode = PLAY_MODE_MANUAL;
   seq_.clock_quantization = 0;
