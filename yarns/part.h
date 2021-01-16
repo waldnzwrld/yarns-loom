@@ -164,7 +164,11 @@ struct PackedPart {
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
-    oscillator_pw_mod : 7;
+    oscillator_pw_mod : 7,
+    env_mod_attack : kEnvelopeModBits,
+    env_mod_decay : kEnvelopeModBits,
+    env_mod_sustain : kEnvelopeModBits,
+    env_mod_release : kEnvelopeModBits;
 
   // MidiSettings
   unsigned int
@@ -203,11 +207,7 @@ struct PackedPart {
     env_init_attack : 7,
     env_init_decay : 7,
     env_init_sustain : 7,
-    env_init_release : 7,
-    env_mod_attack : kEnvelopeModBits,
-    env_mod_decay : kEnvelopeModBits,
-    env_mod_sustain : kEnvelopeModBits,
-    env_mod_release : kEnvelopeModBits;
+    env_init_release : 7;
 
   // SequencerSettings
   unsigned int
@@ -296,10 +296,10 @@ struct VoicingSettings {
   uint8_t env_init_decay;
   uint8_t env_init_sustain;
   uint8_t env_init_release;
-  uint8_t env_mod_attack;
-  uint8_t env_mod_decay;
-  uint8_t env_mod_sustain;
-  uint8_t env_mod_release;
+  int8_t env_mod_attack;
+  int8_t env_mod_decay;
+  int8_t env_mod_sustain;
+  int8_t env_mod_release;
   uint8_t padding[2];
 
   void Pack(PackedPart& packed) {
@@ -977,6 +977,7 @@ class Part {
   void ReleaseLatchedNotes(PressedKeys &keys);
   void DispatchSortedNotes(bool unison, bool force_legato);
   void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato);
+  void VoiceNoteOnWithADSR(Voice* voice, int16_t pitch, uint8_t velocity, uint8_t portamento, bool trigger);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
