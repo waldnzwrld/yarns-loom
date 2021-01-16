@@ -419,7 +419,6 @@ class Multi {
     STATIC_ASSERT(size % 4 == 0, flash_word);
     STATIC_ASSERT(size <= kMaxSize, capacity);
     stream_buffer->Write(packed);
-    // stream_buffer->Write(size);
   };
   
   template<typename T>
