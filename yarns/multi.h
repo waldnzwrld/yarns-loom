@@ -56,7 +56,7 @@ struct PackedMulti {
     layout : 4,
     clock_tempo : 8,
     clock_swing : 7,
-    clock_input_division : 3, // can 0-index
+    clock_input_division : 3, // can 0-index for 1 fewer bit
     clock_output_division : 5,
     clock_bar_duration : 6, // barely
     clock_override : 1,
@@ -411,7 +411,7 @@ class Multi {
     }
     settings_.Pack(packed);
     const uint16_t size = sizeof(packed);
-    // char (*__kaboom)[size] = 1;
+    // char (*__debug)[size] = 1;
     STATIC_ASSERT(size == 1020, expected);
     STATIC_ASSERT(size % 4 == 0, flash_word);
     STATIC_ASSERT(size <= kMaxSize, capacity);
