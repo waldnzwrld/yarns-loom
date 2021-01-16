@@ -81,14 +81,13 @@ void Part::Init() {
   voicing_.portamento = 0;
   voicing_.pitch_bend_range = 2;
   voicing_.vibrato_range = 1;
-  voicing_.vibrato_initial = 0;
-  voicing_.vibrato_control_source = VIBRATO_CONTROL_SOURCE_MODWHEEL;
+  voicing_.vibrato_initial = 5;
   voicing_.modulation_rate = 50;
   voicing_.trigger_duration = 2;
   voicing_.aux_cv = MOD_AUX_MODULATION;
   voicing_.aux_cv_2 = MOD_AUX_VIBRATO_LFO;
-  voicing_.oscillator_pw_initial = 80;
-  voicing_.oscillator_pw_mod = 10;
+  voicing_.oscillator_pw_initial = 40;
+  voicing_.oscillator_pw_mod = 5;
   voicing_.tuning_transpose = 0;
   voicing_.tuning_fine = 0;
   voicing_.tuning_root = 0;
@@ -96,14 +95,14 @@ void Part::Init() {
   voicing_.tuning_factor = 0;
   voicing_.audio_mode = AUDIO_MODE_OFF;
 
-  voicing_.env_init_attack = 60;
-  voicing_.env_init_decay = 30;
-  voicing_.env_init_sustain = 80;
-  voicing_.env_init_release = 80;
-  voicing_.env_mod_attack = -8;
-  voicing_.env_mod_decay = -4;
-  voicing_.env_mod_sustain = 4;
-  voicing_.env_mod_release = 8;
+  voicing_.env_init_attack = 30;
+  voicing_.env_init_decay = 20;
+  voicing_.env_init_sustain = 40;
+  voicing_.env_init_release = 40;
+  voicing_.env_mod_attack = -16;
+  voicing_.env_mod_decay = -8;
+  voicing_.env_mod_sustain = 8;
+  voicing_.env_mod_release = 16;
 
   seq_.clock_division = clock_division::unity;
   seq_.gate_length = 3;
@@ -818,10 +817,10 @@ void Part::VoiceNoteOnWithADSR(
   bool trigger
 ) {
   voice->envelope()->SetADSR(
-    modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack << 2, vel),
-    modulate_7bit(voicing_.env_init_decay, voicing_.env_mod_decay << 2, vel),
-    modulate_7bit(voicing_.env_init_sustain, voicing_.env_mod_sustain << 2, vel),
-    modulate_7bit(voicing_.env_init_release, voicing_.env_mod_release << 2, vel)
+    modulate_7bit(voicing_.env_init_attack << 1, voicing_.env_mod_attack << 1, vel),
+    modulate_7bit(voicing_.env_init_decay << 1, voicing_.env_mod_decay << 1, vel),
+    modulate_7bit(voicing_.env_init_sustain << 1, voicing_.env_mod_sustain << 1, vel),
+    modulate_7bit(voicing_.env_init_release << 1, voicing_.env_mod_release << 1, vel)
   );
   voice->NoteOn(pitch, vel, portamento, trigger);
 }
@@ -978,7 +977,6 @@ void Part::TouchVoices() {
     voice_[i]->set_modulation_rate(voicing_.modulation_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_initial(voicing_.vibrato_initial);
-    voice_[i]->set_vibrato_control_source(voicing_.vibrato_control_source);
     voice_[i]->set_trigger_duration(voicing_.trigger_duration);
     voice_[i]->set_trigger_scale(voicing_.trigger_scale);
     voice_[i]->set_trigger_shape(voicing_.trigger_shape);
@@ -1019,7 +1017,6 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_MODULATION_RATE:
     case PART_VOICING_VIBRATO_RANGE:
     case PART_VOICING_VIBRATO_INITIAL:
-    case PART_VOICING_VIBRATO_CONTROL_SOURCE:
     case PART_VOICING_TRIGGER_DURATION:
     case PART_VOICING_TRIGGER_SHAPE:
     case PART_VOICING_TRIGGER_SCALE:

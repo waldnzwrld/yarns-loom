@@ -144,7 +144,7 @@ enum LegatoMode {
 
 const uint8_t kEnvelopeModBits = 5;
 struct PackedPart {
-  // Currently has 1 bit to spare
+  // Currently has 0 bits to spare
 
   struct PackedSequencerStep {
     unsigned int
@@ -158,17 +158,20 @@ struct PackedPart {
     looper_oldest_index : looper::kBitsNoteIndex,
     looper_size         : looper::kBitsNoteIndex;
 
+  static const uint8_t kTimbreBits = 6;
+
   signed int
     // MidiSettings
-    transpose_octaves : 5,
+    transpose_octaves : 3,
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
-    oscillator_pw_mod : 7,
-    env_mod_attack : kEnvelopeModBits,
-    env_mod_decay : kEnvelopeModBits,
-    env_mod_sustain : kEnvelopeModBits,
-    env_mod_release : kEnvelopeModBits;
+    oscillator_pw_mod : kTimbreBits,
+    oscillator_amp_mod : kTimbreBits,
+    env_mod_attack : kTimbreBits,
+    env_mod_decay : kTimbreBits,
+    env_mod_sustain : kTimbreBits,
+    env_mod_release : kTimbreBits;
 
   // MidiSettings
   unsigned int
@@ -191,23 +194,23 @@ struct PackedPart {
     legato_mode : 2,
     pitch_bend_range : 5,
     vibrato_range : 4,
-    vibrato_initial : 7,
-    vibrato_control_source : 1,
+    vibrato_initial : kTimbreBits,
     modulation_rate : 7,
     tuning_root : 4,
     tuning_system : 6,
-    trigger_duration : 7, // TODO seems ridiculous -- coarsen?
+    trigger_duration : 7, // probably excessive
     trigger_scale : 1,
     trigger_shape : 3,
-    aux_cv : 4, // TODO includes room for envelope
+    aux_cv : 4, // barely
     audio_mode : 3,
-    aux_cv_2 : 4, // TODO includes room for envelope
+    aux_cv_2 : 4, // barely
     tuning_factor : 4,
-    oscillator_pw_initial : 7,
-    env_init_attack : 7,
-    env_init_decay : 7,
-    env_init_sustain : 7,
-    env_init_release : 7;
+    oscillator_pw_initial : kTimbreBits,
+    oscillator_amp_init : kTimbreBits,
+    env_init_attack : kTimbreBits,
+    env_init_decay : kTimbreBits,
+    env_init_sustain : kTimbreBits,
+    env_init_release : kTimbreBits;
 
   // SequencerSettings
   unsigned int
@@ -219,9 +222,9 @@ struct PackedPart {
     euclidean_length : 5,
     euclidean_fill : 5,
     euclidean_rotate : 5,
-    num_steps : 5, // TODO see where this lands!
+    num_steps : 5,
     clock_quantization : 1,
-    loop_length : 7; // TODO wasteful
+    loop_length : 7; // probably excessive
 
 }__attribute__((packed));
 
@@ -277,7 +280,6 @@ struct VoicingSettings {
   uint8_t pitch_bend_range;
   uint8_t vibrato_range;
   uint8_t vibrato_initial;
-  uint8_t vibrato_control_source;
   uint8_t modulation_rate;
   int8_t tuning_transpose;
   int8_t tuning_fine;
@@ -310,7 +312,6 @@ struct VoicingSettings {
     packed.pitch_bend_range = pitch_bend_range;
     packed.vibrato_range = vibrato_range;
     packed.vibrato_initial = vibrato_initial;
-    packed.vibrato_control_source = vibrato_control_source;
     packed.modulation_rate = modulation_rate;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
@@ -343,7 +344,6 @@ struct VoicingSettings {
     pitch_bend_range = packed.pitch_bend_range;
     vibrato_range = packed.vibrato_range;
     vibrato_initial = packed.vibrato_initial;
-    vibrato_control_source = packed.vibrato_control_source;
     modulation_rate = packed.modulation_rate;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
@@ -391,7 +391,6 @@ enum PartSetting {
   PART_VOICING_PITCH_BEND_RANGE,
   PART_VOICING_VIBRATO_RANGE,
   PART_VOICING_VIBRATO_INITIAL,
-  PART_VOICING_VIBRATO_CONTROL_SOURCE,
   PART_VOICING_MODULATION_RATE,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,

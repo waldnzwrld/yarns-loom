@@ -84,7 +84,6 @@
 - [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./clock_division.h#L43)
   
 ### More control over vibrato
-- New setting `VC (VIBRATO CONTROL SOURCE)` that allows changing the vibrato controller from the default `MODWHEEL` to `AFTERTOUCH`
 - New setting `VI(BRATO AMP INITIAL)` for setting a baseline vibrato amplitude when the vibrato controller is absent or at its minimum
 - Tweaks to per-voice vibrato LFO for parts in polyphonic layouts:
   - When vibrato speed is synced to clock, each voice's LFO uses the quadrature of the previous voice
