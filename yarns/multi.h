@@ -50,10 +50,7 @@ const uint8_t kMaxBarDuration = 32;
 struct PackedMulti {
   PackedPart parts[kNumParts];
 
-  struct CustomPitch {
-    int8_t data;
-  }__attribute__((packed));
-  CustomPitch custom_pitch_table[12];
+  int8_t custom_pitch_table[12];
 
   unsigned int
     layout : 4,
@@ -86,7 +83,7 @@ struct MultiSettings {
 
   void Pack(PackedMulti& packed) {
     for (uint8_t i = 0; i < 12; i++) {
-      packed.custom_pitch_table[i].data = custom_pitch_table[i];
+      packed.custom_pitch_table[i] = custom_pitch_table[i];
     }
     packed.layout = layout;
     packed.clock_tempo = clock_tempo;
@@ -102,7 +99,7 @@ struct MultiSettings {
 
   void Unpack(PackedMulti& packed) {
     for (uint8_t i = 0; i < 12; i++) {
-      custom_pitch_table[i] = packed.custom_pitch_table[i].data;
+      custom_pitch_table[i] = packed.custom_pitch_table[i];
     }
     layout = packed.layout;
     clock_tempo = packed.clock_tempo;
