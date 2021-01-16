@@ -107,7 +107,7 @@ void Part::Init() {
 
   seq_.clock_division = clock_division::unity;
   seq_.gate_length = 3;
-  seq_.arp_range = 1;
+  seq_.arp_range = 0;
   seq_.arp_direction = 0;
   seq_.arp_pattern = 0;
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
@@ -653,7 +653,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         } else { // If black key
           next.key_index = seq_step.black_key_distance_from_middle_c();
           next.octave = abs(next.key_index / num_keys);
-          if (next.octave >= seq_.arp_range) {
+          if (next.octave > seq_.arp_range) {
             return next; // Rest
           }
         }
@@ -677,7 +677,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         uint8_t new_pos = modulo(old_pos + clock, limit);
         int8_t key_without_wrap = key_with_octave + spacer * (new_pos - old_pos);
         next.octave = key_without_wrap / num_keys;
-        if (next.octave < 0 || next.octave >= seq_.arp_range) {
+        if (next.octave < 0 || next.octave > seq_.arp_range) {
           // If outside octave range
           next.key_index = key_with_octave - spacer * old_pos;
           next.octave = next.key_index / num_keys;
@@ -688,7 +688,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       break;
     default:
       {
-        if (num_keys == 1 && seq_.arp_range == 1) {
+        if (num_keys == 1 && seq_.arp_range == 0) {
           // This is a corner case for the Up/down pattern code.
           // Get it out of the way.
           next.key_index = 0;
@@ -701,12 +701,12 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
               next.key_index = next.key_increment > 0 ? 0 : num_keys - 1;
             }
             wrapped = false;
-            if (next.octave >= seq_.arp_range || next.octave < 0) {
-              next.octave = next.key_increment > 0 ? 0 : seq_.arp_range - 1;
+            if (next.octave > seq_.arp_range || next.octave < 0) {
+              next.octave = next.key_increment > 0 ? 0 : seq_.arp_range;
               if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_UP_DOWN) {
                 next.key_increment = -next.key_increment;
                 next.key_index = next.key_increment > 0 ? 1 : num_keys - 2;
-                next.octave = next.key_increment > 0 ? 0 : seq_.arp_range - 1;
+                next.octave = next.key_increment > 0 ? 0 : seq_.arp_range;
                 wrapped = true;
               }
             }
@@ -716,7 +716,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       break;
   }
   // Invariants
-  next.octave = stmlib::modulo(next.octave, seq_.arp_range);
+  next.octave = stmlib::modulo(next.octave, seq_.arp_range + 1);
   next.key_index = stmlib::modulo(next.key_index, num_keys);
 
   // Build arpeggiator step

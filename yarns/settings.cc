@@ -487,7 +487,7 @@ const Setting Settings::settings_[] = {
   {
     "AR", "ARP RANGE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_RANGE, 0 },
-    SETTING_UNIT_UINT8, 1, 4, NULL,
+    SETTING_UNIT_INDEX, 0, 3, NULL,
     104, 26,
   },
   {

@@ -213,7 +213,7 @@ struct PackedPart {
   unsigned int
     clock_division : 5,
     gate_length : 6,
-    arp_range : 3, // TODO can shave 1 by starting at 0
+    arp_range : 2,
     arp_direction : 3,
     arp_pattern : 5,
     euclidean_length : 5,
@@ -954,7 +954,7 @@ class Part {
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);
     CONSTRAIN(seq_.loop_length, 1, 127);
-    CONSTRAIN(seq_.arp_range, 1, 4);
+    CONSTRAIN(seq_.arp_range, 0, 3);
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();
     TouchVoiceAllocation();
