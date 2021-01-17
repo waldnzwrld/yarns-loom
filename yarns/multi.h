@@ -50,16 +50,13 @@ const uint8_t kMaxBarDuration = 32;
 struct PackedMulti {
   PackedPart parts[kNumParts];
 
-  struct CustomPitch {
-    int8_t data;
-  }__attribute__((packed));
-  CustomPitch custom_pitch_table[12];
+  int8_t custom_pitch_table[12];
 
   unsigned int
     layout : 4,
     clock_tempo : 8,
     clock_swing : 7,
-    clock_input_division : 3, // can 0-index
+    clock_input_division : 3, // can 0-index for 1 fewer bit
     clock_output_division : 5,
     clock_bar_duration : 6, // barely
     clock_override : 1,
@@ -86,7 +83,7 @@ struct MultiSettings {
 
   void Pack(PackedMulti& packed) {
     for (uint8_t i = 0; i < 12; i++) {
-      packed.custom_pitch_table[i].data = custom_pitch_table[i];
+      packed.custom_pitch_table[i] = custom_pitch_table[i];
     }
     packed.layout = layout;
     packed.clock_tempo = clock_tempo;
@@ -102,7 +99,7 @@ struct MultiSettings {
 
   void Unpack(PackedMulti& packed) {
     for (uint8_t i = 0; i < 12; i++) {
-      custom_pitch_table[i] = packed.custom_pitch_table[i].data;
+      custom_pitch_table[i] = packed.custom_pitch_table[i];
     }
     layout = packed.layout;
     clock_tempo = packed.clock_tempo;
@@ -414,7 +411,7 @@ class Multi {
     }
     settings_.Pack(packed);
     const uint16_t size = sizeof(packed);
-    // char (*__kaboom)[size] = 1;
+    // char (*__debug)[size] = 1;
     STATIC_ASSERT(size == 1020, expected);
     STATIC_ASSERT(size % 4 == 0, flash_word);
     STATIC_ASSERT(size <= kMaxSize, capacity);

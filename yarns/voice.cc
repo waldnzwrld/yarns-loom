@@ -156,29 +156,20 @@ bool Voice::Refresh(uint8_t voice_index) {
   }
   uint32_t lfo_phase = synced_lfo_.GetPhase() + voice_index * kQuadrature;
   int32_t lfo = synced_lfo_.Triangle(lfo_phase);
-  uint16_t vibrato_control_value = 0;
-  switch (vibrato_control_source_) {
-    case VIBRATO_CONTROL_SOURCE_MODWHEEL:
-      vibrato_control_value = mod_wheel_;
-      break;
-    case VIBRATO_CONTROL_SOURCE_AFTERTOUCH:
-      vibrato_control_value = mod_aux_[MOD_AUX_AFTERTOUCH];
-      break;
-  }
-  vibrato_control_value += vibrato_initial_;
-  CONSTRAIN(vibrato_control_value, 0, 127);
-  note += lfo * vibrato_control_value * vibrato_range_ >> 15;
+  uint16_t vibrato_level = mod_wheel_ + (vibrato_initial_ << 1);
+  CONSTRAIN(vibrato_level, 0, 127);
+  note += lfo * vibrato_level * vibrato_range_ >> 15;
   mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
   mod_aux_[MOD_AUX_MODULATION] = mod_wheel_ << 9;
   mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[MOD_AUX_VIBRATO_LFO] = (lfo * vibrato_control_value >> 7) + 32768;
+  mod_aux_[MOD_AUX_VIBRATO_LFO] = (lfo * vibrato_level >> 7) + 32768;
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
   
   // Use quadrature phase for PWM LFO
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
   int32_t pw_21bit = \
-    (oscillator_pw_initial_ << (21 - 7)) + // Initial range 0..1
-    lfo * oscillator_pw_mod_; // Mod range -1..1
+    (oscillator_pw_initial_ << (21 - 6)) + // Initial range 0..1
+    lfo * (oscillator_pw_mod_ << (7 - 6)); // Mod range -1..1
   int32_t min_pw = 1 << (21 - kOscillatorPWMRatioBits);
   CONSTRAIN(pw_21bit, min_pw, (1 << 21) - min_pw)
   oscillator_.SetPulseWidth(pw_21bit << (32 - 21));

@@ -150,10 +150,6 @@ const char* const hold_pedal_polarity_values[] = {
   "+ POS CASIO KORG",
 };
 
-const char* const vibrato_control_source_values[] = {
-  "MODWHEEL", "AFTERTOUCH"
-};
-
 const char* const tuning_factor_values[] = {
   "OFF",
   "0 ",
@@ -287,7 +283,7 @@ const Setting Settings::settings_[] = {
   {
     "IT", "INPUT TRANSPOSE OCTAVES",
     SETTING_DOMAIN_PART, { PART_MIDI_TRANSPOSE_OCTAVES, 0 },
-    SETTING_UNIT_INT8, -10, 10, NULL,
+    SETTING_UNIT_INT8, -4, 3, NULL,
     73, 0,
   },
   {
@@ -336,14 +332,8 @@ const Setting Settings::settings_[] = {
   {
     "VI", "VIBRATO AMP INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_INITIAL, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
     81, 0,
-  },
-  {
-    "VC", "VIBRATO CONTROL SOURCE",
-    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_CONTROL_SOURCE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, VIBRATO_CONTROL_SOURCE_LAST - 1, vibrato_control_source_values,
-    0, 0,
   },
   {
     "TT", "TRANSPOSE",
@@ -415,61 +405,73 @@ const Setting Settings::settings_[] = {
   {
     "PW", "OSC PW INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_INITIAL, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
     82, 0,
   },
   {
     "PM", "OSC PW MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_MOD, 0 },
-    SETTING_UNIT_INT8, -64, 63, NULL,
+    SETTING_UNIT_INT8, -32, 31, NULL,
+    83, 0,
+  },
+  {
+    "GI", "GAIN INITIAL",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_INIT, 0 },
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    82, 0,
+  },
+  {
+    "GM", "GAIN MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_MOD, 0 },
+    SETTING_UNIT_INT8, -32, 31, NULL,
     83, 0,
   },
   {
     "AI", "ATTACK TIME INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_ATTACK, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
     77, 0,
   },
   {
     "DI", "DECAY TIME INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_DECAY, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
     78, 0,
   },
   {
     "SI", "SUSTAIN LEVEL INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_SUSTAIN, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
     79, 0,
   },
   {
     "RI", "RELEASE TIME INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_RELEASE, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
     80, 0,
   },
   {
     "AM", "ATTACK TIME MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_ATTACK, 0 },
-    SETTING_UNIT_INT8, -16, 15, NULL,
+    SETTING_UNIT_INT8, -32, 31, NULL,
     86, 0,
   },
   {
     "DM", "DECAY TIME MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_DECAY, 0 },
-    SETTING_UNIT_INT8, -16, 15, NULL,
+    SETTING_UNIT_INT8, -32, 31, NULL,
     87, 0,
   },
   {
     "SM", "SUSTAIN LEVEL MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_SUSTAIN, 0 },
-    SETTING_UNIT_INT8, -16, 15, NULL,
+    SETTING_UNIT_INT8, -32, 31, NULL,
     88, 0,
   },
   {
     "RM", "RELEASE TIME MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_RELEASE, 0 },
-    SETTING_UNIT_INT8, -16, 15, NULL,
+    SETTING_UNIT_INT8, -32, 31, NULL,
     89, 0,
   },
   {
@@ -487,7 +489,7 @@ const Setting Settings::settings_[] = {
   {
     "AR", "ARP RANGE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_RANGE, 0 },
-    SETTING_UNIT_UINT8, 1, 4, NULL,
+    SETTING_UNIT_INDEX, 0, 3, NULL,
     104, 26,
   },
   {

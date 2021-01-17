@@ -77,12 +77,6 @@ enum ModAux {
   MOD_AUX_LAST
 };
 
-enum VibratoControlSource {
-  VIBRATO_CONTROL_SOURCE_MODWHEEL,
-  VIBRATO_CONTROL_SOURCE_AFTERTOUCH,
-  VIBRATO_CONTROL_SOURCE_LAST
-};
-
 class Oscillator {
  public:
   Oscillator() { }
@@ -168,9 +162,6 @@ class Voice {
   inline void set_vibrato_initial(uint8_t n) {
     vibrato_initial_ = n;
   }
-  inline void set_vibrato_control_source(uint8_t n) {
-    vibrato_control_source_ = n;
-  }
   inline void set_trigger_duration(uint8_t trigger_duration) {
     trigger_duration_ = trigger_duration;
   }
@@ -228,8 +219,18 @@ class Voice {
     return &envelope_;
   }
 
+  inline void set_envelope_amplitude(uint16_t a) {
+    envelope_amplitude_ = a;
+  }
+
+  inline uint16_t scaled_envelope() {
+    uint32_t value = envelope_.value();
+    value = (value * envelope_amplitude_) >> 16;
+    return value;
+  }
+
   inline void RenderAudio(bool use_envelope) {
-    oscillator_.Render(audio_mode_, note_, gate_, use_envelope ? envelope_.value() : UINT16_MAX);
+    oscillator_.Render(audio_mode_, note_, gate_, use_envelope ? scaled_envelope() : UINT16_MAX);
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -256,7 +257,6 @@ class Voice {
   uint16_t modulation_sync_ticks_;
   uint8_t vibrato_range_;
   uint8_t vibrato_initial_;
-  uint8_t vibrato_control_source_;
   
   uint8_t trigger_duration_;
   uint8_t trigger_shape_;
@@ -283,6 +283,7 @@ class Voice {
   int8_t oscillator_pw_mod_;
   Oscillator oscillator_;
   Envelope envelope_;
+  uint16_t envelope_amplitude_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };

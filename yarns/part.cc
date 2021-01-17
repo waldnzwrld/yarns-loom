@@ -71,7 +71,7 @@ void Part::Init() {
   midi_.min_velocity = 0;
   midi_.max_velocity = 127;
   midi_.out_mode = MIDI_OUT_MODE_GENERATED_EVENTS;
-  midi_.sustain_mode = SUSTAIN_MODE_NORMAL;
+  midi_.sustain_mode = SUSTAIN_MODE_LATCH;
   midi_.sustain_polarity = 0;
   midi_.transpose_octaves = 0;
 
@@ -81,14 +81,13 @@ void Part::Init() {
   voicing_.portamento = 0;
   voicing_.pitch_bend_range = 2;
   voicing_.vibrato_range = 1;
-  voicing_.vibrato_initial = 0;
-  voicing_.vibrato_control_source = VIBRATO_CONTROL_SOURCE_MODWHEEL;
+  voicing_.vibrato_initial = 5;
   voicing_.modulation_rate = 50;
   voicing_.trigger_duration = 2;
   voicing_.aux_cv = MOD_AUX_MODULATION;
   voicing_.aux_cv_2 = MOD_AUX_VIBRATO_LFO;
-  voicing_.oscillator_pw_initial = 80;
-  voicing_.oscillator_pw_mod = 10;
+  voicing_.oscillator_pw_initial = 40;
+  voicing_.oscillator_pw_mod = 5;
   voicing_.tuning_transpose = 0;
   voicing_.tuning_fine = 0;
   voicing_.tuning_root = 0;
@@ -96,20 +95,22 @@ void Part::Init() {
   voicing_.tuning_factor = 0;
   voicing_.audio_mode = AUDIO_MODE_OFF;
 
-  voicing_.env_init_attack = 60;
-  voicing_.env_init_decay = 30;
-  voicing_.env_init_sustain = 80;
-  voicing_.env_init_release = 80;
-  voicing_.env_mod_attack = -8;
-  voicing_.env_mod_decay = -4;
-  voicing_.env_mod_sustain = 4;
-  voicing_.env_mod_release = 8;
+  voicing_.envelope_amplitude_init = 16;
+  voicing_.envelope_amplitude_mod = 24;
+  voicing_.env_init_attack = 30;
+  voicing_.env_init_decay = 20;
+  voicing_.env_init_sustain = 40;
+  voicing_.env_init_release = 40;
+  voicing_.env_mod_attack = -16;
+  voicing_.env_mod_decay = -8;
+  voicing_.env_mod_sustain = 8;
+  voicing_.env_mod_release = 16;
 
   seq_.clock_division = clock_division::unity;
   seq_.gate_length = 3;
-  seq_.arp_range = 1;
+  seq_.arp_range = 0;
   seq_.arp_direction = 0;
-  seq_.arp_pattern = 0;
+  seq_.arp_pattern = 1;
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   midi_.play_mode = PLAY_MODE_MANUAL;
   seq_.clock_quantization = 0;
@@ -648,7 +649,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         } else { // If black key
           next.key_index = seq_step.black_key_distance_from_middle_c();
           next.octave = abs(next.key_index / num_keys);
-          if (next.octave >= seq_.arp_range) {
+          if (next.octave > seq_.arp_range) {
             return next; // Rest
           }
         }
@@ -672,7 +673,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
         uint8_t new_pos = modulo(old_pos + clock, limit);
         int8_t key_without_wrap = key_with_octave + spacer * (new_pos - old_pos);
         next.octave = key_without_wrap / num_keys;
-        if (next.octave < 0 || next.octave >= seq_.arp_range) {
+        if (next.octave < 0 || next.octave > seq_.arp_range) {
           // If outside octave range
           next.key_index = key_with_octave - spacer * old_pos;
           next.octave = next.key_index / num_keys;
@@ -683,7 +684,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       break;
     default:
       {
-        if (num_keys == 1 && seq_.arp_range == 1) {
+        if (num_keys == 1 && seq_.arp_range == 0) {
           // This is a corner case for the Up/down pattern code.
           // Get it out of the way.
           next.key_index = 0;
@@ -696,12 +697,12 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
               next.key_index = next.key_increment > 0 ? 0 : num_keys - 1;
             }
             wrapped = false;
-            if (next.octave >= seq_.arp_range || next.octave < 0) {
-              next.octave = next.key_increment > 0 ? 0 : seq_.arp_range - 1;
+            if (next.octave > seq_.arp_range || next.octave < 0) {
+              next.octave = next.key_increment > 0 ? 0 : seq_.arp_range;
               if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_UP_DOWN) {
                 next.key_increment = -next.key_increment;
                 next.key_index = next.key_increment > 0 ? 1 : num_keys - 2;
-                next.octave = next.key_increment > 0 ? 0 : seq_.arp_range - 1;
+                next.octave = next.key_increment > 0 ? 0 : seq_.arp_range;
                 wrapped = true;
               }
             }
@@ -711,7 +712,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       break;
   }
   // Invariants
-  next.octave = stmlib::modulo(next.octave, seq_.arp_range);
+  next.octave = stmlib::modulo(next.octave, seq_.arp_range + 1);
   next.key_index = stmlib::modulo(next.key_index, num_keys);
 
   // Build arpeggiator step
@@ -812,12 +813,17 @@ void Part::VoiceNoteOnWithADSR(
   uint8_t portamento,
   bool trigger
 ) {
+  int32_t amplitude_12bit = (voicing_.envelope_amplitude_init << 6) + vel * voicing_.envelope_amplitude_mod;
+  CONSTRAIN(amplitude_12bit, 0, (1 << 12) - 1)
+  voice->set_envelope_amplitude(amplitude_12bit << 4);
+
   voice->envelope()->SetADSR(
-    modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack << 2, vel),
-    modulate_7bit(voicing_.env_init_decay, voicing_.env_mod_decay << 2, vel),
-    modulate_7bit(voicing_.env_init_sustain, voicing_.env_mod_sustain << 2, vel),
-    modulate_7bit(voicing_.env_init_release, voicing_.env_mod_release << 2, vel)
+    modulate_7bit(voicing_.env_init_attack << 1, voicing_.env_mod_attack << 1, vel),
+    modulate_7bit(voicing_.env_init_decay << 1, voicing_.env_mod_decay << 1, vel),
+    modulate_7bit(voicing_.env_init_sustain << 1, voicing_.env_mod_sustain << 1, vel),
+    modulate_7bit(voicing_.env_init_release << 1, voicing_.env_mod_release << 1, vel)
   );
+
   voice->NoteOn(pitch, vel, portamento, trigger);
 }
 
@@ -973,7 +979,6 @@ void Part::TouchVoices() {
     voice_[i]->set_modulation_rate(voicing_.modulation_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_initial(voicing_.vibrato_initial);
-    voice_[i]->set_vibrato_control_source(voicing_.vibrato_control_source);
     voice_[i]->set_trigger_duration(voicing_.trigger_duration);
     voice_[i]->set_trigger_scale(voicing_.trigger_scale);
     voice_[i]->set_trigger_shape(voicing_.trigger_shape);
@@ -1014,7 +1019,6 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_MODULATION_RATE:
     case PART_VOICING_VIBRATO_RANGE:
     case PART_VOICING_VIBRATO_INITIAL:
-    case PART_VOICING_VIBRATO_CONTROL_SOURCE:
     case PART_VOICING_TRIGGER_DURATION:
     case PART_VOICING_TRIGGER_SHAPE:
     case PART_VOICING_TRIGGER_SCALE:
