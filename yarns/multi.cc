@@ -257,7 +257,7 @@ void Multi::Refresh() {
   }
 
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
-    part_[j].Refresh();
+    part_[j].mutable_looper().Refresh();
   }
 
   for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
@@ -719,14 +719,14 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
   }
 }
 
-void Multi::Touch() {
+void Multi::AfterDeserialize() {
   Stop();
 
   internal_clock_.set_tempo(settings_.clock_tempo);
   AllocateParts();
   
   for (uint8_t i = 0; i < kNumParts; ++i) {
-    part_[i].Touch();
+    part_[i].AfterDeserialize();
   }
 }
 
@@ -789,7 +789,7 @@ void Multi::StartRecording(uint8_t part) {
       StopRecording(recording_part_);
     }
   }
-  if (part_[part].looped()) {
+  if (part_[part].looper_in_use()) {
     // Looper needs a running clock
     Start(false);
   }

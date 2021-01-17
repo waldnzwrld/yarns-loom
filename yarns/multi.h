@@ -47,6 +47,29 @@ const uint8_t kNumCVOutputs = 4;
 const uint8_t kNumSystemVoices = kNumParaphonicVoices + (kNumCVOutputs - 1);
 const uint8_t kMaxBarDuration = 32;
 
+struct PackedMulti {
+  PackedPart parts[kNumParts];
+
+  struct CustomPitch {
+    int8_t data;
+  }__attribute__((packed));
+  CustomPitch custom_pitch_table[12];
+
+  unsigned int
+    layout : 4,
+    clock_tempo : 8,
+    clock_swing : 7,
+    clock_input_division : 3, // can 0-index
+    clock_output_division : 5,
+    clock_bar_duration : 6, // barely
+    clock_override : 1,
+    remote_control_channel : 5, // barely
+    nudge_first_tick : 1,
+    clock_manual_start : 1;
+
+  uint8_t flash_padding[2];
+}__attribute__((packed));
+
 struct MultiSettings {
   uint8_t layout;
   uint8_t clock_tempo;
@@ -60,6 +83,38 @@ struct MultiSettings {
   uint8_t nudge_first_tick;
   uint8_t clock_manual_start;
   uint8_t padding[10];
+
+  void Pack(PackedMulti& packed) {
+    for (uint8_t i = 0; i < 12; i++) {
+      packed.custom_pitch_table[i].data = custom_pitch_table[i];
+    }
+    packed.layout = layout;
+    packed.clock_tempo = clock_tempo;
+    packed.clock_swing = clock_swing;
+    packed.clock_input_division = clock_input_division;
+    packed.clock_output_division = clock_output_division;
+    packed.clock_bar_duration = clock_bar_duration;
+    packed.clock_override = clock_override;
+    packed.remote_control_channel = remote_control_channel;
+    packed.nudge_first_tick = nudge_first_tick;
+    packed.clock_manual_start = clock_manual_start;
+  }
+
+  void Unpack(PackedMulti& packed) {
+    for (uint8_t i = 0; i < 12; i++) {
+      custom_pitch_table[i] = packed.custom_pitch_table[i].data;
+    }
+    layout = packed.layout;
+    clock_tempo = packed.clock_tempo;
+    clock_swing = packed.clock_swing;
+    clock_input_division = packed.clock_input_division;
+    clock_output_division = packed.clock_output_division;
+    clock_bar_duration = packed.clock_bar_duration;
+    clock_override = packed.clock_override;
+    remote_control_channel = packed.remote_control_channel;
+    nudge_first_tick = packed.nudge_first_tick;
+    clock_manual_start = packed.clock_manual_start;
+  }
 };
 
 enum Tempo {
@@ -261,7 +316,7 @@ class Multi {
     }
   }
   
-  void Touch();
+  void AfterDeserialize();
   void Refresh();
   void RefreshInternalClock() {
     if (running() && internal_clock() && internal_clock_.Process()) {
@@ -280,7 +335,8 @@ class Multi {
       return;
     }
     for (uint8_t j = 0; j < num_active_parts_; ++j) {
-      part_[j].LooperAdvance();
+      if (!part_[j].looper_in_use()) { continue; }
+      part_[j].mutable_looper().AdvanceToPresent();
     }
   }
 
@@ -352,32 +408,29 @@ class Multi {
 
   template<typename T>
   void Serialize(T* stream_buffer) {
-    stream_buffer->Write(settings());
-    for (uint8_t i = 0; i < kNumParts; ++i) {
-      STATIC_ASSERT(kStreamBufferSize >= (
-        sizeof(settings()) + // 32 bytes
-        kNumParts * ( // Max 248 bytes
-          sizeof(part_[i].midi_settings()) +
-          sizeof(part_[i].voicing_settings()) +
-          sizeof(part_[i].sequencer_settings())
-        )
-      ), buffer_size_exceeded);
-      stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
-      stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
-      stream_buffer->Write(part_[i].sequencer_settings()); // 176 bytes
+    PackedMulti packed;
+    for (uint8_t i = 0; i < kNumParts; i++) {
+      part_[i].Pack(packed.parts[i]);
     }
+    settings_.Pack(packed);
+    const uint16_t size = sizeof(packed);
+    // char (*__kaboom)[size] = 1;
+    STATIC_ASSERT(size == 1020, expected);
+    STATIC_ASSERT(size % 4 == 0, flash_word);
+    STATIC_ASSERT(size <= kMaxSize, capacity);
+    stream_buffer->Write(packed);
   };
   
   template<typename T>
   void Deserialize(T* stream_buffer) {
     Stop();
-    stream_buffer->Read(mutable_settings());
-    for (uint8_t i = 0; i < kNumParts; ++i) {
-      stream_buffer->Read(part_[i].mutable_midi_settings());
-      stream_buffer->Read(part_[i].mutable_voicing_settings());
-      stream_buffer->Read(part_[i].mutable_sequencer_settings());
+    PackedMulti packed;
+    stream_buffer->Read(&packed);
+    for (uint8_t i = 0; i < kNumParts; i++) {
+      part_[i].Unpack(packed.parts[i]);
     }
-    Touch();
+    settings_.Unpack(packed);
+    AfterDeserialize();
   };
   
   template<typename T>

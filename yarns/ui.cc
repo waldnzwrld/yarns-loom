@@ -326,7 +326,7 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
 void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
   uint16_t phase;
   if (part.looped()) {
-    phase = UINT16_MAX - (part.LooperPhase() >> 16);
+    phase = UINT16_MAX - part.looper().phase();
   } else {
     phase = (1 + part.playing_step()) * (UINT16_MAX / part.sequencer_settings().num_steps);
   }
@@ -335,14 +335,13 @@ void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
 
 void Ui::PrintLooperRecordingStatus() {
   uint8_t note_index = recording_part().LooperCurrentNoteIndex();
-  uint32_t pos = recording_part().LooperPhase();
   if (note_index == looper::kNullIndex) {
     SetBrightnessFromSequencerPhase(recording_part());
     display_.Print("__");
     return;
   }
-  const looper::Tape& looper_tape = recording_part().sequencer_settings().looper_tape;
-  uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index, pos >> 16);
+  const looper::Deck& looper_tape = recording_part().looper();
+  uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index);
   display_.set_brightness(UINT16_MAX - note_fraction_completed);
   if (recording_mode_is_displaying_pitch_) {
     PrintNote(looper_tape.NotePitch(note_index));
@@ -658,7 +657,7 @@ void Ui::OnSwitchPress(const Event& e) {
     case UI_SWITCH_START_STOP:
       if (multi.recording()) {
         if (recording_part().looped()) {
-          mutable_recording_part()->LooperRemoveOldestNote();
+          mutable_recording_part()->mutable_looper().RemoveOldestNote();
         } else {
           if (push_it_ && !recording_part().overdubbing()) {
             multi.PushItNoteOff(push_it_note_);
@@ -681,7 +680,7 @@ void Ui::OnSwitchPress(const Event& e) {
     case UI_SWITCH_TAP_TEMPO:
       if (multi.recording()) {
         if (recording_part().looped()) {
-          mutable_recording_part()->LooperRemoveNewestNote();
+          mutable_recording_part()->mutable_looper().RemoveNewestNote();
         } else {
           if (push_it_ && !recording_part().overdubbing()) {
             multi.PushItNoteOff(push_it_note_);

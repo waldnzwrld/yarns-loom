@@ -38,7 +38,7 @@
 
 namespace yarns {
 
-const size_t kStreamBufferSize = 1024;
+const uint16_t kMaxSize = PAGE_SIZE - 2; // 2 bytes for checksum
 
 class StorageManager {
  public:
@@ -61,7 +61,7 @@ class StorageManager {
   void DeserializeMulti();
 
  private:
-  stmlib::StreamBuffer<kStreamBufferSize> stream_buffer_;
+  stmlib::StreamBuffer<kMaxSize> stream_buffer_;
   stmlib::Storage<0x8020000, 9> storage_;
   
   DISALLOW_COPY_AND_ASSIGN(StorageManager);

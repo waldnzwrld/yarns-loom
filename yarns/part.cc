@@ -62,9 +62,8 @@ void Part::Init() {
   polychained_ = false;
   seq_recording_ = false;
   transposable_ = true;
-  seq_.looper_tape.RemoveAll();
-  looper_lfo_.Init();
-  LooperRewind();
+
+  looper_.Init(this);
 
   midi_.channel = 0;
   midi_.min_note = 0;
@@ -90,16 +89,21 @@ void Part::Init() {
   voicing_.aux_cv_2 = MOD_AUX_VIBRATO_LFO;
   voicing_.oscillator_pw_initial = 80;
   voicing_.oscillator_pw_mod = 10;
-  voicing_.envelope_attack = 40;
-  voicing_.envelope_decay = 30;
-  voicing_.envelope_sustain = 80;
-  voicing_.envelope_release = 105;
   voicing_.tuning_transpose = 0;
   voicing_.tuning_fine = 0;
   voicing_.tuning_root = 0;
   voicing_.tuning_system = TUNING_SYSTEM_EQUAL;
   voicing_.tuning_factor = 0;
   voicing_.audio_mode = AUDIO_MODE_OFF;
+
+  voicing_.env_init_attack = 60;
+  voicing_.env_init_decay = 30;
+  voicing_.env_init_sustain = 80;
+  voicing_.env_init_release = 80;
+  voicing_.env_mod_attack = -8;
+  voicing_.env_mod_decay = -4;
+  voicing_.env_mod_sustain = 4;
+  voicing_.env_mod_release = 8;
 
   seq_.clock_division = clock_division::unity;
   seq_.gate_length = 3;
@@ -291,13 +295,13 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
 
     case 0x70:
       if (seq_recording_) {
-        looped() ? LooperRemoveOldestNote() : RecordStep(SEQUENCER_STEP_TIE);
+        looped() ? looper_.RemoveOldestNote() : RecordStep(SEQUENCER_STEP_TIE);
       }
       break;
     
     case 0x71:
       if (seq_recording_) {
-        looped() ? LooperRemoveNewestNote() : RecordStep(SEQUENCER_STEP_REST);
+        looped() ? looper_.RemoveNewestNote() : RecordStep(SEQUENCER_STEP_REST);
       }
       break;
     
@@ -429,9 +433,7 @@ void Part::Clock() {
     voice_[i]->Clock();
   }
 
-  // looper
-  uint16_t num_ticks = clock_division::list[seq_.clock_division].num_ticks;
-  looper_lfo_.Tap(num_ticks * seq_.loop_length);
+  looper_.Clock();
 }
 
 void Part::Start() {
@@ -442,16 +444,7 @@ void Part::Start() {
   arp_.ResetKey();
   arp_.step_index = 0;
   
-  looper_lfo_.Init();
-  LooperRewind();
-
-  generated_notes_.Clear();
-}
-
-void Part::LooperRewind() {
-  looper_pos_ = 0;
-  looper_needs_advance_ = false;
-  seq_.looper_tape.ResetHead();
+  looper_.Rewind();
   std::fill(
     &looper_note_recording_pressed_key_[0],
     &looper_note_recording_pressed_key_[kNoteStackSize],
@@ -467,19 +460,8 @@ void Part::LooperRewind() {
     &output_pitch_for_looper_note_[kNoteStackSize],
     looper::kNullIndex
   );
-}
 
-void Part::LooperAdvance() {
-  if (
-    !looper_needs_advance_ ||
-    !looped() ||
-    midi_.play_mode == PLAY_MODE_MANUAL
-  ) { return; }
-
-  uint16_t new_pos = looper_lfo_.GetPhase() >> 16;
-  seq_.looper_tape.Advance(this, looper_pos_, new_pos);
-  looper_pos_ = new_pos;
-  looper_needs_advance_ = false;
+  generated_notes_.Clear();
 }
 
 void Part::Stop() {
@@ -523,7 +505,7 @@ void Part::StartRecording() {
 void Part::DeleteRecording() {
   if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
   StopSequencerArpeggiatorNotes();
-  looped() ? seq_.looper_tape.RemoveAll() : DeleteSequence();
+  looped() ? looper_.RemoveAll() : DeleteSequence();
   ui.SplashOn(SPLASH_DELETE_RECORDING);
 }
 
@@ -818,13 +800,30 @@ void Part::DispatchSortedNotes(bool unison, bool force_legato) {
   }
 }
 
- void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
-  voice->NoteOn(
+void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
+  VoiceNoteOnWithADSR(
+    voice,
     Tune(pitch),
     velocity,
     (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
     (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato
   );
+}
+
+void Part::VoiceNoteOnWithADSR(
+  Voice* voice,
+  int16_t pitch,
+  uint8_t vel,
+  uint8_t portamento,
+  bool trigger
+) {
+  voice->envelope()->SetADSR(
+    modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack << 2, vel),
+    modulate_7bit(voicing_.env_init_decay, voicing_.env_mod_decay << 2, vel),
+    modulate_7bit(voicing_.env_init_sustain, voicing_.env_mod_sustain << 2, vel),
+    modulate_7bit(voicing_.env_init_release, voicing_.env_mod_release << 2, vel)
+  );
+  voice->NoteOn(pitch, vel, portamento, trigger);
 }
 
 void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
@@ -883,11 +882,13 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     if (voice_index < num_voices_) {
       // Prevent the same note from being simultaneously played on two channels.
       KillAllInstancesOfNote(note);
-      voice_[voice_index]->NoteOn(
-          Tune(note),
-          velocity,
-          voicing_.portamento,
-          true);
+      VoiceNoteOnWithADSR(
+        voice_[voice_index],
+        Tune(note),
+        velocity,
+        voicing_.portamento,
+        true
+      );
       active_note_[voice_index] = note;
     } else {
       // Polychaining forwarding.
@@ -930,11 +931,13 @@ void Part::InternalNoteOff(uint8_t note) {
       // Removing the note gives priority to another note that is still being
       // pressed. Slide to this note (or retrigger is legato mode is off).
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        voice_[i]->NoteOn(
-            Tune(after.note),
-            after.velocity,
-            voicing_.portamento,
-            voicing_.legato_mode == LEGATO_MODE_OFF);
+        VoiceNoteOnWithADSR(
+          voice_[i],
+          Tune(after.note),
+          after.velocity,
+          voicing_.portamento,
+          voicing_.legato_mode == LEGATO_MODE_OFF
+        );
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
@@ -985,12 +988,6 @@ void Part::TouchVoices() {
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
     voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
     voice_[i]->set_oscillator_pw_mod(voicing_.oscillator_pw_mod);
-    voice_[i]->envelope()->SetADSR(
-        voicing_.envelope_attack,
-        voicing_.envelope_decay,
-        voicing_.envelope_sustain,
-        voicing_.envelope_release
-    );
   }
 }
 
@@ -1031,10 +1028,6 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_AUDIO_MODE:
     case PART_VOICING_OSCILLATOR_PW_INITIAL:
     case PART_VOICING_OSCILLATOR_PW_MOD:
-    case PART_VOICING_ENVELOPE_ATTACK:
-    case PART_VOICING_ENVELOPE_DECAY:
-    case PART_VOICING_ENVELOPE_SUSTAIN:
-    case PART_VOICING_ENVELOPE_RELEASE:
     case PART_VOICING_TUNING_TRANSPOSE:
     case PART_VOICING_TUNING_FINE:
       TouchVoices();
