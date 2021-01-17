@@ -290,10 +290,6 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         SustainOn() : SustainOff();
       break;
 
-    case kCCDeleteRecording:
-      DeleteRecording();
-      break;
-
     case 0x70:
       if (seq_recording_) {
         looped() ? looper_.RemoveOldestNote() : RecordStep(SEQUENCER_STEP_TIE);
@@ -507,7 +503,6 @@ void Part::DeleteRecording() {
   if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
   StopSequencerArpeggiatorNotes();
   looped() ? looper_.RemoveAll() : DeleteSequence();
-  ui.SplashOn(SPLASH_DELETE_RECORDING);
 }
 
 void Part::DeleteSequence() {

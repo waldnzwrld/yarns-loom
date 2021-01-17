@@ -117,9 +117,13 @@ class Ui {
   void DoEvents();
   void FlushEvents();
   void SplashOn(Splash s);
+  static const uint8_t kNoSplashPart = 0xff;
+  inline void SetSplashPart(uint8_t part) {
+    splash_part_ = part;
+  }
   inline void SplashSetting(const Setting& s, uint8_t part) {
     splash_setting_def_ = &s;
-    splash_setting_part_ = part;
+    SetSplashPart(part);
     SplashOn(SPLASH_SETTING);
   }
 
@@ -263,7 +267,7 @@ class Ui {
   UiMode previous_mode_;
   Splash splash_;
   Setting const* splash_setting_def_;
-  uint8_t splash_setting_part_;
+  uint8_t splash_part_;
   
   Menu setup_menu_;
   Menu envelope_menu_;

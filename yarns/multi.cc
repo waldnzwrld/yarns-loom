@@ -844,10 +844,15 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);
         ui.SplashOn(SPLASH_ACTIVE_PART);
-        continue;
+      } else if (controller == kCCDeleteRecording) {
+        // Splash needs part index
+        part_[i].DeleteRecording();
+        ui.SetSplashPart(i);
+        ui.SplashOn(SPLASH_DELETE_RECORDING);
+      } else {
+        thru = part_[i].ControlChange(channel, controller, value) && thru;
+        SetFromCC(i, controller, value);
       }
-      thru = part_[i].ControlChange(channel, controller, value) && thru;
-      SetFromCC(i, controller, value);
     }
   }
   return thru;
