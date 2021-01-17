@@ -199,7 +199,7 @@ uint8_t Deck::RecordNoteOn(uint8_t pitch, uint8_t velocity) {
   note.pitch = pitch;
   note.velocity = velocity;
   note.on_pos = pos_;
-  note.off_pos = pos_; // TODO wtf
+  note.off_pos = pos_;
   next_link_[index].off = kNullIndex;
   size_++;
 
