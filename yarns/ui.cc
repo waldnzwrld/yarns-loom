@@ -442,10 +442,10 @@ void Ui::SplashOn(Splash s) {
 
     case SPLASH_SETTING:
       SetFadeForSetting(*splash_setting_def_);
-      if (splash_setting_part_ == 0xff) {
+      if (splash_part_ == kNoSplashPart) {
         display_.Print(splash_setting_def_->short_name, splash_setting_def_->name);
       } else {
-        setting_defs.Print(*splash_setting_def_, multi.GetSetting(*splash_setting_def_, splash_setting_part_), buffer_);
+        setting_defs.Print(*splash_setting_def_, multi.GetSetting(*splash_setting_def_, splash_part_), buffer_);
         display_.Print(buffer_);
       }
       display_.Scroll();
@@ -453,7 +453,7 @@ void Ui::SplashOn(Splash s) {
 
     case SPLASH_DELETE_RECORDING:
       strcpy(buffer_, "1D");
-      buffer_[0] += active_part_;
+      buffer_[0] += splash_part_;
       display_.Print(buffer_);
       break;
 
@@ -706,6 +706,8 @@ void Ui::OnSwitchHeld(const Event& e) {
     case UI_SWITCH_REC:
       if (recording_any) {
         mutable_recording_part()->DeleteRecording();
+        SetSplashPart(active_part_);
+        SplashOn(SPLASH_DELETE_RECORDING);
       } else {
         PressedKeys &keys = LatchableKeys();
         if (keys.ignore_note_off_messages) {
@@ -863,9 +865,9 @@ void Ui::DoEvents() {
     if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
       return; // Splash isn't over yet
     }
-    if (splash_ == SPLASH_SETTING && splash_setting_part_ != 0xff) {
+    if (splash_ == SPLASH_SETTING && splash_part_ != kNoSplashPart) {
       // If done displaying setting value, switch to displaying setting name
-      splash_setting_part_ = 0xff;
+      SetSplashPart(kNoSplashPart);
       SplashOn(SPLASH_SETTING);
       return;
     }
