@@ -167,12 +167,14 @@ bool Voice::Refresh(uint8_t voice_index) {
   
   // Use quadrature phase for PWM LFO
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
-  int32_t pw_21bit = \
-    (oscillator_pw_initial_ << (21 - 6)) + // Initial range 0..1
-    lfo * (oscillator_pw_mod_ << (7 - 6)); // Mod range -1..1
-  int32_t min_pw = 1 << (21 - kOscillatorPWMRatioBits);
-  CONSTRAIN(pw_21bit, min_pw, (1 << 21) - min_pw)
-  oscillator_.SetPulseWidth(pw_21bit << (32 - 21));
+  int32_t pw_31bit = \
+    // Initial range 0..1
+    (oscillator_pw_initial_ << (30 - 6)) +
+    // Mod range -1..1 with cubic scaling
+    lfo * oscillator_pw_mod_ * oscillator_pw_mod_ * oscillator_pw_mod_;
+  int32_t min_pw = 1 << (31 - kOscillatorPWMRatioBits);
+  CONSTRAIN(pw_31bit, min_pw, (1 << 31) - min_pw)
+  oscillator_.SetPulseWidth(pw_31bit << (32 - 31));
 
   if (retrigger_delay_) {
     --retrigger_delay_;
