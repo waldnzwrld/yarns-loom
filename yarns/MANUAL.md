@@ -93,7 +93,7 @@
   - `CLUTCH DOWN` is the same as `CLUTCH UP`, but with reversed up/down semantics
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)
 
-### Notes
+### Incoming note handling
 - New `SI (SEQ INPUT RESPONSE)` setting to change how a playing sequence responds to notes
   - `OFF` ignores keyboard input
   - `TRANSPOSE` is the stock firmware behavior
