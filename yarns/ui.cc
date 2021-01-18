@@ -288,6 +288,8 @@ void Ui::PrintActivePartAndPlayMode() {
   uint8_t play_mode = active_part().midi_settings().play_mode;
   if (multi.running()) {
     SetBrightnessFromSequencerPhase(active_part());
+  } else {
+    display_.set_brightness(UINT16_MAX);
   }
   strcpy(buffer_, "1x");
   buffer_[0] += active_part_;
