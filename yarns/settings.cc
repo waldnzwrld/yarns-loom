@@ -418,13 +418,13 @@ const Setting Settings::settings_[] = {
     "GI", "GAIN INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_INIT, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    82, 0,
+    90, 0,
   },
   {
     "GM", "GAIN MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_MOD, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
-    83, 0,
+    91, 0,
   },
   {
     "AI", "ATTACK TIME INIT",
