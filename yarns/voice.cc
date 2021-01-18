@@ -191,6 +191,7 @@ bool Voice::Refresh(uint8_t voice_index) {
   }
 
   envelope_.Render();
+  mod_aux_[MOD_AUX_ENVELOPE] = scaled_envelope();
 
   bool changed = note != note_;
   note_ = note;

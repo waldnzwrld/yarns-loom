@@ -109,6 +109,7 @@ namespace yarns {
 
 static const SettingIndex menu_live[] = {
   SETTING_MENU_SETUP,
+  SETTING_MENU_ENVELOPE,
   MENU_LIVE,
   SETTING_LAST
 };
@@ -124,13 +125,6 @@ static const SettingIndex menu_envelope[] = {
   SETTING_VOICING_ENV_MOD_DECAY,
   SETTING_VOICING_ENV_MOD_SUSTAIN,
   SETTING_VOICING_ENV_MOD_RELEASE,
-};
-
-static const SettingIndex menu_live_para[] = {
-  SETTING_MENU_SETUP,
-  SETTING_MENU_ENVELOPE,
-  MENU_LIVE,
-  SETTING_LAST
 };
 
 static const SettingIndex menu_live_quad_triggers[] = {
@@ -319,8 +313,6 @@ class Menu {
         switch (multi.layout()) {
           case LAYOUT_QUAD_TRIGGERS:
             return menu_live_quad_triggers;
-          case LAYOUT_PARAPHONIC_PLUS_TWO:
-            return menu_live_para;
           default:
             return menu_live;
         }

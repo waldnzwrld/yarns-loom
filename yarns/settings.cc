@@ -60,7 +60,7 @@ const char* const sequencer_arp_direction_values[] = {
 };
 
 const char* const voicing_aux_cv_values[] = {
-  "VELOCITY", "MODULATION", "AT", "BREATH", "PEDAL", "BEND", "VIBRATO LFO", "LFO"
+  "VELOCITY", "MODULATION", "AT", "BREATH", "PEDAL", "BEND", "VIBRATO LFO", "LFO", "ENVELOPE"
 };
 
 const char* const legato_mode_values[] = {

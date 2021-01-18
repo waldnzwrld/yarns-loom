@@ -73,6 +73,7 @@ enum ModAux {
   MOD_AUX_BEND,
   MOD_AUX_VIBRATO_LFO,
   MOD_AUX_FULL_LFO,
+  MOD_AUX_ENVELOPE,
 
   MOD_AUX_LAST
 };
@@ -181,8 +182,10 @@ class Voice {
   inline int32_t note() const { return note_; }
   inline uint8_t velocity() const { return mod_velocity_; }
   inline uint8_t modulation() const { return mod_wheel_; }
-  inline uint8_t aux_cv() const { return mod_aux_[aux_cv_source_] >> 8; }
-  inline uint8_t aux_cv_2() const { return mod_aux_[aux_cv_source_2_] >> 8; }
+  inline uint16_t aux_cv_16bit() const { return mod_aux_[aux_cv_source_]; }
+  inline uint16_t aux_cv_2_16bit() const { return mod_aux_[aux_cv_source_2_]; }
+  inline uint8_t aux_cv() const { return aux_cv_16bit() >> 8; }
+  inline uint8_t aux_cv_2() const { return aux_cv_2_16bit() >> 8; }
   
   inline bool gate_on() const { return gate_; }
 
@@ -355,10 +358,10 @@ class CVOutput {
     return DacCodeFrom16BitValue(main_voice()->modulation() << 9);
   }
   inline uint16_t aux_cv_dac_code() const {
-    return DacCodeFrom16BitValue(main_voice()->aux_cv() << 8);
+    return DacCodeFrom16BitValue(main_voice()->aux_cv_16bit());
   }
   inline uint16_t aux_cv_dac_code_2() const {
-    return DacCodeFrom16BitValue(main_voice()->aux_cv_2() << 8);
+    return DacCodeFrom16BitValue(main_voice()->aux_cv_2_16bit());
   }
   inline uint16_t trigger_dac_code() const {
     int32_t max = volts_dac_code(5);
