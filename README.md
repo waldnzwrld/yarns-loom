@@ -7,13 +7,16 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - Expand Yarns' abilities as a digital synthesis voice
 
 ### Features
-- New layouts, including a layout that features a 3-voice paraphonic part with internal envelopes
-- Looper with real-time recording and overdubbing
+- New layouts, including a layout that features a 3-voice paraphonic part
 - Global control and display of the active part and its play mode
+- Looper with real-time recording and overdubbing
+- Sequencer-driven arpeggiator
+- Internal envelopes, with velocity modulation of amplitude and segments
 - Pulse-width modulation for Yarns' digital oscillator
 - Velocity filtering
 - More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction
-- Sequencer-driven arpeggiator
+- New ways to use the hold pedal, including latch and sostenuto
+- Expanded CC support, including start/stop/delete recording
 - [Check the manual for more!](yarns/MANUAL.md)
 
 ### Caveats
@@ -34,4 +37,5 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 ### Acknowledgements
 - Thanks to [forum user `Airell`](https://forum.mutable-instruments.net/t/yarns-firmware-wish-list/8051/39) for the idea of per-part latching
 - Thanks to [forum user `sdejesus13`](https://forum.mutable-instruments.net/t/yarns-firmware-wish-list/8051/24) for encouraging the exploration of clock-based recording
+- Thanks to [forum user `bloc`](https://forum.mutable-instruments.net/t/loom-alternative-firmware-for-yarns-looper-paraphony-and-more/17723/3) for support, bug reports, and many great ideas
 - And above all, thanks to Émilie Gillet for making a great module and then open-sourcing it!
