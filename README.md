@@ -26,10 +26,11 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 1. Download `yarns.syx` from the [latest release's assets](https://github.com/rcrogers/mutable-instruments-eurorack/releases/latest)
 2. [Follow the manufacturer's instructions for installing new firmware](https://mutable-instruments.net/modules/yarns/manual/#firmware)
 
-### Contributing
+### Contributions and support
 - License: MIT License
 - Forks, pull requests, feature ideas, and bug reports are welcome
 - Responses and merges are at my discretion
+- [Patreon link](https://www.patreon.com/rcrogers)
 
 ### Acknowledgements
 - Thanks to [forum user `Airell`](https://forum.mutable-instruments.net/t/yarns-firmware-wish-list/8051/39) for the idea of per-part latching
