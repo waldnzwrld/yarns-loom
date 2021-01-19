@@ -326,6 +326,8 @@ struct VoicingSettings {
     packed.tuning_factor = tuning_factor;
     packed.oscillator_pw_initial = oscillator_pw_initial;
     packed.oscillator_pw_mod = oscillator_pw_mod;
+    packed.envelope_amplitude_init = envelope_amplitude_init;
+    packed.envelope_amplitude_mod = envelope_amplitude_mod;
     packed.env_init_attack = env_init_attack;
     packed.env_init_decay = env_init_decay;
     packed.env_init_sustain = env_init_sustain;
@@ -358,6 +360,8 @@ struct VoicingSettings {
     tuning_factor = packed.tuning_factor;
     oscillator_pw_initial = packed.oscillator_pw_initial;
     oscillator_pw_mod = packed.oscillator_pw_mod;
+    envelope_amplitude_init = packed.envelope_amplitude_init;
+    envelope_amplitude_mod = packed.envelope_amplitude_mod;
     env_init_attack = packed.env_init_attack;
     env_init_decay = packed.env_init_decay;
     env_init_sustain = packed.env_init_sustain;
