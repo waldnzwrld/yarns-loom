@@ -20,11 +20,14 @@
 - Print flat notes as lowercase character (instead of denoting flatness with `b`) so that octave can always be displayed
 - Improved clock-sync of display fade for the `TE(MPO)` setting
 
-# Digital oscillator
+# Synth voice
 
-### Amplitude envelopes
-- Only available for the paraphonic part in the new [`*2` layout](#layouts)
-- ADSR configured via the `▽📉 (ENVELOPE MENU)`
+### ADSR envelopes with velocity control
+- Configured via the `▽📉 (ENVELOPE MENU)`
+- The envelope's amplitude and its sensitivity to velocity are set by `GAIN INIT` and `GAIN MOD`
+- The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.  
+- Controls voice amplitude for the paraphonic part in the new [`*2` layout](#layouts)
+- Available as an assignable CV output (`ENVELOPE`) in all layouts
 
 ### Oscillator PWM
   - Replaced the "25% rectangle" wave with a pulse-width modulated rectangle wave
@@ -43,14 +46,14 @@
 - Allow non-recording parts on the same channel to keep accepting input IFF both the recording part and the accepting part are using velocity filtering
 - Recording part now responds to MIDI start
 
-### Looper-style sequencer mode with real-time recording
+### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
 - To record or overdub, press `REC` to enter real-time recording mode, then use the keyboard
 - While recording, delete the oldest note by pressing `START`, newest by `TAP`
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, as applied to the part's `C/`
-- Note start/end times are recorded at 16-bit resolution (¹⁄₆₅₅₃₆th of the loop length)
-- Holds 16 notes max -- past this limit, overwrites oldest note
-- Step sequencer also reduced from 64 to 16 notes, to free up space in the preset storage
+- Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
+- Holds 31 notes max -- past this limit, overwrites oldest note
+- Step sequencer also reduced from 64 to 31 notes, to free up space in the preset storage
 
 ### Sequencer-driven arpeggiator
 - Activated by setting the `ARP PATTERN` to `SEQUENCER`
@@ -90,7 +93,7 @@
   - `CLUTCH DOWN` is the same as `CLUTCH UP`, but with reversed up/down semantics
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)
 
-### Notes
+### Incoming note handling
 - New `SI (SEQ INPUT RESPONSE)` setting to change how a playing sequence responds to notes
   - `OFF` ignores keyboard input
   - `TRANSPOSE` is the stock firmware behavior
