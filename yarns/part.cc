@@ -138,7 +138,7 @@ uint8_t Part::PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t veloci
     bool still_latched = keys.ignore_note_off_messages;
 
     // Releasing all latched key will generate "fake" NoteOff messages. We
-    // should note ignore them.
+    // should not ignore them.
     keys.ignore_note_off_messages = false;
     ReleaseLatchedNotes(keys);
 
