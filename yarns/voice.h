@@ -343,8 +343,8 @@ class CVOutput {
 
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
     uint32_t v = static_cast<uint32_t>(value);
-    uint32_t scale = calibrated_dac_code_[3] - calibrated_dac_code_[8];
-    return static_cast<uint16_t>(calibrated_dac_code_[3] - (scale * v >> 16));
+    uint32_t scale = volts_dac_code(0) - volts_dac_code(7);
+    return static_cast<uint16_t>(volts_dac_code(0) - (scale * v >> 16));
   }
 
   inline uint16_t note_dac_code() const {
