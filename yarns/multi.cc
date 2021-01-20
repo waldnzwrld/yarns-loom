@@ -61,7 +61,6 @@ void Multi::Init(bool reset_calibration) {
   }
   for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
     cv_outputs_[i].Init(reset_calibration);
-    cv_outputs_[i].assign_voices(&voice_[i]);
   }
   running_ = false;
   recording_ = false;
@@ -93,9 +92,8 @@ void Multi::Init(bool reset_calibration) {
   // settings_.clock_tempo = 100;
   // settings_.clock_swing = 99;
 
-  num_active_parts_ = 1;
-  part_[0].AllocateVoices(&voice_[0], 1, false);
   settings_.layout = LAYOUT_MONO;
+  AfterDeserialize();
 }
 
 void Multi::Clock() {
