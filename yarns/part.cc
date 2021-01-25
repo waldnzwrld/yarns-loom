@@ -291,14 +291,18 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       break;
 
     case 0x70:
-      if (seq_recording_) {
-        looped() ? looper_.RemoveOldestNote() : RecordStep(SEQUENCER_STEP_TIE);
+      if (looped()) {
+        looper_.RemoveOldestNote();
+      } else if (seq_recording_) {
+        RecordStep(SEQUENCER_STEP_TIE);
       }
       break;
     
     case 0x71:
-      if (seq_recording_) {
-        looped() ? looper_.RemoveNewestNote() : RecordStep(SEQUENCER_STEP_REST);
+      if (looped()) {
+        looper_.RemoveNewestNote();
+      } else if (seq_recording_) {
+        RecordStep(SEQUENCER_STEP_REST);
       }
       break;
     
