@@ -25,8 +25,9 @@
 ### ADSR envelopes with velocity control
 - Configured via the `▽📉 (ENVELOPE MENU)`
 - The envelope's amplitude and its sensitivity to velocity are set by `GAIN INIT` and `GAIN MOD`
-- The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.  
-- Controls voice amplitude for the paraphonic part in the new [`*2` layout](#layouts)
+- The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
+  - Segment times range from 0.375 ms (3 ticks) to 3 seconds
+- Handles voice amplitude for the paraphonic part in the new [`*2` layout](#layouts)
 - Available as an assignable CV output (`ENVELOPE`) in all layouts
 
 ### Oscillator PWM
