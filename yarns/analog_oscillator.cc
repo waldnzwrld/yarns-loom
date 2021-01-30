@@ -26,7 +26,7 @@
 //
 // Oscillator - analog style waveforms.
 
-#include "braids/analog_oscillator.h"
+#include "yarns/analog_oscillator.h"
 
 #include "stmlib/utils/dsp.h"
 
@@ -66,9 +66,7 @@ uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
 }
 
 void AnalogOscillator::Render(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   RenderFn fn = fn_table_[shape_];
   
@@ -85,21 +83,16 @@ void AnalogOscillator::Render(
     pitch_ = 0;
   }
   
-  (this->*fn)(sync_in, buffer, sync_out, size);
+  (this->*fn)(buffer, size);
 }
 
 void AnalogOscillator::RenderCSaw(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
   while (size--) {
-    bool sync_reset = false;
     bool self_reset = false;
-    bool transition_during_reset = false;
-    uint32_t reset_time = 0;
     INTERPOLATE_PHASE_INCREMENT
     uint32_t pw = static_cast<uint32_t>(parameter_) * 49152;
     if (pw < 8 * phase_increment) {
@@ -109,40 +102,12 @@ void AnalogOscillator::RenderCSaw(
     int32_t this_sample = next_sample;
     next_sample = 0;
 
-    if (*sync_in) {
-      // sync_in contain the fractional reset time.
-      reset_time = static_cast<uint32_t>(*sync_in - 1) << 9;
-      uint32_t phase_at_reset = phase_ + \
-          (65535 - reset_time) * (phase_increment >> 16);
-      sync_reset = true;
-      transition_during_reset = false;
-      if (phase_at_reset < phase_ || (!high_ && phase_at_reset >= pw)) {
-        transition_during_reset = true;
-      }
-      if (phase_ >= pw) {
-        discontinuity_depth_ = -2048 + (aux_parameter_ >> 2);
-        int32_t before = (phase_at_reset >> 18);
-        int16_t after = discontinuity_depth_;
-        int32_t discontinuity = after - before;
-        this_sample += discontinuity * ThisBlepSample(reset_time) >> 15;
-        next_sample += discontinuity * NextBlepSample(reset_time) >> 15;
-      }
-    }
-    sync_in++;
-
     phase_ += phase_increment;
     if (phase_ < phase_increment) {
       self_reset = true;
     }
-    if (sync_out) {
-      if (phase_ < phase_increment) {
-        *sync_out++ = phase_ / (phase_increment >> 7) + 1;
-      } else {
-        *sync_out++ = 0;
-      }
-    }
     
-    while (transition_during_reset || !sync_reset) {
+    while (true) {
       if (!high_) {
         if (phase_ < pw) {
           break;
@@ -171,11 +136,6 @@ void AnalogOscillator::RenderCSaw(
       }
     }
 
-    if (sync_reset) {
-      phase_ = reset_time * (phase_increment >> 16);
-      high_ = false;
-    }
-
     next_sample += phase_ < pw
         ? discontinuity_depth_
         : phase_ >> 18;
@@ -186,9 +146,7 @@ void AnalogOscillator::RenderCSaw(
 }
 
 void AnalogOscillator::RenderSquare(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   if (parameter_ > 32000) {
@@ -197,47 +155,20 @@ void AnalogOscillator::RenderSquare(
   
   int32_t next_sample = next_sample_;
   while (size--) {
-    bool sync_reset = false;
     bool self_reset = false;
-    bool transition_during_reset = false;
-    uint32_t reset_time = 0;
-    
+
     INTERPOLATE_PHASE_INCREMENT
     uint32_t pw = static_cast<uint32_t>(32768 - parameter_) << 16;
     
     int32_t this_sample = next_sample;
     next_sample = 0;
     
-    if (*sync_in) {
-      // sync_in contain the fractional reset time.
-      reset_time = static_cast<uint32_t>(*sync_in - 1) << 9;
-      uint32_t phase_at_reset = phase_ + \
-          (65535 - reset_time) * (phase_increment >> 16);
-      sync_reset = true;
-      if (phase_at_reset < phase_ || (!high_ && phase_at_reset >= pw)) {
-        transition_during_reset = true;
-      }
-      if (phase_at_reset >= pw) {
-        this_sample -= ThisBlepSample(reset_time);
-        next_sample -= NextBlepSample(reset_time);
-      }
-    }
-    sync_in++;
-    
     phase_ += phase_increment;
     if (phase_ < phase_increment) {
       self_reset = true;
     }
     
-    if (sync_out) {
-      if (phase_ < phase_increment) {
-        *sync_out++ = phase_ / (phase_increment >> 7) + 1;
-      } else {
-        *sync_out++ = 0;
-      }
-    }
-    
-    while (transition_during_reset || !sync_reset) {
+    while (true) {
       if (!high_) {
         if (phase_ < pw) {
           break;
@@ -259,11 +190,6 @@ void AnalogOscillator::RenderSquare(
       }
     }
     
-    if (sync_reset) {
-      phase_ = reset_time * (phase_increment >> 16);
-      high_ = false;
-    }
-    
     next_sample += phase_ < pw ? 0 : 32767;
     *buffer++ = (this_sample - 16384) << 1;
   }
@@ -272,59 +198,26 @@ void AnalogOscillator::RenderSquare(
 }
 
 void AnalogOscillator::RenderSaw(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
   while (size--) {
-    bool sync_reset = false;
     bool self_reset = false;
-    bool transition_during_reset = false;
-    uint32_t reset_time = 0;
     
     INTERPOLATE_PHASE_INCREMENT
     int32_t this_sample = next_sample;
     next_sample = 0;
-
-    if (*sync_in) {
-      // sync_in contain the fractional reset time.
-      reset_time = static_cast<uint32_t>(*sync_in - 1) << 9;
-      uint32_t phase_at_reset = phase_ + \
-          (65535 - reset_time) * (phase_increment >> 16);
-      sync_reset = true;
-      if (phase_at_reset < phase_) {
-        transition_during_reset = true;
-      }
-      int32_t discontinuity = phase_at_reset >> 17;
-      this_sample -= discontinuity * ThisBlepSample(reset_time) >> 15;
-      next_sample -= discontinuity * NextBlepSample(reset_time) >> 15;
-    }
-    sync_in++;
 
     phase_ += phase_increment;
     if (phase_ < phase_increment) {
       self_reset = true;
     }
 
-    if (sync_out) {
-      if (phase_ < phase_increment) {
-        *sync_out++ = phase_ / (phase_increment >> 7) + 1;
-      } else {
-        *sync_out++ = 0;
-      }
-    }
-
-    if ((transition_during_reset || !sync_reset) && self_reset) {
+    if (self_reset) {
       uint32_t t = phase_ / (phase_increment >> 16);
       this_sample -= ThisBlepSample(t);
       next_sample -= NextBlepSample(t);
-    }
-
-    if (sync_reset) {
-      phase_ = reset_time * (phase_increment >> 16);
-      high_ = false;
     }
     
     next_sample += phase_ >> 17;
@@ -335,9 +228,7 @@ void AnalogOscillator::RenderSaw(
 }
 
 void AnalogOscillator::RenderVariableSaw(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
@@ -345,10 +236,7 @@ void AnalogOscillator::RenderVariableSaw(
     parameter_ = 1024;
   }
   while (size--) {
-    bool sync_reset = false;
     bool self_reset = false;
-    bool transition_during_reset = false;
-    uint32_t reset_time = 0;
 
     INTERPOLATE_PHASE_INCREMENT
     uint32_t pw = static_cast<uint32_t>(parameter_) << 16;
@@ -356,37 +244,12 @@ void AnalogOscillator::RenderVariableSaw(
     int32_t this_sample = next_sample;
     next_sample = 0;
 
-    if (*sync_in) {
-      // sync_in contain the fractional reset time.
-      reset_time = static_cast<uint32_t>(*sync_in - 1) << 9;
-      uint32_t phase_at_reset = phase_ + \
-          (65535 - reset_time) * (phase_increment >> 16);
-      sync_reset = true;
-      if (phase_at_reset < phase_ || (!high_ && phase_at_reset >= pw)) {
-        transition_during_reset = true;
-      }
-      int32_t before = (phase_at_reset >> 18) + ((phase_at_reset - pw) >> 18);
-      int32_t after = (0 >> 18) + ((0 - pw) >> 18);
-      int32_t discontinuity = after - before;
-      this_sample += discontinuity * ThisBlepSample(reset_time) >> 15;
-      next_sample += discontinuity * NextBlepSample(reset_time) >> 15;
-    }
-    sync_in++;
-
     phase_ += phase_increment;
     if (phase_ < phase_increment) {
       self_reset = true;
     }
 
-    if (sync_out) {
-      if (phase_ < phase_increment) {
-        *sync_out++ = phase_ / (phase_increment >> 7) + 1;
-      } else {
-        *sync_out++ = 0;
-      }
-    }
-
-    while (transition_during_reset || !sync_reset) {
+    while (true) {
       if (!high_) {
         if (phase_ < pw) {
           break;
@@ -407,11 +270,6 @@ void AnalogOscillator::RenderVariableSaw(
         high_ = false;
       }
     }
-
-    if (sync_reset) {
-      phase_ = reset_time * (phase_increment >> 16);
-      high_ = false;
-    }
     
     next_sample += phase_ >> 18;
     next_sample += (phase_ - pw) >> 18;
@@ -422,9 +280,7 @@ void AnalogOscillator::RenderVariableSaw(
 }
 
 void AnalogOscillator::RenderTriangle(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   uint32_t phase = phase_;
@@ -433,10 +289,6 @@ void AnalogOscillator::RenderTriangle(
     
     int16_t triangle;
     uint16_t phase_16;
-    
-    if (*sync_in++) {
-      phase = 0;
-    }
     
     phase += phase_increment >> 1;
     phase_16 = phase >> 16;
@@ -455,18 +307,13 @@ void AnalogOscillator::RenderTriangle(
 }
 
 void AnalogOscillator::RenderSine(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   uint32_t phase = phase_;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   while (size--) {
     INTERPOLATE_PHASE_INCREMENT
     phase += phase_increment;
-    if (*sync_in++) {
-      phase = 0;
-    }
     *buffer++ = Interpolate824(wav_sine, phase);
   }
   END_INTERPOLATE_PHASE_INCREMENT
@@ -474,9 +321,7 @@ void AnalogOscillator::RenderSine(
 }
 
 void AnalogOscillator::RenderTriangleFold(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   uint32_t phase = phase_;
   
@@ -490,10 +335,6 @@ void AnalogOscillator::RenderTriangleFold(
     uint16_t phase_16;
     int16_t triangle;
     int16_t gain = 2048 + (parameter * 30720 >> 15);
-    
-    if (*sync_in++) {
-      phase = 0;
-    }
     
     // 2x oversampled WF.
     phase += phase_increment >> 1;
@@ -520,9 +361,7 @@ void AnalogOscillator::RenderTriangleFold(
 }
 
 void AnalogOscillator::RenderSineFold(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   uint32_t phase = phase_;
   
@@ -535,10 +374,7 @@ void AnalogOscillator::RenderSineFold(
     
     int16_t sine;
     int16_t gain = 2048 + (parameter * 30720 >> 15);
-    
-    if (*sync_in++) {
-      phase = 0;
-    }
+
     
     // 2x oversampled WF.
     phase += phase_increment >> 1;
@@ -561,9 +397,7 @@ void AnalogOscillator::RenderSineFold(
 }
 
 void AnalogOscillator::RenderBuzz(
-    const uint8_t* sync_in,
     int16_t* buffer,
-    uint8_t* sync_out,
     size_t size) {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
@@ -579,9 +413,6 @@ void AnalogOscillator::RenderBuzz(
   const int16_t* wave_2 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
   while (size--) {
     phase_ += phase_increment_;
-    if (*sync_in++) {
-      phase_ = 0;
-    }
     *buffer++ = Crossfade(wave_1, wave_2, phase_, crossfade);
   }
 }

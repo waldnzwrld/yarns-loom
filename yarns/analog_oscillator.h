@@ -61,9 +61,7 @@ enum SyncMode {
 class AnalogOscillator {
  public:
   typedef void (AnalogOscillator::*RenderFn)(
-      const uint8_t*,
       int16_t*,
-      uint8_t*,
       size_t);
 
   AnalogOscillator() { }
@@ -111,15 +109,15 @@ class AnalogOscillator {
       size_t size);
   
  private:
-  void RenderSquare(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderSaw(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderVariableSaw(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderCSaw(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderTriangle(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderSine(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderTriangleFold(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderSineFold(const uint8_t*, int16_t*, uint8_t*, size_t);
-  void RenderBuzz(const uint8_t*, int16_t*, uint8_t*, size_t);
+  void RenderSquare(int16_t*, size_t);
+  void RenderSaw(int16_t*, size_t);
+  void RenderVariableSaw(int16_t*, size_t);
+  void RenderCSaw(int16_t*, size_t);
+  void RenderTriangle(int16_t*, size_t);
+  void RenderSine(int16_t*, size_t);
+  void RenderTriangleFold(int16_t*, size_t);
+  void RenderSineFold(int16_t*, size_t);
+  void RenderBuzz(int16_t*, size_t);
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch);
   
