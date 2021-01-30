@@ -110,11 +110,8 @@ class AnalogOscillator {
   
  private:
   void RenderSquare(int16_t*, size_t);
-  void RenderSaw(int16_t*, size_t);
   void RenderVariableSaw(int16_t*, size_t);
   void RenderCSaw(int16_t*, size_t);
-  void RenderTriangle(int16_t*, size_t);
-  void RenderSine(int16_t*, size_t);
   void RenderTriangleFold(int16_t*, size_t);
   void RenderSineFold(int16_t*, size_t);
   void RenderBuzz(int16_t*, size_t);

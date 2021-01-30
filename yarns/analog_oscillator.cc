@@ -197,36 +197,6 @@ void AnalogOscillator::RenderSquare(
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderSaw(
-    int16_t* buffer,
-    size_t size) {
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
-  int32_t next_sample = next_sample_;
-  while (size--) {
-    bool self_reset = false;
-    
-    INTERPOLATE_PHASE_INCREMENT
-    int32_t this_sample = next_sample;
-    next_sample = 0;
-
-    phase_ += phase_increment;
-    if (phase_ < phase_increment) {
-      self_reset = true;
-    }
-
-    if (self_reset) {
-      uint32_t t = phase_ / (phase_increment >> 16);
-      this_sample -= ThisBlepSample(t);
-      next_sample -= NextBlepSample(t);
-    }
-    
-    next_sample += phase_ >> 17;
-    *buffer++ = (this_sample - 16384) << 1;
-  }
-  next_sample_ = next_sample;
-  END_INTERPOLATE_PHASE_INCREMENT
-}
-
 void AnalogOscillator::RenderVariableSaw(
     int16_t* buffer,
     size_t size) {
@@ -277,47 +247,6 @@ void AnalogOscillator::RenderVariableSaw(
   }
   next_sample_ = next_sample;
   END_INTERPOLATE_PHASE_INCREMENT
-}
-
-void AnalogOscillator::RenderTriangle(
-    int16_t* buffer,
-    size_t size) {
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
-  uint32_t phase = phase_;
-  while (size--) {
-    INTERPOLATE_PHASE_INCREMENT
-    
-    int16_t triangle;
-    uint16_t phase_16;
-    
-    phase += phase_increment >> 1;
-    phase_16 = phase >> 16;
-    triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
-    triangle += 32768;
-    *buffer = triangle >> 1;
-    
-    phase += phase_increment >> 1;
-    phase_16 = phase >> 16;
-    triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
-    triangle += 32768;
-    *buffer++ += triangle >> 1;
-  }
-  phase_ = phase;
-  END_INTERPOLATE_PHASE_INCREMENT
-}
-
-void AnalogOscillator::RenderSine(
-    int16_t* buffer,
-    size_t size) {
-  uint32_t phase = phase_;
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
-  while (size--) {
-    INTERPOLATE_PHASE_INCREMENT
-    phase += phase_increment;
-    *buffer++ = Interpolate824(wav_sine, phase);
-  }
-  END_INTERPOLATE_PHASE_INCREMENT
-  phase_ = phase;
 }
 
 void AnalogOscillator::RenderTriangleFold(
@@ -419,15 +348,14 @@ void AnalogOscillator::RenderBuzz(
 
 /* static */
 AnalogOscillator::RenderFn AnalogOscillator::fn_table_[] = {
-  &AnalogOscillator::RenderSaw,
+  // OFF
   &AnalogOscillator::RenderVariableSaw,
   &AnalogOscillator::RenderCSaw,
   &AnalogOscillator::RenderSquare,
-  &AnalogOscillator::RenderTriangle,
-  &AnalogOscillator::RenderSine,
   &AnalogOscillator::RenderTriangleFold,
   &AnalogOscillator::RenderSineFold,
   &AnalogOscillator::RenderBuzz,
+  // NOISE
 };
 
 }  // namespace braids
