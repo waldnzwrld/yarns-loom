@@ -38,6 +38,8 @@
 
 namespace braids {
 
+const size_t kAudioBlockSize = 24; // TODO Yarns was 64
+
 enum AnalogOscillatorShape {
   OSC_SHAPE_SAW,
   OSC_SHAPE_VARIABLE_SAW,
@@ -61,8 +63,7 @@ enum SyncMode {
 class AnalogOscillator {
  public:
   typedef void (AnalogOscillator::*RenderFn)(
-      int16_t*,
-      size_t);
+      int16_t*);
 
   AnalogOscillator() { }
   ~AnalogOscillator() { }
@@ -102,19 +103,15 @@ class AnalogOscillator {
     phase_ = -phase_increment_;
   }
 
-  void Render(
-      // const uint8_t* sync_in,
-      int16_t* buffer,
-      // uint8_t* sync_out,
-      size_t size);
+  void Render(int16_t* buffer);
   
  private:
-  void RenderSquare(int16_t*, size_t);
-  void RenderVariableSaw(int16_t*, size_t);
-  void RenderCSaw(int16_t*, size_t);
-  void RenderTriangleFold(int16_t*, size_t);
-  void RenderSineFold(int16_t*, size_t);
-  void RenderBuzz(int16_t*, size_t);
+  void RenderSquare(int16_t*);
+  void RenderVariableSaw(int16_t*);
+  void RenderCSaw(int16_t*);
+  void RenderTriangleFold(int16_t*);
+  void RenderSineFold(int16_t*);
+  void RenderBuzz(int16_t*);
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch);
   

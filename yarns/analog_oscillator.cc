@@ -66,8 +66,7 @@ uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
 }
 
 void AnalogOscillator::Render(
-    int16_t* buffer,
-    size_t size) {
+    int16_t* buffer) {
   RenderFn fn = fn_table_[shape_];
   
   if (shape_ != previous_shape_) {
@@ -83,12 +82,12 @@ void AnalogOscillator::Render(
     pitch_ = 0;
   }
   
-  (this->*fn)(buffer, size);
+  (this->*fn)(buffer);
 }
 
 void AnalogOscillator::RenderCSaw(
-    int16_t* buffer,
-    size_t size) {
+    int16_t* buffer) {
+  size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
   while (size--) {
@@ -146,8 +145,8 @@ void AnalogOscillator::RenderCSaw(
 }
 
 void AnalogOscillator::RenderSquare(
-    int16_t* buffer,
-    size_t size) {
+    int16_t* buffer) {
+  size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   if (parameter_ > 32000) {
     parameter_ = 32000;
@@ -198,8 +197,8 @@ void AnalogOscillator::RenderSquare(
 }
 
 void AnalogOscillator::RenderVariableSaw(
-    int16_t* buffer,
-    size_t size) {
+    int16_t* buffer) {
+  size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
   if (parameter_ < 1024) {
@@ -250,10 +249,10 @@ void AnalogOscillator::RenderVariableSaw(
 }
 
 void AnalogOscillator::RenderTriangleFold(
-    int16_t* buffer,
-    size_t size) {
+    int16_t* buffer) {
   uint32_t phase = phase_;
   
+  size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   BEGIN_INTERPOLATE_PARAMETER
   
@@ -290,10 +289,10 @@ void AnalogOscillator::RenderTriangleFold(
 }
 
 void AnalogOscillator::RenderSineFold(
-    int16_t* buffer,
-    size_t size) {
+    int16_t* buffer) {
   uint32_t phase = phase_;
   
+  size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   BEGIN_INTERPOLATE_PARAMETER
   
@@ -326,8 +325,7 @@ void AnalogOscillator::RenderSineFold(
 }
 
 void AnalogOscillator::RenderBuzz(
-    int16_t* buffer,
-    size_t size) {
+    int16_t* buffer) {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
   size_t index = (shifted_pitch >> 10);
@@ -340,6 +338,7 @@ void AnalogOscillator::RenderBuzz(
     index = kNumZones - 1;
   }
   const int16_t* wave_2 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
+  size_t size = kAudioBlockSize;
   while (size--) {
     phase_ += phase_increment_;
     *buffer++ = Crossfade(wave_1, wave_2, phase_, crossfade);
