@@ -419,7 +419,7 @@ void Oscillator::RenderSquare(
 }
 
 void Oscillator::Render(uint8_t mode, int16_t note, bool gate, uint16_t gain) {
-  if (mode == AUDIO_MODE_OFF || audio_buffer_.writable() < kAudioBlockSize) {
+  if (mode == OSCILLATOR_SHAPE_OFF || audio_buffer_.writable() < kAudioBlockSize) {
     return;
   }
   
@@ -430,22 +430,22 @@ void Oscillator::Render(uint8_t mode, int16_t note, bool gate, uint16_t gain) {
   
   uint32_t phase_increment = ComputePhaseIncrement(note);
   switch (mode & 0x0f) {
-    case AUDIO_MODE_SAW:
+    case OSCILLATOR_SHAPE_SAW:
       RenderSaw(gain, phase_increment);
       break;
-    case AUDIO_MODE_PULSE_VARIABLE:
+    case OSCILLATOR_SHAPE_PULSE_VARIABLE:
       RenderSquare(gain, phase_increment, pulse_width_, false);
       break;
-    case AUDIO_MODE_PULSE_50:
+    case OSCILLATOR_SHAPE_PULSE_50:
       RenderSquare(gain, phase_increment, 0x80000000, false);
       break;
-    case AUDIO_MODE_TRIANGLE:
+    case OSCILLATOR_SHAPE_TRIANGLE:
       RenderSquare(gain, phase_increment, 0x80000000, true);
       break;
-    case AUDIO_MODE_SINE:
+    case OSCILLATOR_SHAPE_SINE:
       RenderSine(gain, phase_increment);
       break;
-    case AUDIO_MODE_NOISE:
+    case OSCILLATOR_SHAPE_NOISE:
       RenderNoise(gain);
       break;
   }

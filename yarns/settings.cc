@@ -398,8 +398,8 @@ const Setting Settings::settings_[] = {
   },
   {
     "OS", "OSC WAVE",
-    SETTING_DOMAIN_PART, { PART_VOICING_AUDIO_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, AUDIO_MODE_LAST - 1, voicing_oscillator_values,
+    SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_SHAPE_LAST - 1, voicing_oscillator_values,
     71, 23,
   },
   {

@@ -200,7 +200,7 @@ struct PackedPart {
     trigger_scale : 1,
     trigger_shape : 3,
     aux_cv : 4, // barely
-    audio_mode : 3,
+    oscillator_shape : 3,
     aux_cv_2 : 4, // barely
     tuning_factor : 4,
     oscillator_pw_initial : kTimbreBits,
@@ -287,7 +287,7 @@ struct VoicingSettings {
   uint8_t trigger_scale;
   uint8_t trigger_shape;
   uint8_t aux_cv;
-  uint8_t audio_mode;
+  uint8_t oscillator_shape;
   uint8_t aux_cv_2;
   uint8_t tuning_factor;
   uint8_t oscillator_pw_initial;
@@ -321,7 +321,7 @@ struct VoicingSettings {
     packed.trigger_scale = trigger_scale;
     packed.trigger_shape = trigger_shape;
     packed.aux_cv = aux_cv;
-    packed.audio_mode = audio_mode;
+    packed.oscillator_shape = oscillator_shape;
     packed.aux_cv_2 = aux_cv_2;
     packed.tuning_factor = tuning_factor;
     packed.oscillator_pw_initial = oscillator_pw_initial;
@@ -355,7 +355,7 @@ struct VoicingSettings {
     trigger_scale = packed.trigger_scale;
     trigger_shape = packed.trigger_shape;
     aux_cv = packed.aux_cv;
-    audio_mode = packed.audio_mode;
+    oscillator_shape = packed.oscillator_shape;
     aux_cv_2 = packed.aux_cv_2;
     tuning_factor = packed.tuning_factor;
     oscillator_pw_initial = packed.oscillator_pw_initial;
@@ -404,7 +404,7 @@ enum PartSetting {
   PART_VOICING_TRIGGER_SCALE,
   PART_VOICING_TRIGGER_SHAPE,
   PART_VOICING_AUX_CV,
-  PART_VOICING_AUDIO_MODE,
+  PART_VOICING_OSCILLATOR_SHAPE,
   PART_VOICING_AUX_CV_2,
   PART_VOICING_TUNING_FACTOR,
   PART_VOICING_OSCILLATOR_PW_INITIAL,
