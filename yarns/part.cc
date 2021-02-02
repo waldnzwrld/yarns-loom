@@ -114,7 +114,7 @@ void Part::Init() {
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   midi_.play_mode = PLAY_MODE_MANUAL;
   seq_.clock_quantization = 0;
-  seq_.loop_length = 4; // 1 bar
+  seq_.loop_length = 2; // 1 bar
 
   StopRecording();
   DeleteSequence();

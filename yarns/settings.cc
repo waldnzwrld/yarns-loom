@@ -550,7 +550,7 @@ const Setting Settings::settings_[] = {
   {
     "L-", "LOOP LENGTH",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_LOOP_LENGTH, 0 },
-    SETTING_UNIT_UINT8, 1, 127, NULL,
+    SETTING_UNIT_LOOP_LENGTH, 0, 7, NULL,
     84, 0,
   },
   {
@@ -679,6 +679,10 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       } else {
         PrintInteger(buffer, value);
       }
+      break;
+
+    case SETTING_UNIT_LOOP_LENGTH:
+      PrintInteger(buffer, 1 << value);
       break;
       
     default:

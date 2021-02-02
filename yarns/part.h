@@ -142,7 +142,7 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 struct PackedPart {
-  // Currently has 0 bits to spare
+  // Currently has 4 bits to spare
 
   struct PackedSequencerStep {
     unsigned int
@@ -222,7 +222,7 @@ struct PackedPart {
     euclidean_rotate : 5,
     num_steps : 5,
     clock_quantization : 1,
-    loop_length : 7; // probably excessive
+    loop_length : 3;
 
 }__attribute__((packed));
 
@@ -958,7 +958,7 @@ class Part {
   void AfterDeserialize() {
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);
-    CONSTRAIN(seq_.loop_length, 1, 127);
+    CONSTRAIN(seq_.loop_length, 0, 7);
     CONSTRAIN(seq_.arp_range, 0, 3);
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();
