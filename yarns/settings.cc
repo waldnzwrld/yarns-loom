@@ -72,7 +72,12 @@ const char* const voicing_oscillator_mode_values[] = {
 };
 
 const char* const voicing_oscillator_shape_values[] = {
-  "\x88\x88", "\x8C\x8C", "\x8C_", "/\\", "SINE", "**"
+  "\x88\x88",
+  "\x89\x89",
+  "\x8C_",
+  "/\\",
+  "SINE",
+  // "\x8E\x8E",
 };
 
 const char* const voicing_allocation_priority_values[] = {
@@ -415,7 +420,7 @@ const Setting Settings::settings_[] = {
   {
     "OS", "OSC SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_SHAPE_LAST - 1, voicing_oscillator_shape_values,
+    SETTING_UNIT_ENUMERATION, 0, 4, voicing_oscillator_shape_values,
     71, 23,
   },
   {

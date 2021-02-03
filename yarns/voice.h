@@ -34,6 +34,7 @@
 #include "stmlib/utils/ring_buffer.h"
 
 #include "yarns/envelope.h"
+#include "yarns/analog_oscillator.h"
 #include "yarns/synced_lfo.h"
 #include "yarns/part.h"
 #include "yarns/clock_division.h"
@@ -41,7 +42,6 @@
 namespace yarns {
 
 const uint16_t kNumOctaves = 11;
-const size_t kAudioBlockSize = 64;
 
 enum TriggerShape {
   TRIGGER_SHAPE_SQUARE,
@@ -60,17 +60,6 @@ enum OscillatorMode {
   OSCILLATOR_MODE_LAST
 };
 
-enum OscillatorShape {
-  OSCILLATOR_SHAPE_SAW,
-  OSCILLATOR_SHAPE_PULSE_VARIABLE,
-  OSCILLATOR_SHAPE_PULSE_50,
-  OSCILLATOR_SHAPE_TRIANGLE,
-  OSCILLATOR_SHAPE_SINE,
-  OSCILLATOR_SHAPE_NOISE,
-
-  OSCILLATOR_SHAPE_LAST
-};
-
 enum ModAux {
   MOD_AUX_VELOCITY,
   MOD_AUX_MODULATION,
@@ -83,58 +72,6 @@ enum ModAux {
   MOD_AUX_ENVELOPE,
 
   MOD_AUX_LAST
-};
-
-class Oscillator {
- public:
-  Oscillator() { }
-  ~Oscillator() { }
-  void Init(int32_t scale, int32_t offset);
-  void Render(uint8_t shape, int16_t note, bool gate, uint16_t gain);
-  inline uint16_t ReadSample() {
-    return audio_buffer_.ImmediateRead();
-  }
-  inline void SetPulseWidth(uint32_t pw) { pulse_width_ = pw; }
-
- private:
-  uint32_t ComputePhaseIncrement(int16_t pitch);
-  
-  void RenderSilence();
-  void RenderNoise(uint16_t gain);
-  void RenderSine(uint16_t gain, uint32_t phase_increment);
-  void RenderSaw(uint16_t gain, uint32_t phase_increment);
-  void RenderSquare(uint16_t gain, uint32_t phase_increment, uint32_t pw, bool integrate);
-
-  inline void WriteSample(uint16_t gain, int16_t sample) {
-    int32_t amplitude = (scale_ * gain) >> 16;
-    audio_buffer_.Overwrite(offset_ - ((amplitude * sample) >> 16));
-  }
-
-  inline int32_t ThisBlepSample(uint32_t t) {
-    if (t > 65535) {
-      t = 65535;
-    }
-    return t * t >> 18;
-  }
-  
-  inline int32_t NextBlepSample(uint32_t t) {
-    if (t > 65535) {
-      t = 65535;
-    }
-    t = 65535 - t;
-    return -static_cast<int32_t>(t * t >> 18);
-  }
-  
-  int32_t scale_;
-  int32_t offset_;
-  uint32_t phase_;
-  int32_t next_sample_;
-  int32_t integrator_state_;
-  uint32_t pulse_width_;
-  bool high_;
-  stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;
-  
-  DISALLOW_COPY_AND_ASSIGN(Oscillator);
 };
 
 class Voice {
@@ -206,8 +143,8 @@ class Voice {
   inline void set_oscillator_mode(uint8_t m) {
     oscillator_mode_ = m;
   }
-  inline void set_oscillator_shape(uint8_t oscillator_shape) {
-    oscillator_shape_ = oscillator_shape;
+  inline void set_oscillator_shape(uint8_t s) {
+    oscillator_.set_shape(static_cast<AnalogOscillatorShape>(s));
   }
   inline void set_oscillator_pw_initial(uint8_t pw) {
     oscillator_pw_initial_ = pw;
@@ -224,7 +161,7 @@ class Voice {
     return oscillator_mode_ != OSCILLATOR_MODE_OFF;
   }
 
-  inline Oscillator* oscillator() {
+  inline AnalogOscillator* oscillator() {
     return &oscillator_;
   }
 
@@ -243,19 +180,8 @@ class Voice {
   }
 
   inline void RenderAudio() {
-    uint16_t gain;
-    switch (oscillator_mode_) {
-      case OSCILLATOR_MODE_DRONE:
-        gain = UINT16_MAX;
-        break;
-      case OSCILLATOR_MODE_ENVELOPED:
-        gain = scaled_envelope();
-        break;
-      case OSCILLATOR_MODE_OFF:
-      default:
-        return;
-    }
-    oscillator_.Render(oscillator_shape_, note_, gate_, gain);
+    if (oscillator_mode_ == OSCILLATOR_MODE_OFF) return;
+    oscillator_.Render();
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -304,10 +230,9 @@ class Voice {
   uint32_t trigger_phase_;
   
   uint8_t oscillator_mode_;
-  uint8_t oscillator_shape_;
   uint8_t oscillator_pw_initial_;
   int8_t oscillator_pw_mod_;
-  Oscillator oscillator_;
+  AnalogOscillator oscillator_;
   Envelope envelope_;
   uint16_t envelope_amplitude_;
 

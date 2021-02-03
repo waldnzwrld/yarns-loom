@@ -30,17 +30,17 @@
 
 #include "stmlib/utils/dsp.h"
 
-#include "braids/resources.h"
+#include "yarns/resources.h"
 #include "braids/parameter_interpolation.h"
 
-namespace braids {
+namespace yarns {
 
 using namespace stmlib;
 
 static const size_t kNumZones = 15;
 
 static const uint16_t kHighestNote = 128 * 128;
-static const uint16_t kPitchTableStart = 128 * 128;
+static const uint16_t kPitchTableStart = 116 * 128;
 static const uint16_t kOctave = 12 * 128;
 
 uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
@@ -65,15 +65,15 @@ uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
   return phase_increment;
 }
 
-void AnalogOscillator::Render(
-    int16_t* buffer) {
+void AnalogOscillator::Render() {
   RenderFn fn = fn_table_[shape_];
   
   if (shape_ != previous_shape_) {
-    Init();
+    OnShapeChange();
     previous_shape_ = shape_;
   }
-  
+
+  if (audio_buffer_.writable() < kAudioBlockSize) return;
   phase_increment_ = ComputePhaseIncrement(pitch_);
   
   if (pitch_ > kHighestNote) {
@@ -82,11 +82,10 @@ void AnalogOscillator::Render(
     pitch_ = 0;
   }
   
-  (this->*fn)(buffer);
+  (this->*fn)();
 }
 
-void AnalogOscillator::RenderCSaw(
-    int16_t* buffer) {
+void AnalogOscillator::RenderCSaw() {
   size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
@@ -138,14 +137,13 @@ void AnalogOscillator::RenderCSaw(
     next_sample += phase_ < pw
         ? discontinuity_depth_
         : phase_ >> 18;
-    *buffer++ = (this_sample - 8192) << 1;
+    WriteSample((this_sample - 8192) << 1);
   }
   next_sample_ = next_sample;
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderSquare(
-    int16_t* buffer) {
+void AnalogOscillator::RenderSquare() {
   size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   if (parameter_ > 32000) {
@@ -190,14 +188,13 @@ void AnalogOscillator::RenderSquare(
     }
     
     next_sample += phase_ < pw ? 0 : 32767;
-    *buffer++ = (this_sample - 16384) << 1;
+    WriteSample((this_sample - 16384) << 1);
   }
   next_sample_ = next_sample;
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderVariableSaw(
-    int16_t* buffer) {
+void AnalogOscillator::RenderVariableSaw() {
   size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
@@ -242,14 +239,13 @@ void AnalogOscillator::RenderVariableSaw(
     
     next_sample += phase_ >> 18;
     next_sample += (phase_ - pw) >> 18;
-    *buffer++ = (this_sample - 16384) << 1;
+    WriteSample((this_sample - 16384) << 1);
   }
   next_sample_ = next_sample;
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderTriangleFold(
-    int16_t* buffer) {
+void AnalogOscillator::RenderTriangleFold() {
   uint32_t phase = phase_;
   
   size_t size = kAudioBlockSize;
@@ -263,23 +259,28 @@ void AnalogOscillator::RenderTriangleFold(
     uint16_t phase_16;
     int16_t triangle;
     int16_t gain = 2048 + (parameter * 30720 >> 15);
+    int16_t sample;
     
     // 2x oversampled WF.
-    phase += phase_increment >> 1;
+    phase += phase_increment; // >> 1;
     phase_16 = phase >> 16;
     triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     triangle += 32768;
     triangle = triangle * gain >> 15;
     triangle = Interpolate88(ws_tri_fold, triangle + 32768);
-    *buffer = triangle >> 1;
+    sample = triangle;// >> 1;
     
+    /*
     phase += phase_increment >> 1;
     phase_16 = phase >> 16;
     triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     triangle += 32768;
     triangle = triangle * gain >> 15;
     triangle = Interpolate88(ws_tri_fold, triangle + 32768);
-    *buffer++ += triangle >> 1;
+    sample += triangle >> 1;
+    */
+
+    WriteSample(sample);
   }
   
   END_INTERPOLATE_PARAMETER
@@ -288,8 +289,7 @@ void AnalogOscillator::RenderTriangleFold(
   phase_ = phase;
 }
 
-void AnalogOscillator::RenderSineFold(
-    int16_t* buffer) {
+void AnalogOscillator::RenderSineFold() {
   uint32_t phase = phase_;
   
   size_t size = kAudioBlockSize;
@@ -302,20 +302,24 @@ void AnalogOscillator::RenderSineFold(
     
     int16_t sine;
     int16_t gain = 2048 + (parameter * 30720 >> 15);
-
+    int16_t sample;
     
     // 2x oversampled WF.
-    phase += phase_increment >> 1;
+    phase += phase_increment; // >> 1;
     sine = Interpolate824(wav_sine, phase);
     sine = sine * gain >> 15;
     sine = Interpolate88(ws_sine_fold, sine + 32768);
-    *buffer = sine >> 1;
+    sample = sine; // >> 1;
     
+    /*
     phase += phase_increment >> 1;
     sine = Interpolate824(wav_sine, phase);
     sine = sine * gain >> 15;
     sine = Interpolate88(ws_sine_fold, sine + 32768);
-    *buffer++ += sine >> 1;
+    sample += sine >> 1;
+    */
+
+    WriteSample(sample);
   }
   
   END_INTERPOLATE_PARAMETER
@@ -324,8 +328,8 @@ void AnalogOscillator::RenderSineFold(
   phase_ = phase;
 }
 
-void AnalogOscillator::RenderBuzz(
-    int16_t* buffer) {
+/*
+void AnalogOscillator::RenderBuzz() {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
   size_t index = (shifted_pitch >> 10);
@@ -341,20 +345,19 @@ void AnalogOscillator::RenderBuzz(
   size_t size = kAudioBlockSize;
   while (size--) {
     phase_ += phase_increment_;
-    *buffer++ = Crossfade(wave_1, wave_2, phase_, crossfade);
+    WriteSample(Crossfade(wave_1, wave_2, phase_, crossfade));
   }
 }
+*/
 
 /* static */
 AnalogOscillator::RenderFn AnalogOscillator::fn_table_[] = {
-  // OFF
   &AnalogOscillator::RenderVariableSaw,
   &AnalogOscillator::RenderCSaw,
   &AnalogOscillator::RenderSquare,
   &AnalogOscillator::RenderTriangleFold,
   &AnalogOscillator::RenderSineFold,
-  &AnalogOscillator::RenderBuzz,
-  // NOISE
+  // &AnalogOscillator::RenderBuzz,
 };
 
-}  // namespace braids
+}  // namespace yarns

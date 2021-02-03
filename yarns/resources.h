@@ -48,6 +48,8 @@ extern const int16_t* lookup_table_signed_table[];
 
 extern const int16_t* waveform_table[];
 
+extern const int16_t* waveshaper_table[];
+
 extern const uint32_t* lookup_table_32_table[];
 
 extern const uint16_t* char_table[];
@@ -89,6 +91,8 @@ extern const int16_t wav_ring[];
 extern const int16_t wav_steps[];
 extern const int16_t wav_noise[];
 extern const int16_t wav_sine[];
+extern const int16_t ws_sine_fold[];
+extern const int16_t ws_tri_fold[];
 extern const uint32_t lut_lfo_increments[];
 extern const uint32_t lut_portamento_increments[];
 extern const uint32_t lut_oscillator_increments[];
@@ -172,7 +176,11 @@ extern const uint16_t chr_characters[];
 #define WAV_NOISE 3
 #define WAV_NOISE_SIZE 257
 #define WAV_SINE 4
-#define WAV_SINE_SIZE 1025
+#define WAV_SINE_SIZE 257
+#define WS_SINE_FOLD 0
+#define WS_SINE_FOLD_SIZE 257
+#define WS_TRI_FOLD 1
+#define WS_TRI_FOLD_SIZE 257
 #define LUT_LFO_INCREMENTS 0
 #define LUT_LFO_INCREMENTS_SIZE 96
 #define LUT_PORTAMENTO_INCREMENTS 1

@@ -167,14 +167,21 @@ bool Voice::Refresh(uint8_t voice_index) {
   
   // Use quadrature phase for PWM LFO
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
+  /*
   int32_t pw_30bit = \
     // Initial range 0..1
     (oscillator_pw_initial_ << (30 - 6)) +
     // Mod range -1..1 with cubic scaling
     lfo * oscillator_pw_mod_ * oscillator_pw_mod_ * oscillator_pw_mod_;
   int32_t min_pw = 1 << (30 - kOscillatorPWMRatioBits);
-  CONSTRAIN(pw_30bit, min_pw, (1 << 30) - min_pw)
+  CONSTRAIN(pw_30bit, min_pw, (1 << 30) - min_pw);
   oscillator_.SetPulseWidth(pw_30bit << (32 - 30));
+  */
+  int32_t parameter_20 = \
+    (oscillator_pw_initial_ << (20 - 6)) +
+    lfo * oscillator_pw_mod_;
+  CONSTRAIN(parameter_20, 0, (1 << 20));
+  oscillator_.set_parameter((parameter_20 >> (20 - 16)) - INT16_MIN);
 
   if (retrigger_delay_) {
     --retrigger_delay_;
@@ -194,9 +201,14 @@ bool Voice::Refresh(uint8_t voice_index) {
 
   envelope_.Render();
   mod_aux_[MOD_AUX_ENVELOPE] = scaled_envelope();
+  oscillator_.set_gain(
+    oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
+    scaled_envelope() : UINT16_MAX
+  );
 
   bool changed = note != note_;
   note_ = note;
+  oscillator_.set_pitch(note);
   return changed;
 }
 
@@ -291,158 +303,6 @@ int32_t Voice::trigger_value() const {
     }
     value = value * velocity_coefficient >> 15;
     return value;
-  }
-}
-
-static const uint16_t kHighestNote = 128 * 128;
-static const uint16_t kPitchTableStart = 116 * 128;
-
-
-void Oscillator::Init(int32_t scale, int32_t offset) {
-  audio_buffer_.Init();
-  phase_ = 0;
-  next_sample_ = 0;
-  high_ = false;
-  scale_ = scale;
-  offset_ = offset;
-  integrator_state_ = 0;
-  pulse_width_ = 0x80000000;
-}
-
-uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) {
-  if (midi_pitch >= kHighestNote) {
-    midi_pitch = kHighestNote - 1;
-  }
-
-  int32_t ref_pitch = midi_pitch;
-  ref_pitch -= kPitchTableStart;
-
-  size_t num_shifts = 0;
-  while (ref_pitch < 0) {
-    ref_pitch += kOctave;
-    ++num_shifts;
-  }
-
-  uint32_t a = lut_oscillator_increments[ref_pitch >> 4];
-  uint32_t b = lut_oscillator_increments[(ref_pitch >> 4) + 1];
-  uint32_t phase_increment = a + \
-      (static_cast<int32_t>(b - a) * (ref_pitch & 0xf) >> 4);
-  phase_increment >>= num_shifts;
-  return phase_increment;
-}
-
-void Oscillator::RenderSilence() {
-  size_t size = kAudioBlockSize;
-  while (size--) {
-    WriteSample(0, 0);
-  }
-}
-
-void Oscillator::RenderSine(uint16_t gain, uint32_t phase_increment) {
-  size_t size = kAudioBlockSize;
-  while (size--) {
-    phase_ += phase_increment;
-    WriteSample(gain, Interpolate1022(wav_sine, phase_));
-  }
-}
-
-void Oscillator::RenderNoise(uint16_t gain) {
-  size_t size = kAudioBlockSize;
-  while (size--) {
-    WriteSample(gain, Random::GetSample());
-  }
-}
-
-void Oscillator::RenderSaw(uint16_t gain, uint32_t phase_increment) {
-  uint32_t phase = phase_;
-  int32_t next_sample = next_sample_;
-  size_t size = kAudioBlockSize;
-
-  while (size--) {
-    int32_t this_sample = next_sample;
-    next_sample = 0;
-    phase += phase_increment;
-    if (phase < phase_increment) {
-      uint32_t t = phase / (phase_increment >> 16);
-      this_sample -= ThisBlepSample(t);
-      next_sample -= NextBlepSample(t);
-    }
-    next_sample += phase >> 17;
-    this_sample = (this_sample - 16384) << 1;
-    WriteSample(gain, this_sample);
-  }
-  next_sample_ = next_sample;
-  phase_ = phase;
-}
-
-void Oscillator::RenderSquare(
-    uint16_t gain,
-    uint32_t phase_increment,
-    uint32_t pw,
-    bool integrate) {
-  uint32_t phase = phase_;
-  int32_t next_sample = next_sample_;
-  int32_t integrator_state = integrator_state_;
-  int16_t integrator_coefficient = phase_increment >> 18;
-  size_t size = kAudioBlockSize;
-
-  while (size--) {
-    int32_t this_sample = next_sample;
-    next_sample = 0;
-    phase += phase_increment;
-
-    if (!high_) {
-      if (phase >= pw) {
-        uint32_t t = (phase - pw) / (phase_increment >> 16);
-        this_sample += ThisBlepSample(t);
-        next_sample += NextBlepSample(t);
-        high_ = true;
-      }
-    }
-    if (high_ && (phase < phase_increment)) {
-      uint32_t t = phase / (phase_increment >> 16);
-      this_sample -= ThisBlepSample(t);
-      next_sample -= NextBlepSample(t);
-      high_ = false;
-    }
-    next_sample += phase < pw ? 0 : 32767;
-    this_sample = (this_sample - 16384) << 1;
-    if (integrate) {
-      integrator_state += integrator_coefficient * (this_sample - integrator_state) >> 15;
-      this_sample = integrator_state << 3;
-    }
-    WriteSample(gain, this_sample);
-  }
-  integrator_state_ = integrator_state;
-  next_sample_ = next_sample;
-  phase_ = phase;
-}
-
-void Oscillator::Render(uint8_t shape, int16_t note, bool gate, uint16_t gain) {
-  if (audio_buffer_.writable() < kAudioBlockSize) {
-    return;
-  }
-  
-  uint32_t phase_increment = ComputePhaseIncrement(note);
-  switch (shape) {
-    case OSCILLATOR_SHAPE_SAW:
-      RenderSaw(gain, phase_increment);
-      break;
-    case OSCILLATOR_SHAPE_PULSE_VARIABLE:
-      RenderSquare(gain, phase_increment, pulse_width_, false);
-      break;
-    case OSCILLATOR_SHAPE_PULSE_50:
-      RenderSquare(gain, phase_increment, 0x80000000, false);
-      break;
-    case OSCILLATOR_SHAPE_TRIANGLE:
-      RenderSquare(gain, phase_increment, 0x80000000, true);
-      break;
-    case OSCILLATOR_SHAPE_SINE:
-      RenderSine(gain, phase_increment);
-      break;
-    case OSCILLATOR_SHAPE_NOISE:
-      RenderNoise(gain);
-      break;
   }
 }
 

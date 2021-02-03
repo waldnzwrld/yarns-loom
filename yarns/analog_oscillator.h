@@ -26,30 +26,26 @@
 //
 // Oscillator - analog style waveforms.
 
-#ifndef BRAIDS_ANALOG_OSCILLATOR_H_
-#define BRAIDS_ANALOG_OSCILLATOR_H_
+#ifndef YARNS_ANALOG_OSCILLATOR_H_
+#define YARNS_ANALOG_OSCILLATOR_H_
 
 #include "stmlib/stmlib.h"
+#include "stmlib/utils/ring_buffer.h"
 
 #include <cstring>
 #include <cstdio>
 
-#include "braids/resources.h"
+namespace yarns {
 
-namespace braids {
-
-const size_t kAudioBlockSize = 24; // TODO Yarns was 64
+const size_t kAudioBlockSize = 64; // TODO Braids was 24
 
 enum AnalogOscillatorShape {
-  OSC_SHAPE_SAW,
   OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_CSAW,
   OSC_SHAPE_SQUARE,
-  OSC_SHAPE_TRIANGLE,
-  OSC_SHAPE_SINE,
   OSC_SHAPE_TRIANGLE_FOLD,
   OSC_SHAPE_SINE_FOLD,
-  OSC_SHAPE_BUZZ
+  // OSC_SHAPE_BUZZ
 };
 
 /*
@@ -62,21 +58,39 @@ enum SyncMode {
 
 class AnalogOscillator {
  public:
-  typedef void (AnalogOscillator::*RenderFn)(
-      int16_t*);
+  typedef void (AnalogOscillator::*RenderFn)();
 
   AnalogOscillator() { }
   ~AnalogOscillator() { }
+
+  inline void Init(int32_t scale, int32_t offset) {
+    audio_buffer_.Init();
+    scale_ = scale;
+    offset_ = offset;
+    pitch_ = 60 << 7;
+    OnShapeChange();
+  }
   
-  inline void Init() {
+  inline void OnShapeChange() {
     phase_ = 0;
     phase_increment_ = 1;
     high_ = false;
     parameter_ = previous_parameter_ = 0;
     aux_parameter_ = 0;
     discontinuity_depth_ = -16383;
-    pitch_ = 60 << 7;
     next_sample_ = 0;
+  }
+
+  inline void WriteSample(int16_t sample) {
+    audio_buffer_.Overwrite(offset_ - ((amplitude_ * sample) >> 16));
+  }
+
+  inline uint16_t ReadSample() {
+    return audio_buffer_.ImmediateRead();
+  }
+
+  inline void set_gain(uint16_t gain) {
+    amplitude_ = (scale_ * gain) >> 16;
   }
   
   inline void set_shape(AnalogOscillatorShape shape) {
@@ -103,15 +117,15 @@ class AnalogOscillator {
     phase_ = -phase_increment_;
   }
 
-  void Render(int16_t* buffer);
+  void Render();
   
  private:
-  void RenderSquare(int16_t*);
-  void RenderVariableSaw(int16_t*);
-  void RenderCSaw(int16_t*);
-  void RenderTriangleFold(int16_t*);
-  void RenderSineFold(int16_t*);
-  void RenderBuzz(int16_t*);
+  void RenderSquare();
+  void RenderVariableSaw();
+  void RenderCSaw();
+  void RenderTriangleFold();
+  void RenderSineFold();
+  // void RenderBuzz();
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch);
   
@@ -145,12 +159,17 @@ class AnalogOscillator {
   
   AnalogOscillatorShape shape_;
   AnalogOscillatorShape previous_shape_;
+
+  int32_t scale_;
+  int32_t amplitude_;
+  int32_t offset_;
+  stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;
   
   static RenderFn fn_table_[];
   
   DISALLOW_COPY_AND_ASSIGN(AnalogOscillator);
 };
 
-}  // namespace braids
+}  // namespace yarns
 
-#endif // BRAIDS_ANALOG_OSCILLATOR_H_
+#endif // YARNS_ANALOG_OSCILLATOR_H_
