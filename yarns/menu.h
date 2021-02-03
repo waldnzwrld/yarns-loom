@@ -79,7 +79,7 @@ namespace yarns {
   SETTING_SEQUENCER_EUCLIDEAN_FILL, \
   SETTING_SEQUENCER_EUCLIDEAN_ROTATE
 
-#define MENU_OUTPUT \
+#define MENU_TUNING \
   SETTING_VOICING_OSCILLATOR_SHAPE, \
   SETTING_VOICING_TUNING_SYSTEM, \
   SETTING_VOICING_TUNING_ROOT, \
@@ -102,16 +102,22 @@ namespace yarns {
   SETTING_VOICING_PORTAMENTO, \
   SETTING_VOICING_MODULATION_RATE, \
   SETTING_VOICING_VIBRATO_INITIAL, \
-  SETTING_VOICING_OSCILLATOR_PW_INITIAL, \
-  SETTING_VOICING_OSCILLATOR_PW_MOD, \
   SETTING_VOICING_TUNING_TRANSPOSE, \
   SETTING_VOICING_TUNING_FINE
 
 static const SettingIndex menu_live[] = {
   SETTING_MENU_SETUP,
+  SETTING_MENU_OSCILLATOR,
   SETTING_MENU_ENVELOPE,
   MENU_LIVE,
   SETTING_LAST
+};
+
+static const SettingIndex menu_oscillator[] = {
+  SETTING_VOICING_OSCILLATOR_MODE,
+  SETTING_VOICING_OSCILLATOR_SHAPE,
+  SETTING_VOICING_OSCILLATOR_PW_INITIAL,
+  SETTING_VOICING_OSCILLATOR_PW_MOD,
 };
 
 static const SettingIndex menu_envelope[] = {
@@ -147,7 +153,7 @@ static const SettingIndex mono[] = {
   SETTING_VOICING_TRIGGER_DURATION,
   SETTING_VOICING_CV_OUT_3,
   SETTING_VOICING_CV_OUT_4,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -157,7 +163,7 @@ static const SettingIndex dual_mono[] = {
   MENU_VOICING_ALLOCATION_MONO,
   MENU_MODULATION,
   SETTING_VOICING_CV_OUT,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -167,7 +173,7 @@ static const SettingIndex quad_mono[] = {
   MENU_MIDI,
   MENU_VOICING_ALLOCATION_MONO,
   MENU_MODULATION,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -178,7 +184,7 @@ static const SettingIndex dual_poly[] = {
   MENU_MODULATION,
   SETTING_VOICING_CV_OUT_3,
   SETTING_VOICING_CV_OUT_4,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -188,7 +194,7 @@ static const SettingIndex quad_poly[] = {
   MENU_MIDI,
   MENU_VOICING_ALLOCATION_POLY,
   MENU_MODULATION,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -199,7 +205,7 @@ static const SettingIndex quad_poly[] = {
   MENU_MODULATION, \
   SETTING_VOICING_CV_OUT_3, \
   SETTING_VOICING_CV_OUT_4, \
-  MENU_OUTPUT, \
+  MENU_TUNING, \
   MENU_END
 
 static const SettingIndex dual_polychained[] = {
@@ -216,7 +222,7 @@ static const SettingIndex octal_polychained[] = {
   MENU_MIDI,
   SETTING_VOICING_ALLOCATION_PRIORITY,
   MENU_MODULATION,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -237,7 +243,7 @@ static const SettingIndex quad_triggers[] = {
   MENU_MIDI, \
   MENU_VOICING_ALLOCATION_MIXED, \
   MENU_MODULATION, \
-  MENU_OUTPUT, \
+  MENU_TUNING, \
   MENU_END
 
 static const SettingIndex three_one[] = {
@@ -255,7 +261,7 @@ static const SettingIndex paraphonic_plus_two[] = {
   MENU_VOICING_ALLOCATION_MIXED,
   MENU_MODULATION,
   SETTING_VOICING_CV_OUT_3,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -265,7 +271,7 @@ static const SettingIndex two_one[] = {
   MENU_VOICING_ALLOCATION_MIXED,
   MENU_MODULATION,
   SETTING_VOICING_CV_OUT_4,
-  MENU_OUTPUT,
+  MENU_TUNING,
   MENU_END
 };
 
@@ -305,6 +311,9 @@ class Menu {
     switch (menu_type_) {
       case SETTING_MENU_SETUP:
         return setup_setting_list_for_layout[multi.layout()];
+
+      case SETTING_MENU_OSCILLATOR:
+        return menu_oscillator;
 
       case SETTING_MENU_ENVELOPE:
         return menu_envelope;

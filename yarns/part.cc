@@ -93,7 +93,8 @@ void Part::Init() {
   voicing_.tuning_root = 0;
   voicing_.tuning_system = TUNING_SYSTEM_EQUAL;
   voicing_.tuning_factor = 0;
-  voicing_.oscillator_shape = OSCILLATOR_SHAPE_OFF;
+  voicing_.oscillator_mode = OSCILLATOR_MODE_OFF;
+  voicing_.oscillator_shape = OSCILLATOR_SHAPE_PULSE_VARIABLE;
 
   voicing_.envelope_amplitude_init = 16;
   voicing_.envelope_amplitude_mod = 24;
@@ -988,6 +989,7 @@ void Part::TouchVoices() {
     voice_[i]->set_trigger_shape(voicing_.trigger_shape);
     voice_[i]->set_aux_cv(voicing_.aux_cv);
     voice_[i]->set_aux_cv_2(voicing_.aux_cv_2);
+    voice_[i]->set_oscillator_mode(voicing_.oscillator_mode);
     voice_[i]->set_oscillator_shape(voicing_.oscillator_shape);
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
     voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
@@ -1028,6 +1030,7 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_TRIGGER_SCALE:
     case PART_VOICING_AUX_CV:
     case PART_VOICING_AUX_CV_2:
+    case PART_VOICING_OSCILLATOR_MODE:
     case PART_VOICING_OSCILLATOR_SHAPE:
     case PART_VOICING_OSCILLATOR_PW_INITIAL:
     case PART_VOICING_OSCILLATOR_PW_MOD:

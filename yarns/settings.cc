@@ -67,8 +67,12 @@ const char* const legato_mode_values[] = {
   "OFF", "AUTO PORTAMENTO", "ON"
 };
 
-const char* const voicing_oscillator_values[] = {
-  "OF", "\x88\x88", "\x8C\x8C", "\x8C_", "/\\", "SINE", "**"
+const char* const voicing_oscillator_mode_values[] = {
+  "OFF", "DRONE", "ENVELOPED"
+};
+
+const char* const voicing_oscillator_shape_values[] = {
+  "\x88\x88", "\x8C\x8C", "\x8C_", "/\\", "SINE", "**"
 };
 
 const char* const voicing_allocation_priority_values[] = {
@@ -174,6 +178,12 @@ STATIC_ASSERT(kVibratoSpeedMax <= 127, overflow);
 const Setting Settings::settings_[] = {
   {
     "\x82""S", "SETUP MENU",
+    SETTING_DOMAIN_MULTI, { 0, 0 },
+    SETTING_UNIT_UINT8, 0, 0, NULL,
+    0, 0,
+  },
+  {
+    "\x82""O", "OSCILLATOR MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
     0, 0,
@@ -397,9 +407,15 @@ const Setting Settings::settings_[] = {
     72, 0,
   },
   {
-    "OS", "OSC WAVE",
+    "O?", "OSC MODE",
+    SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_MODE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_MODE_LAST - 1, voicing_oscillator_mode_values,
+    70, 0,
+  },
+  {
+    "OS", "OSC SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_SHAPE_LAST - 1, voicing_oscillator_values,
+    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_SHAPE_LAST - 1, voicing_oscillator_shape_values,
     71, 23,
   },
   {

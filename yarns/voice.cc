@@ -418,18 +418,13 @@ void Oscillator::RenderSquare(
   phase_ = phase;
 }
 
-void Oscillator::Render(uint8_t mode, int16_t note, bool gate, uint16_t gain) {
-  if (mode == OSCILLATOR_SHAPE_OFF || audio_buffer_.writable() < kAudioBlockSize) {
-    return;
-  }
-  
-  if ((mode & 0x80) && !gate) { // See 'paques'
-    RenderSilence();
+void Oscillator::Render(uint8_t shape, int16_t note, bool gate, uint16_t gain) {
+  if (audio_buffer_.writable() < kAudioBlockSize) {
     return;
   }
   
   uint32_t phase_increment = ComputePhaseIncrement(note);
-  switch (mode & 0x0f) {
+  switch (shape) {
     case OSCILLATOR_SHAPE_SAW:
       RenderSaw(gain, phase_increment);
       break;

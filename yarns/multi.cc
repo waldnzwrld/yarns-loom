@@ -637,7 +637,7 @@ void Multi::AllocateParts() {
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
       {
-        CONSTRAIN(part_[0].mutable_voicing_settings()->oscillator_shape, 1, OSCILLATOR_SHAPE_LAST - 1);
+        CONSTRAIN(part_[0].mutable_voicing_settings()->oscillator_mode, OSCILLATOR_MODE_OFF + 1, OSCILLATOR_MODE_LAST - 1);
         part_[0].AllocateVoices(&voice_[0], kNumParaphonicVoices, false);
         part_[1].AllocateVoices(&voice_[kNumParaphonicVoices], 1, false);
         part_[2].AllocateVoices(&voice_[kNumParaphonicVoices + 1], 1, false);
@@ -895,9 +895,9 @@ void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value
   if (
     multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
     part == 0 &&
-    &setting == &setting_defs.get(SETTING_VOICING_OSCILLATOR_SHAPE)
+    &setting == &setting_defs.get(SETTING_VOICING_OSCILLATOR_MODE)
   ) {
-    min_value = OSCILLATOR_SHAPE_SAW;
+    min_value = OSCILLATOR_MODE_DRONE;
   }
   CONSTRAIN(raw_value, min_value, max_value);
   uint8_t value = static_cast<uint8_t>(raw_value);

@@ -200,9 +200,10 @@ struct PackedPart {
     trigger_scale : 1,
     trigger_shape : 3,
     aux_cv : 4, // barely
-    oscillator_shape : 3,
     aux_cv_2 : 4, // barely
     tuning_factor : 4,
+    oscillator_mode : 2,
+    oscillator_shape : 3,
     oscillator_pw_initial : kTimbreBits,
     envelope_amplitude_init : kTimbreBits,
     env_init_attack : kTimbreBits,
@@ -287,9 +288,10 @@ struct VoicingSettings {
   uint8_t trigger_scale;
   uint8_t trigger_shape;
   uint8_t aux_cv;
-  uint8_t oscillator_shape;
   uint8_t aux_cv_2;
   uint8_t tuning_factor;
+  uint8_t oscillator_mode;
+  uint8_t oscillator_shape;
   uint8_t oscillator_pw_initial;
   int8_t oscillator_pw_mod;
   uint8_t envelope_amplitude_init;
@@ -321,9 +323,10 @@ struct VoicingSettings {
     packed.trigger_scale = trigger_scale;
     packed.trigger_shape = trigger_shape;
     packed.aux_cv = aux_cv;
-    packed.oscillator_shape = oscillator_shape;
     packed.aux_cv_2 = aux_cv_2;
     packed.tuning_factor = tuning_factor;
+    packed.oscillator_mode = oscillator_mode;
+    packed.oscillator_shape = oscillator_shape;
     packed.oscillator_pw_initial = oscillator_pw_initial;
     packed.oscillator_pw_mod = oscillator_pw_mod;
     packed.envelope_amplitude_init = envelope_amplitude_init;
@@ -355,9 +358,10 @@ struct VoicingSettings {
     trigger_scale = packed.trigger_scale;
     trigger_shape = packed.trigger_shape;
     aux_cv = packed.aux_cv;
-    oscillator_shape = packed.oscillator_shape;
     aux_cv_2 = packed.aux_cv_2;
     tuning_factor = packed.tuning_factor;
+    oscillator_mode = packed.oscillator_mode;
+    oscillator_shape = packed.oscillator_shape;
     oscillator_pw_initial = packed.oscillator_pw_initial;
     oscillator_pw_mod = packed.oscillator_pw_mod;
     envelope_amplitude_init = packed.envelope_amplitude_init;
@@ -404,9 +408,10 @@ enum PartSetting {
   PART_VOICING_TRIGGER_SCALE,
   PART_VOICING_TRIGGER_SHAPE,
   PART_VOICING_AUX_CV,
-  PART_VOICING_OSCILLATOR_SHAPE,
   PART_VOICING_AUX_CV_2,
   PART_VOICING_TUNING_FACTOR,
+  PART_VOICING_OSCILLATOR_MODE,
+  PART_VOICING_OSCILLATOR_SHAPE,
   PART_VOICING_OSCILLATOR_PW_INITIAL,
   PART_VOICING_OSCILLATOR_PW_MOD,
   PART_VOICING_ENVELOPE_AMPLITUDE_INIT,
