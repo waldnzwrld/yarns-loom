@@ -117,6 +117,8 @@ static const SettingIndex menu_oscillator[] = {
   SETTING_VOICING_OSCILLATOR_SHAPE,
   SETTING_VOICING_OSCILLATOR_PW_INITIAL,
   SETTING_VOICING_OSCILLATOR_PW_MOD,
+
+  SETTING_LAST
 };
 
 static const SettingIndex menu_envelope[] = {
@@ -130,6 +132,8 @@ static const SettingIndex menu_envelope[] = {
   SETTING_VOICING_ENV_MOD_SUSTAIN,
   SETTING_VOICING_ENV_INIT_RELEASE,
   SETTING_VOICING_ENV_MOD_RELEASE,
+
+  SETTING_LAST
 };
 
 static const SettingIndex menu_live_quad_triggers[] = {
