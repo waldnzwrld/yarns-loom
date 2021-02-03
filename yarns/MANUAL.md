@@ -22,19 +22,22 @@
 
 # Synth voice
 
+### Oscillator controls
+- Configured via the `▽O (OSCILLATOR MENU)`
+- `O? (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
+- `OS (OSCILLATOR SHAPE)` sets the waveform
+- A pulse-width modulated rectangle wave replaces the "25% rectangle" wave
+  - The modulating LFO for the PWM is the quadrature of the vibrato LFO
+  - `OSC PW INITIAL` sets initial pulse width
+  - `OSC PW MOD` sets the bipolar depth of pulse width modulation by the LFO
+
 ### ADSR envelopes with velocity control
 - Configured via the `▽📉 (ENVELOPE MENU)`
+- Controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
+- Available as an assignable CV output (`ENVELOPE`) in all layouts
 - The envelope's amplitude and its sensitivity to velocity are set by `GAIN INIT` and `GAIN MOD`
 - The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
   - Segment times range from 0.375 ms (3 ticks) to 3 seconds
-- Handles voice amplitude for the paraphonic part in the new [`*2` layout](#layouts)
-- Available as an assignable CV output (`ENVELOPE`) in all layouts
-
-### Oscillator PWM
-  - Replaced the "25% rectangle" wave with a pulse-width modulated rectangle wave
-  - The modulating LFO for the PWM is the quadrature of the vibrato LFO
-  - `OSC PW INITIAL` sets initial pulse width
-  - `OSC PW MOD` sets the depth of pulse width modulation by the LFO
   
 # Sequencer
 
