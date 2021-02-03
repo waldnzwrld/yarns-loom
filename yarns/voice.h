@@ -339,7 +339,7 @@ class CVOutput {
   }
 
   inline int32_t scale() const {
-    return offset() - volts_dac_code(5);
+    return offset() - volts_dac_code(4);
   }
 
   inline int32_t offset() const {
