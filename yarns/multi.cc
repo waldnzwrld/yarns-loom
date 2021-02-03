@@ -88,7 +88,7 @@ void Multi::Init(bool reset_calibration) {
   // seq->step[2].data[1] = 0x7f;
   // seq->step[3].data[0] = 72;
   // seq->step[3].data[1] = 0x7f;
-  // voicing->audio_mode = 1;
+  // voicing->oscillator_shape = 1;
   // settings_.clock_tempo = 100;
   // settings_.clock_swing = 99;
 
@@ -637,7 +637,7 @@ void Multi::AllocateParts() {
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
       {
-        CONSTRAIN(part_[0].mutable_voicing_settings()->audio_mode, 1, AUDIO_MODE_LAST - 1);
+        CONSTRAIN(part_[0].mutable_voicing_settings()->oscillator_mode, OSCILLATOR_MODE_OFF + 1, OSCILLATOR_MODE_LAST - 1);
         part_[0].AllocateVoices(&voice_[0], kNumParaphonicVoices, false);
         part_[1].AllocateVoices(&voice_[kNumParaphonicVoices], 1, false);
         part_[2].AllocateVoices(&voice_[kNumParaphonicVoices + 1], 1, false);
@@ -735,10 +735,10 @@ const uint8_t song[] = {
 
 void Multi::StartSong() {
   Set(MULTI_LAYOUT, LAYOUT_QUAD_MONO);
-  part_[0].mutable_voicing_settings()->audio_mode = 0x83;
-  part_[1].mutable_voicing_settings()->audio_mode = 0x83;
-  part_[2].mutable_voicing_settings()->audio_mode = 0x84;
-  part_[3].mutable_voicing_settings()->audio_mode = 0x86;
+  part_[0].mutable_voicing_settings()->oscillator_shape = 0x83;
+  part_[1].mutable_voicing_settings()->oscillator_shape = 0x83;
+  part_[2].mutable_voicing_settings()->oscillator_shape = 0x84;
+  part_[3].mutable_voicing_settings()->oscillator_shape = 0x86;
   AllocateParts();
   settings_.clock_tempo = 140;
   Stop();
@@ -895,9 +895,9 @@ void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value
   if (
     multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
     part == 0 &&
-    &setting == &setting_defs.get(SETTING_VOICING_AUDIO_MODE)
+    &setting == &setting_defs.get(SETTING_VOICING_OSCILLATOR_MODE)
   ) {
-    min_value = AUDIO_MODE_SAW;
+    min_value = OSCILLATOR_MODE_DRONE;
   }
   CONSTRAIN(raw_value, min_value, max_value);
   uint8_t value = static_cast<uint8_t>(raw_value);

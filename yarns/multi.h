@@ -339,7 +339,7 @@ class Multi {
 
   inline void RenderAudio() {
     for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-      cv_outputs_[i].RenderAudio(settings_.layout == LAYOUT_PARAPHONIC_PLUS_TWO);
+      cv_outputs_[i].RenderAudio();
     }
   }
   

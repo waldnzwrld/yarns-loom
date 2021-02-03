@@ -52,16 +52,23 @@ enum TriggerShape {
   TRIGGER_SHAPE_NOISE_BURST
 };
 
-enum AudioMode {
-  AUDIO_MODE_OFF,
-  AUDIO_MODE_SAW,
-  AUDIO_MODE_PULSE_VARIABLE,
-  AUDIO_MODE_PULSE_50,
-  AUDIO_MODE_TRIANGLE,
-  AUDIO_MODE_SINE,
-  AUDIO_MODE_NOISE,
+enum OscillatorMode {
+  OSCILLATOR_MODE_OFF,
+  OSCILLATOR_MODE_DRONE,
+  OSCILLATOR_MODE_ENVELOPED,
 
-  AUDIO_MODE_LAST
+  OSCILLATOR_MODE_LAST
+};
+
+enum OscillatorShape {
+  OSCILLATOR_SHAPE_SAW,
+  OSCILLATOR_SHAPE_PULSE_VARIABLE,
+  OSCILLATOR_SHAPE_PULSE_50,
+  OSCILLATOR_SHAPE_TRIANGLE,
+  OSCILLATOR_SHAPE_SINE,
+  OSCILLATOR_SHAPE_NOISE,
+
+  OSCILLATOR_SHAPE_LAST
 };
 
 enum ModAux {
@@ -83,7 +90,7 @@ class Oscillator {
   Oscillator() { }
   ~Oscillator() { }
   void Init(int32_t scale, int32_t offset);
-  void Render(uint8_t mode, int16_t note, bool gate, uint16_t gain);
+  void Render(uint8_t shape, int16_t note, bool gate, uint16_t gain);
   inline uint16_t ReadSample() {
     return audio_buffer_.ImmediateRead();
   }
@@ -196,8 +203,11 @@ class Voice {
   
   int32_t trigger_value() const;
   
-  inline void set_audio_mode(uint8_t audio_mode) {
-    audio_mode_ = audio_mode;
+  inline void set_oscillator_mode(uint8_t m) {
+    oscillator_mode_ = m;
+  }
+  inline void set_oscillator_shape(uint8_t oscillator_shape) {
+    oscillator_shape_ = oscillator_shape;
   }
   inline void set_oscillator_pw_initial(uint8_t pw) {
     oscillator_pw_initial_ = pw;
@@ -210,8 +220,8 @@ class Voice {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
   }
   
-  inline uint8_t audio_mode() {
-    return audio_mode_;
+  inline uint8_t has_audio() {
+    return oscillator_mode_ != OSCILLATOR_MODE_OFF;
   }
 
   inline Oscillator* oscillator() {
@@ -232,8 +242,20 @@ class Voice {
     return value;
   }
 
-  inline void RenderAudio(bool use_envelope) {
-    oscillator_.Render(audio_mode_, note_, gate_, use_envelope ? scaled_envelope() : UINT16_MAX);
+  inline void RenderAudio() {
+    uint16_t gain;
+    switch (oscillator_mode_) {
+      case OSCILLATOR_MODE_DRONE:
+        gain = UINT16_MAX;
+        break;
+      case OSCILLATOR_MODE_ENVELOPED:
+        gain = scaled_envelope();
+        break;
+      case OSCILLATOR_MODE_OFF:
+      default:
+        return;
+    }
+    oscillator_.Render(oscillator_shape_, note_, gate_, gain);
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -281,7 +303,8 @@ class Voice {
   uint32_t trigger_phase_increment_;
   uint32_t trigger_phase_;
   
-  uint8_t audio_mode_;
+  uint8_t oscillator_mode_;
+  uint8_t oscillator_shape_;
   uint8_t oscillator_pw_initial_;
   int8_t oscillator_pw_mod_;
   Oscillator oscillator_;
@@ -316,7 +339,7 @@ class CVOutput {
   }
 
   inline int32_t scale() const {
-    return offset() - volts_dac_code(5);
+    return offset() - volts_dac_code(4);
   }
 
   inline int32_t offset() const {
@@ -328,7 +351,7 @@ class CVOutput {
   }
 
   inline bool has_audio() const {
-    return !!(main_voice()->audio_mode());
+    return main_voice()->has_audio();
   }
 
   inline uint16_t ReadSample() {
@@ -382,9 +405,9 @@ class CVOutput {
     return calibration_dac_code(volts + 3);
   }
 
-  inline void RenderAudio(bool use_envelope) {
+  inline void RenderAudio() {
     for (uint8_t i = 0; i < num_voices_; ++i) {
-      voices_[i]->RenderAudio(use_envelope);
+      voices_[i]->RenderAudio();
     }
   }
 
