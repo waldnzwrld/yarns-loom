@@ -105,6 +105,7 @@ void AnalogOscillator::RenderCSaw() {
       self_reset = true;
     }
     
+    int16_t shift = -(aux_parameter_ - 32767) >> 4;
     while (true) {
       if (!high_) {
         if (phase_ < pw) {
@@ -137,7 +138,7 @@ void AnalogOscillator::RenderCSaw() {
     next_sample += phase_ < pw
         ? discontinuity_depth_
         : phase_ >> 18;
-    WriteSample((this_sample - 8192) << 1);
+    WriteSample(((((this_sample + shift) * 13) >> 3) - 8192) << 1);
   }
   next_sample_ = next_sample;
   END_INTERPOLATE_PHASE_INCREMENT
@@ -146,8 +147,8 @@ void AnalogOscillator::RenderCSaw() {
 void AnalogOscillator::RenderSquare() {
   size_t size = kAudioBlockSize;
   BEGIN_INTERPOLATE_PHASE_INCREMENT
-  if (parameter_ > 32000) {
-    parameter_ = 32000;
+  if (parameter_ > 30000) {
+    parameter_ = 30000;
   }
   
   int32_t next_sample = next_sample_;

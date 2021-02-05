@@ -180,8 +180,9 @@ bool Voice::Refresh(uint8_t voice_index) {
   int32_t parameter_20 = \
     (oscillator_pw_initial_ << (20 - 6)) +
     lfo * oscillator_pw_mod_;
-  CONSTRAIN(parameter_20, 0, (1 << 20));
-  oscillator_.set_parameter((parameter_20 >> (20 - 16)) - INT16_MIN);
+  CONSTRAIN(parameter_20, 0, (1 << 20) - 1);
+  oscillator_.set_parameter(parameter_20 >> (20 - 15));
+  oscillator_.set_aux_parameter(parameter_20 >> (20 - 15));
 
   if (retrigger_delay_) {
     --retrigger_delay_;

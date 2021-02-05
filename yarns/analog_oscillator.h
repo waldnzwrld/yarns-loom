@@ -76,7 +76,7 @@ class AnalogOscillator {
     phase_increment_ = 1;
     high_ = false;
     parameter_ = previous_parameter_ = 0;
-    aux_parameter_ = 0;
+    aux_parameter_ = 0x3fff;
     discontinuity_depth_ = -16383;
     next_sample_ = 0;
   }
@@ -149,7 +149,7 @@ class AnalogOscillator {
   uint32_t previous_phase_increment_;
   bool high_;
 
-  int16_t parameter_;
+  int16_t parameter_; // 15-bit
   int16_t previous_parameter_;
   int16_t aux_parameter_;
   int16_t discontinuity_depth_;
