@@ -40,7 +40,9 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
-const uint32_t kRefreshPeriod = 900; // msec
+const uint16_t kRefreshPeriod = 900; // msec
+const uint16_t kRefreshOneThird = 300;
+const uint16_t kRefreshTwoThirds = 600;
 const uint32_t kEncoderLongPressTime = kRefreshPeriod * 2 / 3;
 const char* const kVersion = "Loom 2_1_0";
 
@@ -938,14 +940,14 @@ void Ui::DoEvents() {
     active_part().midi_settings().sustain_mode != SUSTAIN_MODE_OFF &&
     LatchableKeys().stack.most_recent_note_index();
   bool print_part = mode_ == UI_MODE_PARAMETER_SELECT;
-  if (queue_.idle_time() > kRefreshPeriod * 2 / 3) {
+  if (queue_.idle_time() > kRefreshTwoThirds) {
     if (print_part) {
       display_.set_fade(0);
       PrintActivePartAndPlayMode();
     } else if (print_latch) {
       PrintLatch();
     }
-  } else if (queue_.idle_time() > kRefreshPeriod / 3) {
+  } else if (queue_.idle_time() > kRefreshOneThird) {
     if (print_latch && print_part) {
       PrintLatch();
     }
@@ -968,6 +970,11 @@ if (setting.unit == SETTING_UNIT_TEMPO) {
 }
 
 const uint8_t kNotesPerDisplayChar = 3;
+// See characters.py for mask-to-segment mapping
+const uint16_t kHoldDisplayMasks[2][3] = {
+  {0x0400, 0x0100, 0x4000}, // Top tick marks
+  {0x0800, 0x0010, 0x2000}, // Bottom tick marks
+};
 void Ui::PrintLatch() {
   display_.set_fade(0);
   const PressedKeys& keys = LatchableKeys();
@@ -976,39 +983,27 @@ void Ui::PrintLatch() {
   uint8_t note_ordinal = 0, display_pos = 0;
   uint8_t note_index = keys.stack.most_recent_note_index();
   stmlib::NoteEntry note_entry;
+  bool blink = queue_.idle_time() % 160 < 80;
   while (note_index) {
     display_pos = note_ordinal / kNotesPerDisplayChar;
     if (display_pos > kDisplayWidth) { break; }
-    uint16_t mask = 0;
 
     note_entry = keys.stack.note(note_index);
     bool sustained = keys.IsSustained(note_entry);
-
     bool top;
     if (sustained) {
-      top = keys.release_latched_keys_on_next_note_on ?
-        queue_.idle_time() % 160 < 80 :
-        true;
+      top = keys.release_latched_keys_on_next_note_on ? blink : true;
     } else {
       top = keys.IsSustainable(note_index);
     }
-    // See characters.py for mask-to-segment mapping
+    uint8_t index_within_char = note_ordinal % kNotesPerDisplayChar;
+    uint16_t mask;
     if (top) {
-      switch (note_ordinal % kNotesPerDisplayChar) {
-        case 0: mask = 0x0400; break;
-        case 1: mask = 0x0100; break;
-        case 2: mask = 0x4000; break;
-        default: break;
-      }
+      mask = kHoldDisplayMasks[0][index_within_char];
       masks[display_pos] |= mask;
     }
     if (!sustained) {
-      switch (note_ordinal % kNotesPerDisplayChar) {
-        case 0: mask = 0x0800; break;
-        case 1: mask = 0x0010; break;
-        case 2: mask = 0x2000; break;
-        default: break;
-      }
+      mask = kHoldDisplayMasks[1][index_within_char];
       masks[display_pos] |= mask;
     }
 
