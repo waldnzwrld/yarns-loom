@@ -220,7 +220,7 @@ class Voice {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
   }
   
-  inline uint8_t has_audio() {
+  inline bool has_audio() {
     return oscillator_mode_ != OSCILLATOR_MODE_OFF;
   }
 
@@ -323,20 +323,24 @@ class CVOutput {
 
   void Calibrate(uint16_t* calibrated_dac_code);
 
-  inline void assign(
-    Voice* cv_gate_voice,
-    uint8_t num_audio_voices
-  ) {
-    cv_gate_voice_ = cv_gate_voice;
-    num_audio_voices_ = num_audio_voices;
+  inline void assign(Voice* dc, uint8_t num_audio) {
+    dc_voice_ = dc;
+    num_audio_voices_ = num_audio;
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-      Voice* audio_voice = audio_voices_[i] = cv_gate_voice + i;
+      Voice* audio_voice = audio_voices_[i] = dc_voice_ + i;
       audio_voice->oscillator()->Init(scale() / num_audio_voices_, offset());
     }
   }
 
   inline bool gate() const {
-    return cv_gate_voice_->gate();
+    if (has_audio()) {
+      for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+        if (audio_voices_[i]->gate()) { return true; }
+      }
+      return false;
+    } else {
+      return dc_voice_->gate();
+    }
   }
 
   inline int32_t scale() const {
@@ -378,21 +382,21 @@ class CVOutput {
   }
 
   inline uint16_t velocity_dac_code() const {
-    return DacCodeFrom16BitValue(cv_gate_voice_->velocity() << 9);
+    return DacCodeFrom16BitValue(dc_voice_->velocity() << 9);
   }
   inline uint16_t modulation_dac_code() const {
-    return DacCodeFrom16BitValue(cv_gate_voice_->modulation() << 9);
+    return DacCodeFrom16BitValue(dc_voice_->modulation() << 9);
   }
   inline uint16_t aux_cv_dac_code() const {
-    return DacCodeFrom16BitValue(cv_gate_voice_->aux_cv_16bit());
+    return DacCodeFrom16BitValue(dc_voice_->aux_cv_16bit());
   }
   inline uint16_t aux_cv_dac_code_2() const {
-    return DacCodeFrom16BitValue(cv_gate_voice_->aux_cv_2_16bit());
+    return DacCodeFrom16BitValue(dc_voice_->aux_cv_2_16bit());
   }
   inline uint16_t trigger_dac_code() const {
     int32_t max = volts_dac_code(5);
     int32_t min = volts_dac_code(0);
-    return min + ((max - min) * cv_gate_voice_->trigger_value() >> 15);
+    return min + ((max - min) * dc_voice_->trigger_value() >> 15);
   }
 
   inline uint16_t calibration_dac_code(uint8_t note) const {
@@ -411,7 +415,7 @@ class CVOutput {
  private:
   void NoteToDacCode();
 
-  Voice* cv_gate_voice_;
+  Voice* dc_voice_;
   Voice* audio_voices_[kNumMaxVoicesPerPart];
   uint8_t num_audio_voices_;
 
