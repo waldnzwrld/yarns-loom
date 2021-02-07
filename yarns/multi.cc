@@ -255,7 +255,11 @@ void Multi::Refresh() {
   }
 
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
-    part_[j].mutable_looper().Refresh();
+    Part& part = part_[j];
+    part.mutable_looper().Refresh();
+    for (uint8_t v = 0; v < part.num_voices(); ++v) {
+      part.voice(v)->Refresh(v);
+    }
   }
 
   for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
@@ -446,60 +450,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
         gate[2] = voice_[2].gate();
         gate[3] = voice_[3].gate();
       }
-      break;
-  }
-}
-
-void Multi::GetAudioSource(bool* audio_source) {
-  switch (settings_.layout) {
-    case LAYOUT_MONO:
-    case LAYOUT_DUAL_POLYCHAINED:
-      audio_source[0] = false;
-      audio_source[1] = false;
-      audio_source[2] = false;
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-      
-    case LAYOUT_DUAL_MONO:
-    case LAYOUT_DUAL_POLY:
-    case LAYOUT_QUAD_POLYCHAINED:
-      audio_source[0] = false;
-      audio_source[1] = false;
-      audio_source[2] = cv_outputs_[2].has_audio();
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-      
-    case LAYOUT_QUAD_MONO:
-    case LAYOUT_QUAD_POLY:
-    case LAYOUT_OCTAL_POLYCHAINED:
-    case LAYOUT_THREE_ONE:
-    case LAYOUT_TWO_TWO:
-      audio_source[0] = cv_outputs_[0].has_audio();
-      audio_source[1] = cv_outputs_[1].has_audio();
-      audio_source[2] = cv_outputs_[2].has_audio();
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-    
-    case LAYOUT_TWO_ONE:
-      audio_source[0] = cv_outputs_[0].has_audio();
-      audio_source[1] = cv_outputs_[1].has_audio();
-      audio_source[2] = false;
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-
-    case LAYOUT_PARAPHONIC_PLUS_TWO:
-      audio_source[0] = true;
-      audio_source[1] = cv_outputs_[1].has_audio();
-      audio_source[2] = false;
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-
-    case LAYOUT_QUAD_TRIGGERS:
-    case LAYOUT_QUAD_VOLTAGES:
-      audio_source[0] = false;
-      audio_source[1] = false;
-      audio_source[2] = false;
-      audio_source[3] = false;
       break;
   }
 }

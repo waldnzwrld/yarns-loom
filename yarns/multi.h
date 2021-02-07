@@ -400,7 +400,6 @@ class Multi {
   
   void AssignVoicesToCVOutputs();
   void GetCvGate(uint16_t* cv, bool* gate);
-  void GetAudioSource(bool* audio_source);
   void GetLedsBrightness(uint8_t* brightness);
 
   template<typename T>

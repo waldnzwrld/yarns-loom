@@ -145,7 +145,7 @@ class Voice {
   void Init();
   void ResetAllControllers();
 
-  bool Refresh(uint8_t voice_index);
+  void Refresh(uint8_t voice_index);
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
   void ControlChange(uint8_t controller, uint8_t value);
@@ -324,14 +324,14 @@ class CVOutput {
   void Calibrate(uint16_t* calibrated_dac_code);
 
   inline void assign(
-    Voice* cv_gate,
-    uint8_t num_oscs
+    Voice* cv_gate_voice,
+    uint8_t num_audio_voices
   ) {
-    cv_gate_voice_ = cv_gate;
-    num_oscillators_ = num_oscs;
-    for (uint8_t i = 0; i < num_oscillators_; ++i) {
-      Voice* osc_voice = oscillator_voices_[i] = cv_gate + i;
-      osc_voice->oscillator()->Init(scale() / num_oscillators_, offset());
+    cv_gate_voice_ = cv_gate_voice;
+    num_audio_voices_ = num_audio_voices;
+    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+      Voice* audio_voice = audio_voices_[i] = cv_gate_voice + i;
+      audio_voice->oscillator()->Init(scale() / num_audio_voices_, offset());
     }
   }
 
@@ -348,23 +348,19 @@ class CVOutput {
   }
 
   inline bool has_audio() const {
-    bool result = false;
-    for (uint8_t i = 0; i < num_oscillators_; ++i) {
-      result = result || oscillator_voices_[i]->has_audio();
-    }
-    return result;
+    return num_audio_voices_ > 0 && audio_voices_[0]->has_audio();
   }
 
   inline void RenderAudio() {
-    for (uint8_t i = 0; i < num_oscillators_; ++i) {
-      oscillator_voices_[i]->RenderAudio();
+    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+      audio_voices_[i]->RenderAudio();
     }
   }
 
   inline uint16_t ReadSample() {
     uint16_t mix = 0;
-    for (uint8_t i = 0; i < num_oscillators_; ++i) {
-      mix += oscillator_voices_[i]->ReadSample();
+    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+      mix += audio_voices_[i]->ReadSample();
     }
     return mix;
   }
@@ -416,9 +412,10 @@ class CVOutput {
   void NoteToDacCode();
 
   Voice* cv_gate_voice_;
-  Voice* oscillator_voices_[kNumMaxVoicesPerPart];
-  uint8_t num_oscillators_;
+  Voice* audio_voices_[kNumMaxVoicesPerPart];
+  uint8_t num_audio_voices_;
 
+  int32_t note_;
   uint16_t note_dac_code_;
   bool dirty_;  // Set to true when the calibration settings have changed.
   uint16_t calibrated_dac_code_[kNumOctaves];

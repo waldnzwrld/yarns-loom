@@ -126,7 +126,7 @@ void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
   }
 }
 
-bool Voice::Refresh(uint8_t voice_index) {
+void Voice::Refresh(uint8_t voice_index) {
   // Compute base pitch with portamento.
   portamento_phase_ += portamento_phase_increment_;
   if (portamento_phase_ < portamento_phase_increment_) {
@@ -195,18 +195,16 @@ bool Voice::Refresh(uint8_t voice_index) {
   envelope_.Render();
   mod_aux_[MOD_AUX_ENVELOPE] = scaled_envelope();
 
-  bool changed = note != note_;
   note_ = note;
-  return changed;
 }
 
 void CVOutput::Refresh() {
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    bool changed = voices_[i]->Refresh(i);
-    if (i == 0 && (changed || dirty_)) {
-      NoteToDacCode();
-      dirty_ = false;
-    }
+  int32_t note = cv_gate_voice_->note();
+  bool changed = note_ != note;
+  note_ = note;
+  if (changed || dirty_) {
+    NoteToDacCode();
+    dirty_ = false;
   }
 }
 
