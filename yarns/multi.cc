@@ -285,18 +285,19 @@ void Multi::AssignVoicesToCVOutputs() {
   switch (settings_.layout) {
     case LAYOUT_MONO:
     case LAYOUT_DUAL_POLYCHAINED:
-      for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-        cv_outputs_[i].assign_voices(&voice_[0]);
-      }
+      cv_outputs_[0].assign(&voice_[0], 0);
+      cv_outputs_[1].assign(&voice_[0], 0);
+      cv_outputs_[2].assign(&voice_[0], 0);
+      cv_outputs_[3].assign(&voice_[0], 1);
       break;
 
     case LAYOUT_DUAL_MONO:
     case LAYOUT_DUAL_POLY:
     case LAYOUT_QUAD_POLYCHAINED:
-      cv_outputs_[0].assign_voices(&voice_[0]);
-      cv_outputs_[1].assign_voices(&voice_[1]);
-      cv_outputs_[2].assign_voices(&voice_[0]);
-      cv_outputs_[3].assign_voices(&voice_[1]);
+      cv_outputs_[0].assign(&voice_[0], 0);
+      cv_outputs_[1].assign(&voice_[1], 0);
+      cv_outputs_[2].assign(&voice_[0], 1);
+      cv_outputs_[3].assign(&voice_[1], 1);
       break;
 
     case LAYOUT_QUAD_MONO:
@@ -307,22 +308,22 @@ void Multi::AssignVoicesToCVOutputs() {
     case LAYOUT_QUAD_TRIGGERS:
     case LAYOUT_QUAD_VOLTAGES:
       for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-        cv_outputs_[i].assign_voices(&voice_[i]);
+        cv_outputs_[i].assign(&voice_[0], 1);
       }
       break;
 
     case LAYOUT_TWO_ONE:
-      cv_outputs_[0].assign_voices(&voice_[0]);
-      cv_outputs_[1].assign_voices(&voice_[1]);
-      cv_outputs_[2].assign_voices(&voice_[2]);
-      cv_outputs_[3].assign_voices(&voice_[2]);
+      cv_outputs_[0].assign(&voice_[0], 1);
+      cv_outputs_[1].assign(&voice_[1], 1);
+      cv_outputs_[2].assign(&voice_[2], 1);
+      cv_outputs_[3].assign(&voice_[2], 0);
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      cv_outputs_[0].assign_voices(&voice_[0], kNumParaphonicVoices);
-      cv_outputs_[1].assign_voices(&voice_[kNumParaphonicVoices]);
-      cv_outputs_[2].assign_voices(&voice_[kNumParaphonicVoices]);
-      cv_outputs_[3].assign_voices(&voice_[kNumParaphonicVoices + 1]);
+      cv_outputs_[0].assign(&voice_[0], kNumParaphonicVoices);
+      cv_outputs_[1].assign(&voice_[kNumParaphonicVoices], 1);
+      cv_outputs_[2].assign(&voice_[kNumParaphonicVoices], 0);
+      cv_outputs_[3].assign(&voice_[kNumParaphonicVoices + 1], 1);
       break;
   }
 }

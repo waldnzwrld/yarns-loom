@@ -89,7 +89,7 @@ void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
 }
 
 inline void CVOutput::NoteToDacCode() {
-  int32_t note = main_voice()->note();
+  int32_t note = cv_gate_voice_->note();
   if (note <= 0) {
     note = 0;
   }
