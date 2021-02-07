@@ -241,6 +241,7 @@ void Voice::NoteOn(
     trigger_pulse_ = trigger_duration_ * 8;
     trigger_phase_ = 0;
     trigger_phase_increment_ = lut_portamento_increments[trigger_duration_];
+    envelope_.GateOff();
   }
   gate_ = true;
   envelope_.GateOn();
