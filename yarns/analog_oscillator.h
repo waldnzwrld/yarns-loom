@@ -37,7 +37,7 @@
 
 namespace yarns {
 
-const size_t kAudioBlockSize = 64; // TODO Braids was 24
+const size_t kAudioBlockSize = 64;
 
 enum AnalogOscillatorShape {
   OSC_SHAPE_VARIABLE_SAW,
@@ -45,16 +45,10 @@ enum AnalogOscillatorShape {
   OSC_SHAPE_SQUARE,
   OSC_SHAPE_TRIANGLE_FOLD,
   OSC_SHAPE_SINE_FOLD,
-  // OSC_SHAPE_BUZZ
-};
+  OSC_SHAPE_BUZZ,
 
-/*
-enum SyncMode {
-  OSCILLATOR_SYNC_MODE_OFF,
-  OSCILLATOR_SYNC_MODE_MASTER,
-  OSCILLATOR_SYNC_MODE_SLAVE
+  OSC_SHAPE_LAST
 };
-*/
 
 class AnalogOscillator {
  public:
@@ -125,7 +119,7 @@ class AnalogOscillator {
   void RenderCSaw();
   void RenderTriangleFold();
   void RenderSineFold();
-  // void RenderBuzz();
+  void RenderBuzz();
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch);
   

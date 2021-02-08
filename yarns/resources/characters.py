@@ -175,7 +175,7 @@ characters = {
   '\x8B': 'nl',    # Tri
   '\x8C': 'efabc', # Square
   '\x8D': 'epkc',  # Baby square
-  '\x8E': 'fehmd', # Pulse
+  '\x8E': 'hmd', # Pulse
   '\x8F': 'efgkc', # ADSR
   
   # Spinner

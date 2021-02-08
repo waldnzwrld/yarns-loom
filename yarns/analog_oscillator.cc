@@ -329,7 +329,6 @@ void AnalogOscillator::RenderSineFold() {
   phase_ = phase;
 }
 
-/*
 void AnalogOscillator::RenderBuzz() {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
@@ -349,7 +348,6 @@ void AnalogOscillator::RenderBuzz() {
     WriteSample(Crossfade(wave_1, wave_2, phase_, crossfade));
   }
 }
-*/
 
 /* static */
 AnalogOscillator::RenderFn AnalogOscillator::fn_table_[] = {
@@ -358,7 +356,7 @@ AnalogOscillator::RenderFn AnalogOscillator::fn_table_[] = {
   &AnalogOscillator::RenderSquare,
   &AnalogOscillator::RenderTriangleFold,
   &AnalogOscillator::RenderSineFold,
-  // &AnalogOscillator::RenderBuzz,
+  &AnalogOscillator::RenderBuzz,
 };
 
 }  // namespace yarns
