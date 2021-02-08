@@ -180,7 +180,7 @@ class Voice {
   }
 
   inline void RenderAudio() {
-    if (oscillator_mode_ == OSCILLATOR_MODE_OFF) return;
+    if (!has_audio()) return;
     oscillator_.Render();
   }
   inline uint16_t ReadSample() {
