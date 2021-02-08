@@ -412,7 +412,7 @@ const Setting Settings::settings_[] = {
     72, 0,
   },
   {
-    "O?", "OSC MODE",
+    "OM", "OSC MODE",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_MODE_LAST - 1, voicing_oscillator_mode_values,
     70, 0,
