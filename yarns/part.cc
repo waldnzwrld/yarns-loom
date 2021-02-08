@@ -1046,6 +1046,7 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_MIDI_SUSTAIN_MODE:
     case PART_MIDI_SUSTAIN_POLARITY:
       ResetLatch();
+      break;
 
     default:
       break;
