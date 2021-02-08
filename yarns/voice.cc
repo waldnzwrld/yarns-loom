@@ -89,7 +89,7 @@ void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
 }
 
 inline void CVOutput::NoteToDacCode() {
-  int32_t note = main_voice()->note();
+  int32_t note = dc_voice_->note();
   if (note <= 0) {
     note = 0;
   }
@@ -126,7 +126,7 @@ void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
   }
 }
 
-bool Voice::Refresh(uint8_t voice_index) {
+void Voice::Refresh(uint8_t voice_index) {
   // Compute base pitch with portamento.
   portamento_phase_ += portamento_phase_increment_;
   if (portamento_phase_ < portamento_phase_increment_) {
@@ -207,19 +207,18 @@ bool Voice::Refresh(uint8_t voice_index) {
     scaled_envelope() : UINT16_MAX
   );
 
-  bool changed = note != note_;
   note_ = note;
   oscillator_.set_pitch(note);
-  return changed;
 }
 
 void CVOutput::Refresh() {
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    bool changed = voices_[i]->Refresh(i);
-    if (i == 0 && (changed || dirty_)) {
-      NoteToDacCode();
-      dirty_ = false;
-    }
+  if (has_audio()) { return; }
+  int32_t note = dc_voice_->note();
+  bool changed = note_ != note;
+  note_ = note;
+  if (changed || dirty_) {
+    NoteToDacCode();
+    dirty_ = false;
   }
 }
 
@@ -255,6 +254,7 @@ void Voice::NoteOn(
     trigger_pulse_ = trigger_duration_ * 8;
     trigger_phase_ = 0;
     trigger_phase_increment_ = lut_portamento_increments[trigger_duration_];
+    envelope_.GateOff();
   }
   gate_ = true;
   envelope_.GateOn();
