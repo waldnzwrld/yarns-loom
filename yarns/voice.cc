@@ -165,18 +165,8 @@ void Voice::Refresh(uint8_t voice_index) {
   mod_aux_[MOD_AUX_VIBRATO_LFO] = (lfo * vibrato_level >> 7) + 32768;
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
   
-  // Use quadrature phase for PWM LFO
+  // Use quadrature phase for timbre modulation
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
-  /*
-  int32_t pw_30bit = \
-    // Initial range 0..1
-    (oscillator_pw_initial_ << (30 - 6)) +
-    // Mod range -1..1 with cubic scaling
-    lfo * oscillator_pw_mod_ * oscillator_pw_mod_ * oscillator_pw_mod_;
-  int32_t min_pw = 1 << (30 - kOscillatorPWMRatioBits);
-  CONSTRAIN(pw_30bit, min_pw, (1 << 30) - min_pw);
-  oscillator_.SetPulseWidth(pw_30bit << (32 - 30));
-  */
   int32_t parameter_20 = \
     (oscillator_pw_initial_ << (20 - 6)) +
     lfo * oscillator_pw_mod_;

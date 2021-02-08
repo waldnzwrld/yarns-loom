@@ -424,13 +424,13 @@ const Setting Settings::settings_[] = {
     71, 23,
   },
   {
-    "PW", "OSC PW INITIAL",
+    "TI", "OSC TIMBRE INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_INITIAL, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
     82, 0,
   },
   {
-    "PM", "OSC PW MOD",
+    "TM", "OSC TIMBRE MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_MOD, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
     83, 0,
