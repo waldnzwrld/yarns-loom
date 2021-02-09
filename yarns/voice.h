@@ -97,7 +97,7 @@ class Oscillator {
   inline void SetPulseWidth(uint32_t pw) { pulse_width_ = pw; }
 
  private:
-  uint32_t ComputePhaseIncrement(int16_t pitch);
+  uint32_t ComputePhaseIncrement(int16_t pitch) const;
   
   void RenderSilence();
   void RenderNoise(uint16_t gain);
@@ -110,14 +110,14 @@ class Oscillator {
     audio_buffer_.Overwrite(offset_ - ((amplitude * sample) >> 16));
   }
 
-  inline int32_t ThisBlepSample(uint32_t t) {
+  inline int32_t ThisBlepSample(uint32_t t) const {
     if (t > 65535) {
       t = 65535;
     }
     return t * t >> 18;
   }
   
-  inline int32_t NextBlepSample(uint32_t t) {
+  inline int32_t NextBlepSample(uint32_t t) const {
     if (t > 65535) {
       t = 65535;
     }
@@ -220,7 +220,7 @@ class Voice {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
   }
   
-  inline bool has_audio() {
+  inline bool has_audio() const {
     return oscillator_mode_ != OSCILLATOR_MODE_OFF;
   }
 
@@ -236,7 +236,7 @@ class Voice {
     envelope_amplitude_ = a;
   }
 
-  inline uint16_t scaled_envelope() {
+  inline uint16_t scaled_envelope() const {
     uint32_t value = envelope_.value();
     value = (value * envelope_amplitude_) >> 16;
     return value;

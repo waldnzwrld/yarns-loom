@@ -61,7 +61,7 @@ class SyncedLFO {
     return Increment(phase_increment_);
   }
 
-  int16_t Triangle(uint32_t phase) {
+  int16_t Triangle(uint32_t phase) const {
     return phase < 1UL << 31       // x < 0.5
       ?  INT16_MIN + (phase >> 15) // y = -0.5 + 2x = 2(x - 1/4)
       : 0x17fff - (phase >> 15);   // y =  1.5 - 2x = 2(3/4 - x)

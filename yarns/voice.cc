@@ -309,7 +309,7 @@ void Oscillator::Init(int32_t scale, int32_t offset) {
   pulse_width_ = 0x80000000;
 }
 
-uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) {
+uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
   if (midi_pitch >= kHighestNote) {
     midi_pitch = kHighestNote - 1;
   }

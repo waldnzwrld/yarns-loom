@@ -241,7 +241,7 @@ struct MidiSettings {
   uint8_t sustain_polarity;
   uint8_t padding[5];
 
-  void Pack(PackedPart& packed) {
+  void Pack(PackedPart& packed) const {
     packed.channel = channel;
     packed.min_note = min_note;
     packed.max_note = max_note;
@@ -306,7 +306,7 @@ struct VoicingSettings {
   int8_t env_mod_release;
   uint8_t padding[1];
 
-  void Pack(PackedPart& packed) {
+  void Pack(PackedPart& packed) const {
     packed.allocation_mode = allocation_mode;
     packed.allocation_priority = allocation_priority;
     packed.portamento = portamento;
@@ -498,7 +498,7 @@ struct SequencerSettings {
   SequencerStep step[kNumSteps];
   uint8_t padding_steps[2];
 
-  void Pack(PackedPart& packed) {
+  void Pack(PackedPart& packed) const {
     for (uint8_t i = 0; i < kNumSteps; i++) {
       PackedPart::PackedSequencerStep& packed_step = packed.sequencer_steps[i];
       packed_step.pitch = step[i].data[0];
@@ -946,7 +946,7 @@ class Part {
     seq_rec_step_ = stmlib::modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
   }
 
-  void Pack(PackedPart& packed) {
+  void Pack(PackedPart& packed) const {
     looper_.Pack(packed);
     midi_.Pack(packed);
     voicing_.Pack(packed);
