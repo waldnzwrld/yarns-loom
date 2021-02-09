@@ -88,7 +88,7 @@ class Deck {
   void RemoveAll();
   void Rewind();
   void Unpack(PackedPart& storage);
-  void Pack(PackedPart& storage);
+  void Pack(PackedPart& storage) const;
 
   inline uint16_t phase() const {
     return pos_;

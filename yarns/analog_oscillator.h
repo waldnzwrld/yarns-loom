@@ -123,16 +123,16 @@ class AnalogOscillator {
   void RenderBuzz();
   void RenderNoise();
   
-  uint32_t ComputePhaseIncrement(int16_t midi_pitch);
+  uint32_t ComputePhaseIncrement(int16_t midi_pitch) const;
   
-  inline int32_t ThisBlepSample(uint32_t t) {
+  inline int32_t ThisBlepSample(uint32_t t) const {
     if (t > 65535) {
       t = 65535;
     }
     return t * t >> 18;
   }
   
-  inline int32_t NextBlepSample(uint32_t t) {
+  inline int32_t NextBlepSample(uint32_t t) const {
     if (t > 65535) {
       t = 65535;
     }

@@ -157,7 +157,7 @@ class Voice {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
   }
   
-  inline bool has_audio() {
+  inline bool has_audio() const {
     return oscillator_mode_ != OSCILLATOR_MODE_OFF;
   }
 
@@ -173,7 +173,7 @@ class Voice {
     envelope_amplitude_ = a;
   }
 
-  inline uint16_t scaled_envelope() {
+  inline uint16_t scaled_envelope() const {
     uint32_t value = envelope_.value();
     value = (value * envelope_amplitude_) >> 16;
     return value;

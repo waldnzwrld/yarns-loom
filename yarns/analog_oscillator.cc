@@ -44,7 +44,7 @@ static const uint16_t kHighestNote = 128 * 128;
 static const uint16_t kPitchTableStart = 116 * 128;
 static const uint16_t kOctave = 12 * 128;
 
-uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
+uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
   if (midi_pitch >= kHighestNote) {
     midi_pitch = kHighestNote - 1;
   }

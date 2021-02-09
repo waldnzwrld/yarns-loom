@@ -87,13 +87,13 @@ void Deck::Unpack(PackedPart& storage) {
   }
 }
 
-void Deck::Pack(PackedPart& storage) {
+void Deck::Pack(PackedPart& storage) const {
   storage.looper_oldest_index = oldest_index_;
   storage.looper_size = size_;
   for (uint8_t ordinal = 0; ordinal < kMaxNotes; ++ordinal) {
     uint8_t index = index_mod(oldest_index_ + ordinal);
     PackedNote& packed_note = storage.looper_notes[index];
-    Note& note = notes_[index];
+    const Note& note = notes_[index];
 
     packed_note.on_pos    = note.on_pos   >> (16 - kBitsPos);
     packed_note.off_pos   = note.off_pos  >> (16 - kBitsPos);
