@@ -1,4 +1,5 @@
 // Copyright 2012 Emilie Gillet.
+// Copyright 2021 Chris Rogers.
 //
 // Author: Emilie Gillet (emilie.o.gillet@gmail.com)
 //
