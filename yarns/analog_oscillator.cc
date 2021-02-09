@@ -29,6 +29,7 @@
 #include "yarns/analog_oscillator.h"
 
 #include "stmlib/utils/dsp.h"
+#include "stmlib/utils/random.h"
 
 #include "yarns/resources.h"
 #include "braids/parameter_interpolation.h"
@@ -349,6 +350,13 @@ void AnalogOscillator::RenderBuzz() {
   }
 }
 
+void AnalogOscillator::RenderNoise() {
+  size_t size = kAudioBlockSize;
+  while (size--) {
+    WriteSample(Random::GetSample());
+  }
+}
+
 /* static */
 AnalogOscillator::RenderFn AnalogOscillator::fn_table_[] = {
   &AnalogOscillator::RenderVariableSaw,
@@ -357,6 +365,7 @@ AnalogOscillator::RenderFn AnalogOscillator::fn_table_[] = {
   &AnalogOscillator::RenderTriangleFold,
   &AnalogOscillator::RenderSineFold,
   &AnalogOscillator::RenderBuzz,
+  &AnalogOscillator::RenderNoise,
 };
 
 }  // namespace yarns

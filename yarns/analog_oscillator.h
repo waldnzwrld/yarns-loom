@@ -46,6 +46,7 @@ enum AnalogOscillatorShape {
   OSC_SHAPE_TRIANGLE_FOLD,
   OSC_SHAPE_SINE_FOLD,
   OSC_SHAPE_BUZZ,
+  OSC_SHAPE_NOISE,
 
   OSC_SHAPE_LAST
 };
@@ -120,6 +121,7 @@ class AnalogOscillator {
   void RenderTriangleFold();
   void RenderSineFold();
   void RenderBuzz();
+  void RenderNoise();
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch);
   

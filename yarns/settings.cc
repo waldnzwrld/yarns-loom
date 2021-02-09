@@ -79,6 +79,7 @@ const char* const voicing_oscillator_shape_values[] = {
   "/\\",
   "SINE",
   "\x8E\x8E",
+  "**",
 };
 
 const char* const voicing_allocation_priority_values[] = {
