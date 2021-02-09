@@ -154,15 +154,17 @@ void Voice::Refresh(uint8_t voice_index) {
   } else {
     synced_lfo_.Refresh();
   }
-  uint32_t lfo_phase = synced_lfo_.GetPhase() + voice_index * kQuadrature;
+  // Use voice index to put voice LFOs in quadrature
+  uint32_t lfo_phase = synced_lfo_.GetPhase() + (voice_index << 30);
   int32_t lfo = synced_lfo_.Triangle(lfo_phase);
   uint16_t vibrato_level = mod_wheel_ + (vibrato_initial_ << 1);
   CONSTRAIN(vibrato_level, 0, 127);
-  note += lfo * vibrato_level * vibrato_range_ >> 15;
+  int32_t attenuated_lfo = lfo * vibrato_level;
+  note += attenuated_lfo * vibrato_range_ >> 15;
   mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
   mod_aux_[MOD_AUX_MODULATION] = mod_wheel_ << 9;
   mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[MOD_AUX_VIBRATO_LFO] = (lfo * vibrato_level >> 7) + 32768;
+  mod_aux_[MOD_AUX_VIBRATO_LFO] = (attenuated_lfo >> 7) + 32768;
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
   
   // Use quadrature phase for timbre modulation
@@ -190,11 +192,11 @@ void Voice::Refresh(uint8_t voice_index) {
     }
   }
 
-  envelope_.Render();
-  mod_aux_[MOD_AUX_ENVELOPE] = scaled_envelope();
+  uint16_t envelope_value = (envelope_.Render() * envelope_amplitude_) >> 16;
+  mod_aux_[MOD_AUX_ENVELOPE] = envelope_value;
   oscillator_.set_gain(
     oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
-    scaled_envelope() : UINT16_MAX
+    envelope_value : UINT16_MAX
   );
 
   note_ = note;

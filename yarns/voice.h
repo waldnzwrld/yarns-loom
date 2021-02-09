@@ -173,12 +173,6 @@ class Voice {
     envelope_amplitude_ = a;
   }
 
-  inline uint16_t scaled_envelope() const {
-    uint32_t value = envelope_.value();
-    value = (value * envelope_amplitude_) >> 16;
-    return value;
-  }
-
   inline void RenderAudio() {
     if (!has_audio()) return;
     oscillator_.Render();
