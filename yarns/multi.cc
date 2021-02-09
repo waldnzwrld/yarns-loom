@@ -312,7 +312,7 @@ void Multi::AssignVoicesToCVOutputs() {
     case LAYOUT_QUAD_TRIGGERS:
     case LAYOUT_QUAD_VOLTAGES:
       for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-        cv_outputs_[i].assign(&voice_[0], 1);
+        cv_outputs_[i].assign(&voice_[i], 1);
       }
       break;
 
