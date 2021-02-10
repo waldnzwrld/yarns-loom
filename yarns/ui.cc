@@ -44,6 +44,8 @@ const uint16_t kRefreshPeriod = 900; // msec
 const uint16_t kRefreshOneThird = 300;
 const uint16_t kRefreshTwoThirds = 600;
 const uint32_t kEncoderLongPressTime = kRefreshPeriod * 2 / 3;
+const uint32_t kDefaultFade = (1 << 15) / kRefreshPeriod; // 1/2 frequency
+
 const char* const kVersion = "Loom 2_1_0";
 
 /* static */
@@ -925,7 +927,7 @@ void Ui::DoEvents() {
         )
       )
     ) {
-      display_.set_fade((1 << 15) / kRefreshPeriod); // 1/2 frequency
+      display_.set_fade(kDefaultFade);
     } else if (mode_ == UI_MODE_PARAMETER_EDIT) {
       SetFadeForSetting(setting());
     } else {
@@ -957,6 +959,7 @@ void Ui::DoEvents() {
 void Ui::SetFadeForSetting(const Setting& setting) {
 if (setting.unit == SETTING_UNIT_TEMPO) {
     /*
+    For refresh at 1kHz
     increment
       = (bpm / 60) * (2^16 / 1000)
       = bpm * 2^16 / 60000

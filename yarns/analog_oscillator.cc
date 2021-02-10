@@ -92,8 +92,8 @@ void AnalogOscillator::RenderCSaw() {
   while (size--) {
     bool self_reset = false;
     uint32_t pw = static_cast<uint32_t>(parameter_) * 49152;
-    if (pw < 8 * phase_increment_) {
-      pw = 8 * phase_increment_;
+    if (pw < (phase_increment_ << 3)) {
+      pw = phase_increment_ << 3;
     }
     
     int32_t this_sample = next_sample;

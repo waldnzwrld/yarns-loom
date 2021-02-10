@@ -291,6 +291,7 @@ class CVOutput {
   void Refresh();
 
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
+    if (has_audio()) { return 0; }
     uint32_t v = static_cast<uint32_t>(value);
     uint32_t scale = volts_dac_code(0) - volts_dac_code(7);
     return static_cast<uint16_t>(volts_dac_code(0) - (scale * v >> 16));
