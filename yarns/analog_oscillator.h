@@ -98,7 +98,19 @@ class AnalogOscillator {
   }
 
   inline void set_parameter(int16_t parameter) {
-    parameter_ = parameter;
+    int32_t strength = 32767;
+    switch (shape_) {
+      case OSC_SHAPE_SINE_FOLD:
+        strength -= 6 * (pitch_ - (92 << 7));
+        break;
+      case OSC_SHAPE_TRIANGLE_FOLD:
+        strength -= 7 * (pitch_ - (80 << 7));
+        break;
+      default:
+        break;
+    }
+    CONSTRAIN(strength, 0, 32767);
+    parameter_ = parameter * strength >> 15;
   }
 
   inline void set_aux_parameter(int16_t parameter) {

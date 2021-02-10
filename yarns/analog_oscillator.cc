@@ -240,12 +240,12 @@ void AnalogOscillator::RenderVariableSaw() {
 
 void AnalogOscillator::RenderTriangleFold() {
   uint32_t phase = phase_;
-  
+  int16_t fold_gain = 2048 + (parameter_ * 30720 >> 15);
+
   size_t size = kAudioBlockSize;
   while (size--) {
     uint16_t phase_16;
     int16_t triangle;
-    int16_t gain = 2048 + (parameter_ * 30720 >> 15);
     int16_t sample;
     
     // 2x oversampled WF.
@@ -253,7 +253,7 @@ void AnalogOscillator::RenderTriangleFold() {
     phase_16 = phase >> 16;
     triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     triangle += 32768;
-    triangle = triangle * gain >> 15;
+    triangle = triangle * fold_gain >> 15;
     triangle = Interpolate88(ws_tri_fold, triangle + 32768);
     sample = triangle;// >> 1;
     
@@ -262,7 +262,7 @@ void AnalogOscillator::RenderTriangleFold() {
     phase_16 = phase >> 16;
     triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     triangle += 32768;
-    triangle = triangle * gain >> 15;
+    triangle = triangle * fold_gain >> 15;
     triangle = Interpolate88(ws_tri_fold, triangle + 32768);
     sample += triangle >> 1;
     */
@@ -275,24 +275,24 @@ void AnalogOscillator::RenderTriangleFold() {
 
 void AnalogOscillator::RenderSineFold() {
   uint32_t phase = phase_;
+  int16_t fold_gain = 2048 + (parameter_ * 30720 >> 15);
   
   size_t size = kAudioBlockSize;
   while (size--) {
     int16_t sine;
-    int16_t gain = 2048 + (parameter_ * 30720 >> 15);
     int16_t sample;
     
     // 2x oversampled WF.
     phase += phase_increment_; // >> 1;
     sine = Interpolate824(wav_sine, phase);
-    sine = sine * gain >> 15;
+    sine = sine * fold_gain >> 15;
     sine = Interpolate88(ws_sine_fold, sine + 32768);
     sample = sine; // >> 1;
     
     /*
     phase += phase_increment_ >> 1;
     sine = Interpolate824(wav_sine, phase);
-    sine = sine * gain >> 15;
+    sine = sine * fold_gain >> 15;
     sine = Interpolate88(ws_sine_fold, sine + 32768);
     sample += sine >> 1;
     */
