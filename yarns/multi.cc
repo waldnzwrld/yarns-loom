@@ -234,7 +234,7 @@ void Multi::Stop() {
   song_pointer_ = NULL;
 }
 
-void Multi::Refresh() {
+void Multi::ClockFast() {
   if (clock_pulse_counter_) {
     --clock_pulse_counter_;
   }
@@ -253,7 +253,9 @@ void Multi::Refresh() {
       --swing_predelay_[i];
     }
   }
+}
 
+void Multi::Refresh() {
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
     Part& part = part_[j];
     part.mutable_looper().Refresh();

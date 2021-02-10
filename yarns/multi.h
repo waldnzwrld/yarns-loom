@@ -314,6 +314,7 @@ class Multi {
   }
   
   void AfterDeserialize();
+  void ClockFast();
   void Refresh();
   void RefreshInternalClock() {
     if (running() && internal_clock() && internal_clock_.Process()) {

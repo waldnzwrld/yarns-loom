@@ -68,6 +68,7 @@ bool gate[4];
 bool has_audio_sources;
 bool audio_source[4];
 uint16_t factory_testing_counter;
+uint8_t refresh_counter;
 
 void SysTick_Handler() {
   // MIDI I/O, and CV/Gate refresh at 8kHz.
@@ -101,12 +102,19 @@ void SysTick_Handler() {
     }
   }
 
-  // Observe that the gate output is written with a systick (0.125 ms) delay
+  // Observe that the gate output is written with a systick * 4 (0.5 ms) delay
   // compared to the CV output. This ensures that the CV output will have been
   // refreshed to the right value when the trigger/gate is sent.
-  gate_output.Write(gate);
-  multi.Refresh();
-  multi.GetCvGate(cv, gate);
+  refresh_counter = (refresh_counter + 1) % 4; // Sample rate = 2 kHz
+  bool refresh = refresh_counter == 0;
+  if (refresh) {
+    gate_output.Write(gate);
+  }
+  multi.ClockFast();
+  if (refresh) {
+    multi.Refresh();
+    multi.GetCvGate(cv, gate);
+  }
   audio_source[0] = multi.cv_output(0).has_audio();
   audio_source[1] = multi.cv_output(1).has_audio();
   audio_source[2] = multi.cv_output(2).has_audio();
@@ -182,6 +190,8 @@ void Init() {
   midi_io.Init();
   midi_handler.Init();
   sys.StartTimers();
+
+  refresh_counter = 0;
 }
 
 int main(void) {

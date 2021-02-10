@@ -243,7 +243,7 @@ void Voice::NoteOn(
     retrigger_delay_ = 3;
   }
   if (trigger) {
-    trigger_pulse_ = trigger_duration_ * 8;
+    trigger_pulse_ = trigger_duration_ * 2;
     trigger_phase_ = 0;
     trigger_phase_increment_ = lut_portamento_increments[trigger_duration_];
     envelope_.GateOff();
