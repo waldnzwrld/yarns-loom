@@ -33,7 +33,6 @@
 #include "stmlib/utils/random.h"
 
 #include "yarns/resources.h"
-#include "braids/parameter_interpolation.h"
 
 namespace yarns {
 
@@ -89,21 +88,19 @@ void AnalogOscillator::Render() {
 
 void AnalogOscillator::RenderCSaw() {
   size_t size = kAudioBlockSize;
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
   while (size--) {
     bool self_reset = false;
-    INTERPOLATE_PHASE_INCREMENT
     uint32_t pw = static_cast<uint32_t>(parameter_) * 49152;
-    if (pw < 8 * phase_increment) {
-      pw = 8 * phase_increment;
+    if (pw < 8 * phase_increment_) {
+      pw = 8 * phase_increment_;
     }
     
     int32_t this_sample = next_sample;
     next_sample = 0;
 
-    phase_ += phase_increment;
-    if (phase_ < phase_increment) {
+    phase_ += phase_increment_;
+    if (phase_ < phase_increment_) {
       self_reset = true;
     }
     
@@ -113,7 +110,7 @@ void AnalogOscillator::RenderCSaw() {
         if (phase_ < pw) {
           break;
         }
-        uint32_t t = (phase_ - pw) / (phase_increment >> 16);
+        uint32_t t = (phase_ - pw) / (phase_increment_ >> 16);
         int16_t before = discontinuity_depth_;
         int16_t after = phase_ >> 18;
         int16_t discontinuity = after - before;
@@ -127,7 +124,7 @@ void AnalogOscillator::RenderCSaw() {
         }
         self_reset = false;
         discontinuity_depth_ = -2048 + (aux_parameter_ >> 2);
-        uint32_t t = phase_ / (phase_increment >> 16);
+        uint32_t t = phase_ / (phase_increment_ >> 16);
         int16_t before = 16383;
         int16_t after = discontinuity_depth_;
         int16_t discontinuity = after - before;
@@ -143,12 +140,10 @@ void AnalogOscillator::RenderCSaw() {
     WriteSample(((((this_sample + shift) * 13) >> 3) - 8192) << 1);
   }
   next_sample_ = next_sample;
-  END_INTERPOLATE_PHASE_INCREMENT
 }
 
 void AnalogOscillator::RenderSquare() {
   size_t size = kAudioBlockSize;
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
   if (parameter_ > 30000) {
     parameter_ = 30000;
   }
@@ -157,14 +152,13 @@ void AnalogOscillator::RenderSquare() {
   while (size--) {
     bool self_reset = false;
 
-    INTERPOLATE_PHASE_INCREMENT
     uint32_t pw = static_cast<uint32_t>(32768 - parameter_) << 16;
     
     int32_t this_sample = next_sample;
     next_sample = 0;
     
-    phase_ += phase_increment;
-    if (phase_ < phase_increment) {
+    phase_ += phase_increment_;
+    if (phase_ < phase_increment_) {
       self_reset = true;
     }
     
@@ -173,7 +167,7 @@ void AnalogOscillator::RenderSquare() {
         if (phase_ < pw) {
           break;
         }
-        uint32_t t = (phase_ - pw) / (phase_increment >> 16);
+        uint32_t t = (phase_ - pw) / (phase_increment_ >> 16);
         this_sample += ThisBlepSample(t);
         next_sample += NextBlepSample(t);
         high_ = true;
@@ -183,7 +177,7 @@ void AnalogOscillator::RenderSquare() {
           break;
         }
         self_reset = false;
-        uint32_t t = phase_ / (phase_increment >> 16);
+        uint32_t t = phase_ / (phase_increment_ >> 16);
         this_sample -= ThisBlepSample(t);
         next_sample -= NextBlepSample(t);
         high_ = false;
@@ -194,12 +188,10 @@ void AnalogOscillator::RenderSquare() {
     WriteSample((this_sample - 16384) << 1);
   }
   next_sample_ = next_sample;
-  END_INTERPOLATE_PHASE_INCREMENT
 }
 
 void AnalogOscillator::RenderVariableSaw() {
   size_t size = kAudioBlockSize;
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
   int32_t next_sample = next_sample_;
   if (parameter_ < 1024) {
     parameter_ = 1024;
@@ -207,14 +199,13 @@ void AnalogOscillator::RenderVariableSaw() {
   while (size--) {
     bool self_reset = false;
 
-    INTERPOLATE_PHASE_INCREMENT
     uint32_t pw = static_cast<uint32_t>(parameter_) << 16;
 
     int32_t this_sample = next_sample;
     next_sample = 0;
 
-    phase_ += phase_increment;
-    if (phase_ < phase_increment) {
+    phase_ += phase_increment_;
+    if (phase_ < phase_increment_) {
       self_reset = true;
     }
 
@@ -223,7 +214,7 @@ void AnalogOscillator::RenderVariableSaw() {
         if (phase_ < pw) {
           break;
         }
-        uint32_t t = (phase_ - pw) / (phase_increment >> 16);
+        uint32_t t = (phase_ - pw) / (phase_increment_ >> 16);
         this_sample -= ThisBlepSample(t) >> 1;
         next_sample -= NextBlepSample(t) >> 1;
         high_ = true;
@@ -233,7 +224,7 @@ void AnalogOscillator::RenderVariableSaw() {
           break;
         }
         self_reset = false;
-        uint32_t t = phase_ / (phase_increment >> 16);
+        uint32_t t = phase_ / (phase_increment_ >> 16);
         this_sample -= ThisBlepSample(t) >> 1;
         next_sample -= NextBlepSample(t) >> 1;
         high_ = false;
@@ -245,27 +236,20 @@ void AnalogOscillator::RenderVariableSaw() {
     WriteSample((this_sample - 16384) << 1);
   }
   next_sample_ = next_sample;
-  END_INTERPOLATE_PHASE_INCREMENT
 }
 
 void AnalogOscillator::RenderTriangleFold() {
   uint32_t phase = phase_;
   
   size_t size = kAudioBlockSize;
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
-  BEGIN_INTERPOLATE_PARAMETER
-  
   while (size--) {
-    INTERPOLATE_PARAMETER
-    INTERPOLATE_PHASE_INCREMENT
-    
     uint16_t phase_16;
     int16_t triangle;
-    int16_t gain = 2048 + (parameter * 30720 >> 15);
+    int16_t gain = 2048 + (parameter_ * 30720 >> 15);
     int16_t sample;
     
     // 2x oversampled WF.
-    phase += phase_increment; // >> 1;
+    phase += phase_increment_; // >> 1;
     phase_16 = phase >> 16;
     triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     triangle += 32768;
@@ -274,7 +258,7 @@ void AnalogOscillator::RenderTriangleFold() {
     sample = triangle;// >> 1;
     
     /*
-    phase += phase_increment >> 1;
+    phase += phase_increment_ >> 1;
     phase_16 = phase >> 16;
     triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     triangle += 32768;
@@ -285,9 +269,6 @@ void AnalogOscillator::RenderTriangleFold() {
 
     WriteSample(sample);
   }
-  
-  END_INTERPOLATE_PARAMETER
-  END_INTERPOLATE_PHASE_INCREMENT
     
   phase_ = phase;
 }
@@ -296,26 +277,20 @@ void AnalogOscillator::RenderSineFold() {
   uint32_t phase = phase_;
   
   size_t size = kAudioBlockSize;
-  BEGIN_INTERPOLATE_PHASE_INCREMENT
-  BEGIN_INTERPOLATE_PARAMETER
-  
   while (size--) {
-    INTERPOLATE_PARAMETER
-    INTERPOLATE_PHASE_INCREMENT
-    
     int16_t sine;
-    int16_t gain = 2048 + (parameter * 30720 >> 15);
+    int16_t gain = 2048 + (parameter_ * 30720 >> 15);
     int16_t sample;
     
     // 2x oversampled WF.
-    phase += phase_increment; // >> 1;
+    phase += phase_increment_; // >> 1;
     sine = Interpolate824(wav_sine, phase);
     sine = sine * gain >> 15;
     sine = Interpolate88(ws_sine_fold, sine + 32768);
     sample = sine; // >> 1;
     
     /*
-    phase += phase_increment >> 1;
+    phase += phase_increment_ >> 1;
     sine = Interpolate824(wav_sine, phase);
     sine = sine * gain >> 15;
     sine = Interpolate88(ws_sine_fold, sine + 32768);
@@ -324,10 +299,7 @@ void AnalogOscillator::RenderSineFold() {
 
     WriteSample(sample);
   }
-  
-  END_INTERPOLATE_PARAMETER
-  END_INTERPOLATE_PHASE_INCREMENT
-  
+
   phase_ = phase;
 }
 
