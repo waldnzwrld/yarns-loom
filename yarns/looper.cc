@@ -166,18 +166,17 @@ void Deck::Advance(uint16_t new_pos, bool play) {
     if (seen_index == kNullIndex) {
       seen_index = next_index;
     }
-    const Note& next_note = notes_[next_index];
+    Note& next_note = notes_[next_index];
     if (!Passed(next_note.on_pos, pos_, new_pos)) {
       break;
     }
     head_.on = next_index;
 
     if (next_link_[next_index].off == kNullIndex) {
-      // If the next 'on' note doesn't yet have an off link, it's still held
-      // and has been for an entire loop -- instead of redundantly turning the
-      // note on, link its off
-      LinkOff(next_index);
-      continue;
+      // If the next 'on' note doesn't yet have an off link, it's still held,
+      // and has been for an entire loop
+      RecordNoteOff(next_index);
+      part_->LooperPlayNoteOff(next_index, next_note.pitch);
     }
 
     if (play) {

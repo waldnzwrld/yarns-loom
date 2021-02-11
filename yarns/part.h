@@ -46,6 +46,7 @@ const uint8_t kNumSteps = 31;
 const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
+const uint8_t kNoteStackMapping = kNoteStackSize + 1; // 1-based
 
 const uint8_t kCCRecordOffOn = 110;
 const uint8_t kCCDeleteRecording = 111;
@@ -568,7 +569,7 @@ struct PressedKeys {
   stmlib::NoteStack<kNoteStackSize> stack;
   bool ignore_note_off_messages;
   bool release_latched_keys_on_next_note_on;
-  bool sustainable[kNoteStackSize];
+  bool sustainable[kNoteStackMapping];
 
   void Init() {
     stack.Init();
@@ -580,7 +581,7 @@ struct PressedKeys {
     release_latched_keys_on_next_note_on = false;
     std::fill(
       &sustainable[0],
-      &sustainable[kNoteStackSize],
+      &sustainable[kNoteStackMapping],
       false
     );
   }
@@ -747,6 +748,8 @@ class Part {
     if (!looper_in_use()) { return; }
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
     pitch = output_pitch_for_looper_note_[looper_note_index];
+    if (pitch == looper::kNullIndex) { return; }
+    output_pitch_for_looper_note_[looper_note_index] = looper::kNullIndex;
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Peek at next looper note
       uint8_t next_on_index = looper_.PeekNextOn();
@@ -1023,11 +1026,12 @@ class Part {
   looper::Deck looper_;
 
   // Tracks which looper notes are currently being recorded
-  uint8_t looper_note_recording_pressed_key_[kNoteStackSize];
+  uint8_t looper_note_recording_pressed_key_[kNoteStackMapping];
 
   // Tracks which looper notes are currently playing, so they can be turned off later
-  uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
+  uint8_t looper_note_index_for_generated_note_index_[kNoteStackMapping];
 
+  // Post-transpose
   uint8_t output_pitch_for_looper_note_[looper::kMaxNotes];
 
   uint16_t gate_length_counter_;
