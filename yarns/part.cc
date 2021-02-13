@@ -495,7 +495,10 @@ void Part::StartRecording() {
     // Start recording any held notes
     for (uint8_t i = 1; i <= manual_keys_.stack.max_size(); ++i) {
       const NoteEntry& e = manual_keys_.stack.note(i);
-      if (e.note == NOTE_STACK_FREE_SLOT) { continue; }
+      if (
+        e.note == NOTE_STACK_FREE_SLOT ||
+        manual_keys_.IsSustained(e)
+      ) { continue; }
       LooperRecordNoteOn(i);
     }
   } else {
