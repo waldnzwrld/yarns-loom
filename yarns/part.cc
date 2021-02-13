@@ -449,17 +449,17 @@ void Part::Start() {
   looper_.Rewind();
   std::fill(
     &looper_note_recording_pressed_key_[0],
-    &looper_note_recording_pressed_key_[kNoteStackSize],
+    &looper_note_recording_pressed_key_[kNoteStackMapping],
     looper::kNullIndex
   );
   std::fill(
     &looper_note_index_for_generated_note_index_[0],
-    &looper_note_index_for_generated_note_index_[kNoteStackSize],
+    &looper_note_index_for_generated_note_index_[kNoteStackMapping],
     looper::kNullIndex
   );
   std::fill(
     &output_pitch_for_looper_note_[0],
-    &output_pitch_for_looper_note_[kNoteStackSize],
+    &output_pitch_for_looper_note_[kNoteStackMapping],
     looper::kNullIndex
   );
 
