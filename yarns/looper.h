@@ -119,7 +119,6 @@ class Deck {
   uint8_t PeekNextOn() const;
   uint8_t PeekNextOff() const;
 
-  bool NoteIsPlaying(uint8_t index) const;
   uint16_t NoteFractionCompleted(uint8_t index) const;
   uint8_t NotePitch(uint8_t index) const;
   uint8_t NoteAgeOrdinal(uint8_t index) const;

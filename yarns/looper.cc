@@ -208,20 +208,17 @@ uint8_t Deck::RecordNoteOn(uint8_t pitch, uint8_t velocity) {
 
 // Returns whether the NoteOff should be sent
 bool Deck::RecordNoteOff(uint8_t index) {
-  if (next_link_[index].off != kNullIndex) {
-    // off link was already set by Advance, so the note was held for an entire
-    // loop, so the note should play continuously and not be turned off now
+  if (
+    // Note was already removed
+    next_link_[index].on == kNullIndex ||
+    // off link was already set by Advance
+    next_link_[index].off != kNullIndex
+  ) {
     return false;
   }
   LinkOff(index);
   notes_[index].off_pos = pos_;
   return true;
-}
-
-bool Deck::NoteIsPlaying(uint8_t index) const {
-  const Note& note = notes_[index];
-  if (next_link_[index].off == kNullIndex) { return false; }
-  return Passed(pos_, note.on_pos, note.off_pos);
 }
 
 uint16_t Deck::NoteFractionCompleted(uint8_t index) const {
@@ -282,7 +279,12 @@ void Deck::RemoveNote(uint8_t target_index) {
   uint8_t search_next_index;
 
   Note& target_note = notes_[target_index];
-  if (NoteIsPlaying(target_index)) {
+  if (
+    // Note is being recorded
+    next_link_[target_index].off == kNullIndex ||
+    // Note is being played
+    Passed(pos_, target_note.on_pos, target_note.off_pos)
+  ) {
     part_->LooperPlayNoteOff(target_index, target_note.pitch);
   }
 
