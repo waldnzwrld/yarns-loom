@@ -146,7 +146,7 @@ uint8_t Part::PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t veloci
     keys.release_latched_keys_on_next_note_on = still_latched;
     keys.ignore_note_off_messages = still_latched;
   }
-  bool sustained = keys.IsSustained(pitch);
+  bool sustained = keys.IsSustained(pitch); // Capture existing sustain status
   uint8_t index = keys.stack.NoteOn(pitch, velocity);
   if (sustained) { keys.SetSustain(pitch); }
   return index;
@@ -185,13 +185,11 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
   uint8_t recording_pitch = ArpUndoTransposeInputPitch(note);
   uint8_t pressed_key_index = manual_keys_.stack.Find(recording_pitch);
   if (seq_recording_ && looped() && looper_is_recording(pressed_key_index)) {
-    // Looper interlaces some operations here, because the manual key has to
-    // exist until LooperRecordNoteOff returns.  Directly mapping pitch to
-    // looper notes would be cleaner, but requires a data structure more
-    // sophisticated than an array
-    manual_keys_.SetSustain(recording_pitch);
+    // Directly mapping pitch to looper notes would be cleaner, but requires a
+    // data structure more sophisticated than an array
+    LooperRecordNoteOff(pressed_key_index);
+    // Sustain is respected only if it was applied before recording
     if (!manual_keys_.IsSustained(recording_pitch)) {
-      LooperRecordNoteOff(pressed_key_index);
       manual_keys_.stack.NoteOff(recording_pitch);
     }
   } else if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
