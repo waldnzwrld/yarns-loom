@@ -169,13 +169,13 @@ characters = {
   '\x87': 'nml',
   
   # Waveforms
-  '\x88': 'glbc',  # VSaw
-  '\x89': 'plbc',  # CSAw
+  '\x88': 'njbc',  # Saw
+  '\x89': 'pjb',   # CSaw
   '\x8A': 'mn',    # Baby saw
   '\x8B': 'nl',    # Tri
   '\x8C': 'efabc', # Square
-  '\x8D': 'epkc',  # Baby square
-  '\x8E': 'hmd', # Pulse
+  '\x8D': 'epkc',   # Baby square
+  '\x8E': 'dhm',   # Pulse
   '\x8F': 'efgkc', # ADSR
   
   # Spinner
