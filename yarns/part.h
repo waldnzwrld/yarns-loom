@@ -705,7 +705,12 @@ class Part {
   inline bool looper_can_control(uint8_t pitch) const {
     if (!manual_control()) { return true; }
     uint8_t key = manual_keys_.stack.Find(pitch);
-    return !key || looper_is_recording(key);
+    if (!key) { return true; } // We got here first
+    if (manual_keys_.IsSustained(pitch)) {
+      // Manual control has not been relinquished
+      return false;
+    }
+    return looper_is_recording(key);
   }
 
   inline bool looped() const {
