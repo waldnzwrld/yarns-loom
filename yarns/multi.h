@@ -180,8 +180,12 @@ class Multi {
 
     bool thru = true;
     bool received = false;
-    for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_[i].accepts(channel, note, velocity)) {
+    if (recording_ && part_[recording_part_].accepts(channel, note, velocity)) {
+      received = true;
+      thru = part_[recording_part_].NoteOn(channel, part_[recording_part_].TransposeInputPitch(note), velocity) && thru;
+    } else {
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        if (!part_[i].accepts(channel, note, velocity)) { continue; }
         received = true;
         thru = part_[i].NoteOn(channel, part_[i].TransposeInputPitch(note), velocity) && thru;
       }
@@ -203,11 +207,17 @@ class Multi {
   bool NoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     bool thru = true;
     bool has_notes = false;
-    for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_[i].accepts(channel, note)) {
+    if (recording_ && part_[recording_part_].accepts(channel, note)) {
+      thru = part_[recording_part_].NoteOff(channel, part_[recording_part_].TransposeInputPitch(note)) && thru;
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        has_notes = has_notes || part_[i].has_notes();
+      }
+    } else {
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        has_notes = has_notes || part_[i].has_notes();
+        if (!part_[i].accepts(channel, note)) { continue; }
         thru = part_[i].NoteOff(channel, part_[i].TransposeInputPitch(note)) && thru;
       }
-      has_notes = has_notes || part_[i].has_notes();
     }
     
     if (!has_notes && CanAutoStop()) {

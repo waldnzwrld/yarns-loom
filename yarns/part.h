@@ -858,9 +858,6 @@ class Part {
   }
 
   inline bool accepts(uint8_t channel) const {
-    if (!(transposable_ || seq_recording_)) {
-      return false;
-    }
     return midi_.channel == 0x10 || midi_.channel == channel;
   }
   
@@ -982,10 +979,6 @@ class Part {
     has_siblings_ = has_siblings;
   }
   
-  void set_transposable(bool transposable) {
-    transposable_ = transposable;
-  }
-  
  private:
   int16_t Tune(int16_t note);
   void ResetAllControllers();
@@ -1042,7 +1035,6 @@ class Part {
   uint16_t gate_length_counter_;
   
   bool has_siblings_;
-  bool transposable_;
   
   bool multi_is_recording_;
 
