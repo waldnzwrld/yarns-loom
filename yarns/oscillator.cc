@@ -25,9 +25,9 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Oscillator - analog style waveforms.
+// Oscillator.
 
-#include "yarns/analog_oscillator.h"
+#include "yarns/oscillator.h"
 
 #include "stmlib/utils/dsp.h"
 #include "stmlib/utils/random.h"
@@ -44,7 +44,7 @@ static const uint16_t kHighestNote = 128 * 128;
 static const uint16_t kPitchTableStart = 116 * 128;
 static const uint16_t kOctave = 12 * 128;
 
-uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
+uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
   if (midi_pitch >= kHighestNote) {
     midi_pitch = kHighestNote - 1;
   }
@@ -66,7 +66,7 @@ uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
   return phase_increment;
 }
 
-void AnalogOscillator::Render() {
+void Oscillator::Render() {
   RenderFn fn = fn_table_[shape_];
   
   if (shape_ != previous_shape_) {
@@ -86,7 +86,7 @@ void AnalogOscillator::Render() {
   (this->*fn)();
 }
 
-void AnalogOscillator::RenderCSaw() {
+void Oscillator::RenderCSaw() {
   size_t size = kAudioBlockSize;
   int32_t next_sample = next_sample_;
   while (size--) {
@@ -142,7 +142,7 @@ void AnalogOscillator::RenderCSaw() {
   next_sample_ = next_sample;
 }
 
-void AnalogOscillator::RenderSquare() {
+void Oscillator::RenderSquare() {
   size_t size = kAudioBlockSize;
   if (parameter_ > 30000) {
     parameter_ = 30000;
@@ -190,7 +190,7 @@ void AnalogOscillator::RenderSquare() {
   next_sample_ = next_sample;
 }
 
-void AnalogOscillator::RenderVariableSaw() {
+void Oscillator::RenderVariableSaw() {
   size_t size = kAudioBlockSize;
   int32_t next_sample = next_sample_;
   if (parameter_ < 1024) {
@@ -238,7 +238,7 @@ void AnalogOscillator::RenderVariableSaw() {
   next_sample_ = next_sample;
 }
 
-void AnalogOscillator::RenderTriangleFold() {
+void Oscillator::RenderTriangleFold() {
   uint32_t phase = phase_;
   int16_t fold_gain = 2048 + (parameter_ * 30720 >> 15);
 
@@ -273,7 +273,7 @@ void AnalogOscillator::RenderTriangleFold() {
   phase_ = phase;
 }
 
-void AnalogOscillator::RenderSineFold() {
+void Oscillator::RenderSineFold() {
   uint32_t phase = phase_;
   int16_t fold_gain = 2048 + (parameter_ * 30720 >> 15);
   
@@ -303,7 +303,7 @@ void AnalogOscillator::RenderSineFold() {
   phase_ = phase;
 }
 
-void AnalogOscillator::RenderBuzz() {
+void Oscillator::RenderBuzz() {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
   size_t index = (shifted_pitch >> 10);
@@ -323,7 +323,7 @@ void AnalogOscillator::RenderBuzz() {
   }
 }
 
-void AnalogOscillator::RenderNoise() {
+void Oscillator::RenderNoise() {
   size_t size = kAudioBlockSize;
   while (size--) {
     WriteSample(Random::GetSample());
@@ -331,14 +331,14 @@ void AnalogOscillator::RenderNoise() {
 }
 
 /* static */
-AnalogOscillator::RenderFn AnalogOscillator::fn_table_[] = {
-  &AnalogOscillator::RenderVariableSaw,
-  &AnalogOscillator::RenderCSaw,
-  &AnalogOscillator::RenderSquare,
-  &AnalogOscillator::RenderTriangleFold,
-  &AnalogOscillator::RenderSineFold,
-  &AnalogOscillator::RenderBuzz,
-  &AnalogOscillator::RenderNoise,
+Oscillator::RenderFn Oscillator::fn_table_[] = {
+  &Oscillator::RenderVariableSaw,
+  &Oscillator::RenderCSaw,
+  &Oscillator::RenderSquare,
+  &Oscillator::RenderTriangleFold,
+  &Oscillator::RenderSineFold,
+  &Oscillator::RenderBuzz,
+  &Oscillator::RenderNoise,
 };
 
 }  // namespace yarns

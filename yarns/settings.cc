@@ -30,7 +30,7 @@
 #include "yarns/settings.h"
 #include "yarns/resources.h"
 #include "yarns/clock_division.h"
-#include "yarns/analog_oscillator.h"
+#include "yarns/oscillator.h"
 
 #include "yarns/multi.h"
 #include "yarns/part.h"

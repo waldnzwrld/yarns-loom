@@ -40,7 +40,7 @@ namespace yarns {
 
 const size_t kAudioBlockSize = 64;
 
-enum AnalogOscillatorShape {
+enum OscillatorShape {
   OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_CSAW,
   OSC_SHAPE_SQUARE,
@@ -52,12 +52,12 @@ enum AnalogOscillatorShape {
   OSC_SHAPE_LAST
 };
 
-class AnalogOscillator {
+class Oscillator {
  public:
-  typedef void (AnalogOscillator::*RenderFn)();
+  typedef void (Oscillator::*RenderFn)();
 
-  AnalogOscillator() { }
-  ~AnalogOscillator() { }
+  Oscillator() { }
+  ~Oscillator() { }
 
   inline void Init(int32_t scale, int32_t offset) {
     audio_buffer_.Init();
@@ -89,7 +89,7 @@ class AnalogOscillator {
     amplitude_ = (scale_ * gain) >> 16;
   }
   
-  inline void set_shape(AnalogOscillatorShape shape) {
+  inline void set_shape(OscillatorShape shape) {
     shape_ = shape;
   }
   
@@ -166,8 +166,8 @@ class AnalogOscillator {
   
   int32_t next_sample_;
   
-  AnalogOscillatorShape shape_;
-  AnalogOscillatorShape previous_shape_;
+  OscillatorShape shape_;
+  OscillatorShape previous_shape_;
 
   int32_t scale_;
   int32_t amplitude_;
@@ -176,7 +176,7 @@ class AnalogOscillator {
   
   static RenderFn fn_table_[];
   
-  DISALLOW_COPY_AND_ASSIGN(AnalogOscillator);
+  DISALLOW_COPY_AND_ASSIGN(Oscillator);
 };
 
 }  // namespace yarns

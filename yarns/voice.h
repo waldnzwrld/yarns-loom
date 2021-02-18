@@ -34,7 +34,7 @@
 #include "stmlib/utils/ring_buffer.h"
 
 #include "yarns/envelope.h"
-#include "yarns/analog_oscillator.h"
+#include "yarns/oscillator.h"
 #include "yarns/synced_lfo.h"
 #include "yarns/part.h"
 #include "yarns/clock_division.h"
@@ -144,7 +144,7 @@ class Voice {
     oscillator_mode_ = m;
   }
   inline void set_oscillator_shape(uint8_t s) {
-    oscillator_.set_shape(static_cast<AnalogOscillatorShape>(s));
+    oscillator_.set_shape(static_cast<OscillatorShape>(s));
   }
   inline void set_oscillator_pw_initial(uint8_t pw) {
     oscillator_pw_initial_ = pw;
@@ -161,7 +161,7 @@ class Voice {
     return oscillator_mode_ != OSCILLATOR_MODE_OFF;
   }
 
-  inline AnalogOscillator* oscillator() {
+  inline Oscillator* oscillator() {
     return &oscillator_;
   }
 
@@ -226,7 +226,7 @@ class Voice {
   uint8_t oscillator_mode_;
   uint8_t oscillator_pw_initial_;
   int8_t oscillator_pw_mod_;
-  AnalogOscillator oscillator_;
+  Oscillator oscillator_;
   Envelope envelope_;
   uint16_t envelope_amplitude_;
 
