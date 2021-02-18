@@ -96,7 +96,7 @@
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)
 
 ### Event routing, filtering, and transformation
-- New `SI (SEQ INPUT RESPONSE)` setting to change how a playing sequence responds to notes
+- New `SI (SEQ INPUT RESPONSE)` setting changes how a playing sequence responds to manual input
   - `OFF` ignores keyboard input
   - `TRANSPOSE` is the stock firmware behavior
   - `REPLACE` retains the sequence's rhythm, but overrides its pitch
