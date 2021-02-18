@@ -249,24 +249,13 @@ void Oscillator::RenderTriangleFold() {
     int16_t triangle;
     int16_t sample;
     
-    // 2x oversampled WF.
-    phase += phase_increment_; // >> 1;
+    phase += phase_increment_;
     phase_16 = phase >> 16;
     triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     triangle += 32768;
     triangle = triangle * fold_gain >> 15;
     triangle = Interpolate88(ws_tri_fold, triangle + 32768);
-    sample = triangle;// >> 1;
-    
-    /*
-    phase += phase_increment_ >> 1;
-    phase_16 = phase >> 16;
-    triangle = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
-    triangle += 32768;
-    triangle = triangle * fold_gain >> 15;
-    triangle = Interpolate88(ws_tri_fold, triangle + 32768);
-    sample += triangle >> 1;
-    */
+    sample = triangle;
 
     WriteSample(sample);
   }
@@ -283,20 +272,11 @@ void Oscillator::RenderSineFold() {
     int16_t sine;
     int16_t sample;
     
-    // 2x oversampled WF.
-    phase += phase_increment_; // >> 1;
+    phase += phase_increment_;
     sine = Interpolate824(wav_sine, phase);
     sine = sine * fold_gain >> 15;
     sine = Interpolate88(ws_sine_fold, sine + 32768);
-    sample = sine; // >> 1;
-    
-    /*
-    phase += phase_increment_ >> 1;
-    sine = Interpolate824(wav_sine, phase);
-    sine = sine * fold_gain >> 15;
-    sine = Interpolate88(ws_sine_fold, sine + 32768);
-    sample += sine >> 1;
-    */
+    sample = sine;
 
     WriteSample(sample);
   }
