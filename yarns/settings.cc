@@ -78,6 +78,7 @@ const char* const voicing_oscillator_shape_values[] = {
   "_\x8C",
   "/\\",
   "SINE",
+  "FM",
   "\x8E\x8E",
   "**",
 };

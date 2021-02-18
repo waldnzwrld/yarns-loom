@@ -43,6 +43,7 @@ static const size_t kNumZones = 15;
 static const uint16_t kHighestNote = 128 * 128;
 static const uint16_t kPitchTableStart = 116 * 128;
 static const uint16_t kOctave = 12 * 128;
+static const uint16_t kFifth = 7 * 128;
 
 uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
   if (midi_pitch >= kHighestNote) {
@@ -303,6 +304,24 @@ void Oscillator::RenderSineFold() {
   phase_ = phase;
 }
 
+void Oscillator::RenderFM() {
+  uint32_t modulator_phase = modulator_phase_;
+  uint32_t modulator_phase_increment = ComputePhaseIncrement(
+  //    (12 << 7) + pitch_ + ((aux_parameter_ - 16384) >> 1)) >> 1;
+    pitch_ + kOctave + kFifth);
+
+  size_t size = kAudioBlockSize;
+  while (size--) {
+    phase_ += phase_increment_;
+    modulator_phase += modulator_phase_increment;
+
+    uint32_t pm = (
+        Interpolate824(wav_sine, modulator_phase) * parameter_) << 2;
+    WriteSample(Interpolate824(wav_sine, phase_ + pm));
+  }
+  modulator_phase_ = modulator_phase;
+}
+
 void Oscillator::RenderBuzz() {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
@@ -337,6 +356,7 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderSquare,
   &Oscillator::RenderTriangleFold,
   &Oscillator::RenderSineFold,
+  &Oscillator::RenderFM,
   &Oscillator::RenderBuzz,
   &Oscillator::RenderNoise,
 };

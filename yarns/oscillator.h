@@ -46,6 +46,7 @@ enum OscillatorShape {
   OSC_SHAPE_SQUARE,
   OSC_SHAPE_TRIANGLE_FOLD,
   OSC_SHAPE_SINE_FOLD,
+  OSC_SHAPE_FM,
   OSC_SHAPE_BUZZ,
   OSC_SHAPE_NOISE,
 
@@ -133,6 +134,7 @@ class Oscillator {
   void RenderCSaw();
   void RenderTriangleFold();
   void RenderSineFold();
+  void RenderFM();
   void RenderBuzz();
   void RenderNoise();
   
@@ -163,6 +165,7 @@ class Oscillator {
   int16_t aux_parameter_;
   int16_t discontinuity_depth_;
   int16_t pitch_;
+  uint32_t modulator_phase_;
   
   int32_t next_sample_;
   
