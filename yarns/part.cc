@@ -61,7 +61,6 @@ void Part::Init() {
   num_voices_ = 0;
   polychained_ = false;
   seq_recording_ = false;
-  transposable_ = true;
 
   looper_.Init(this);
 
@@ -542,7 +541,7 @@ void Part::StopSequencerArpeggiatorNotes() {
 }
 
 uint8_t Part::ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch) const {
-  if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR || !transposable_) {
+  if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
     return pitch;
   }
 
