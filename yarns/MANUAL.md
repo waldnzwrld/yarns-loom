@@ -133,4 +133,4 @@
 - Fixed `UNISON` voice allocation methods to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
 - Voicing algorithms `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
 - Broadened portamento setting range from 51 to 64 values per curve shape
-- Allow an explicit clock start (from panel switch or MIDI) to override an implicit clock start (from keyboard)
+- Allow an explicit clock start (from panel switch or MIDI) to supersede an implicit clock start (from keyboard)
