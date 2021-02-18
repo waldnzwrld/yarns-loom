@@ -35,7 +35,7 @@
   - Murmuring buzz
   - White noise
 - Each wave shape has a timbral parameter modulated by an LFO
-  - The modulating LFO for the PWM is the quadrature of the vibrato LFO
+  - The modulating LFO is the quadrature of the vibrato LFO
   - `TI (TIMBRE INITIAL)` sets initial timbre
   - `TM (TIMBRE MOD)` sets the bipolar depth of timbre modulation by the LFO
 
