@@ -24,14 +24,14 @@
 
 ### Oscillator controls
 - Configured via the `▽O (OSCILLATOR MENU)`
-- `O? (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
+- `OM (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
 - `OS (OSCILLATOR SHAPE)` sets the waveform
 - A pulse-width modulated rectangle wave replaces the "25% rectangle" wave
   - The modulating LFO for the PWM is the quadrature of the vibrato LFO
   - `OSC PW INITIAL` sets initial pulse width
   - `OSC PW MOD` sets the bipolar depth of pulse width modulation by the LFO
 
-### ADSR envelopes with velocity control
+### ADSR envelopes, modulated by velocity
 - Configured via the `▽📉 (ENVELOPE MENU)`
 - Controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
 - Available as an assignable CV output (`ENVELOPE`) in all layouts
@@ -47,8 +47,6 @@
 - Flash note (or RS/TI) for the selected step
 - Brighten display while the selected step is being played
 - Wrap around around when using encoder to scroll through steps
-- Allow non-recording parts on the same channel to keep accepting input IFF both the recording part and the accepting part are using velocity filtering
-- Recording part now responds to MIDI start
 
 ### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
@@ -97,8 +95,8 @@
   - `CLUTCH DOWN` is the same as `CLUTCH UP`, but with reversed up/down semantics
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)
 
-### Incoming note handling
-- New `SI (SEQ INPUT RESPONSE)` setting to change how a playing sequence responds to notes
+### Event routing, filtering, and transformation
+- New `SI (SEQ INPUT RESPONSE)` setting changes how a playing sequence responds to manual input
   - `OFF` ignores keyboard input
   - `TRANSPOSE` is the stock firmware behavior
   - `REPLACE` retains the sequence's rhythm, but overrides its pitch
@@ -110,8 +108,11 @@
   - Added UI for previously hidden settings `V> (VELOCITY MIN)` and `V< (VELOCITY MAX)`
   - Present for all layouts except 4V
   - Output velocity range is scaled to compensate for the restricted range imposed by input filtering
+- Recording 
+  - Any MIDI events ignored by the recording part can be received by other parts
+  - Recording part now responds to MIDI start
   
-### Expanded support for CC (Control Change) messages
+### Expanded support for Control Change events
 - The result of a received CC is briefly displayed
 - Recording control: start/stop recording mode, delete a recording
 - CC support for all new settings
@@ -132,4 +133,4 @@
 - Fixed `UNISON` voice allocation methods to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
 - Voicing algorithms `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
 - Broadened portamento setting range from 51 to 64 values per curve shape
-- Allow an explicit clock start (from panel switch or MIDI) to override an implicit clock start (from keyboard)
+- Allow an explicit clock start (from panel switch or MIDI) to supersede an implicit clock start (from keyboard)

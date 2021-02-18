@@ -11,7 +11,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - Global control and display of the active part and its play mode
 - Looper with real-time recording and overdubbing
 - Sequencer-driven arpeggiator
-- Internal envelopes, with velocity modulation of amplitude and segments
+- Internal envelopes, with velocity-modulated segments and amplitude
 - Pulse-width modulation for Yarns' digital oscillator
 - Velocity filtering
 - More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction
