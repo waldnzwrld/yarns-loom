@@ -26,10 +26,18 @@
 - Configured via the `▽O (OSCILLATOR MENU)`
 - `OM (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
 - `OS (OSCILLATOR SHAPE)` sets the waveform
-- A pulse-width modulated rectangle wave replaces the "25% rectangle" wave
+  - Sharktooth
+  - CS80 saw
+  - Pulse
+  - Folded triangle
+  - Folded sine
+  - FM sine
+  - Murmuring buzz
+  - White noise
+- Each wave shape has a timbral parameter modulated by an LFO
   - The modulating LFO for the PWM is the quadrature of the vibrato LFO
-  - `OSC PW INITIAL` sets initial pulse width
-  - `OSC PW MOD` sets the bipolar depth of pulse width modulation by the LFO
+  - `TI (TIMBRE INITIAL)` sets initial timbre
+  - `TM (TIMBRE MOD)` sets the bipolar depth of timbre modulation by the LFO
 
 ### ADSR envelopes, modulated by velocity
 - Configured via the `▽📉 (ENVELOPE MENU)`
