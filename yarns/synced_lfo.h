@@ -41,7 +41,7 @@ class SyncedLFO {
   ~SyncedLFO() { }
   void Init() {
     counter_ = 0;
-    period_ticks_ = 1;
+    period_ticks_ = 0;
     phase_ = 0;
   }
 
@@ -70,7 +70,9 @@ class SyncedLFO {
 
   void Tap(uint16_t num_ticks) {
     if (num_ticks != period_ticks_) {
-      counter_ = (counter_ * num_ticks + period_ticks_ - 1) / period_ticks_;
+      if (period_ticks_) {
+        counter_ = (counter_ * num_ticks + period_ticks_ - 1) / period_ticks_;
+      }
       period_ticks_ = num_ticks;
       counter_ %= period_ticks_;
     }
@@ -80,7 +82,7 @@ class SyncedLFO {
 
     int32_t d_error = target_increment - (phase_ - previous_phase_);
     int32_t p_error = target_phase - phase_;
-    int32_t error = (d_error + (p_error >> 1)) >> 13;
+    int32_t error = (d_error + (p_error >> 1)) >> 11;
 
     if (error < 0 && abs(error) > phase_increment_) {
       // underflow
