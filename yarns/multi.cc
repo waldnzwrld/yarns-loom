@@ -755,20 +755,14 @@ void Multi::StopRecording(uint8_t part) {
 
 bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   bool thru = true;
-  
-  if (channel + 1 == settings_.remote_control_channel) {
+  if (
+    is_remote_control_channel(channel) &&
+    setting_defs.remote_control_cc_map[controller] != 0xff
+  ) {
     SetFromCC(0xff, controller, value);
-    if (num_active_parts_ >= 4 && \
-        (controller == 0x78 || controller == 0x79 || controller == 0x7b)) {
-      // Do not continue to avoid treating these messages as "all sound off",
-      // "reset all controllers" and "all notes off" CC.
-      return true;
-    }
-  }
-
-  for (uint8_t i = 0; i < num_active_parts_; ++i) {
-    if (part_[i].accepts(channel) && \
-        channel + 1 != settings_.remote_control_channel) {
+  } else {
+    for (uint8_t i = 0; i < num_active_parts_; ++i) {
+      if (!part_accepts(i, channel)) { continue; }
       if (controller == kCCRecordOffOn) {
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);

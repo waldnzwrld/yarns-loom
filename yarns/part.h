@@ -856,27 +856,6 @@ class Part {
       )
     );
   }
-
-  inline bool accepts(uint8_t channel) const {
-    return midi_.channel == 0x10 || midi_.channel == channel;
-  }
-  
-  inline bool accepts(uint8_t channel, uint8_t note) const {
-    if (!accepts(channel)) {
-      return false;
-    }
-    if (midi_.min_note <= midi_.max_note) {
-      return note >= midi_.min_note && note <= midi_.max_note;
-    } else {
-      return note <= midi_.max_note || note >= midi_.min_note;
-    }
-  }
-  
-  inline bool accepts(uint8_t channel, uint8_t note, uint8_t velocity) const {
-    return accepts(channel, note) && \
-        velocity >= midi_.min_velocity && \
-        velocity <= midi_.max_velocity;
-  }
   
   void AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain);
   inline void set_custom_pitch_table(int8_t* table) {
