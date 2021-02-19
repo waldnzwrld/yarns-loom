@@ -23,7 +23,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - Installation of this firmware is at your own risk
 - Presets saved in this firmware cannot be loaded with the manufacturer's firmware, and vice versa
 - Some changes are not documented in the changelog
-- Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 16 notes instead of the original 64)
+- Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 31 notes instead of the original 64)
 
 ### Installation
 1. Download `yarns.syx` from the [latest release's assets](https://github.com/rcrogers/mutable-instruments-eurorack/releases/latest)
