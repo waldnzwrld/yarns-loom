@@ -7,16 +7,16 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - Expand Yarns' abilities as a digital synthesis voice
 
 ### Features
-- New layouts, including a layout that features a 3-voice paraphonic part
-- Global control and display of the active part and its play mode
-- Looper with real-time recording and overdubbing
-- Sequencer-driven arpeggiator
-- Internal envelopes, with velocity-modulated segments and amplitude
-- Pulse-width modulation for Yarns' digital oscillator
-- Velocity filtering
-- More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction
-- New ways to use the hold pedal, including latch and sostenuto
-- Expanded CC support, including start/stop/delete recording
+- [New layouts, including a layout that features a 3-voice paraphonic part](yarns/MANUAL.md#layouts)
+- [Global control and display of the active part and its play mode](yarns/MANUAL.md#global-control-and-display-of-the-active-part-and-its-play-mode)
+- [Looper with real-time recording and overdubbing](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#looper-style-sequencing-mode-with-real-time-recording)
+- [Sequencer-driven arpeggiator](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#sequencer-driven-arpeggiator)
+- [Internal envelopes, with velocity-modulated segments and amplitude](yarns/MANUAL.md#adsr-envelopes-modulated-by-velocity)
+- [Pulse-width modulation for Yarns' digital oscillator](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#oscillator-controls)
+- [Velocity filtering](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [New ways to use the hold pedal, including latch and sostenuto](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#hold-pedal)
+- [Expanded CC support, including start/stop/delete recording](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#expanded-support-for-control-change-events)
 - [Check the manual for more!](yarns/MANUAL.md)
 
 ### Caveats
