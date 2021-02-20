@@ -81,7 +81,7 @@
 - `22` 3-part layout: one two-voice polyphonic part, two monophonic parts
 - `21` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
 - `*2` 3-part layout: 3-voice paraphonic part, 1 monophonic part with modulation, 1 monophonic part without modulation
-  - Paraphonic part can use the new [envelopes](#adsr-envelopes-with-velocity-control)
+  - Paraphonic part can use the new [envelopes](#adsr-envelopes-modulated-by-velocity)
   - Audio mode is always on for the paraphonic part
   - Output channels:
     1. Part 1, 3 voices mixed to 1 audio output

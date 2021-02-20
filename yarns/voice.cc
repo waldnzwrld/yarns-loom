@@ -30,8 +30,6 @@
 #include "yarns/voice.h"
 
 #include <algorithm>
-#include <cstdio>
-#include <cstdlib>
 #include <cmath>
 
 #include "stmlib/midi/midi.h"

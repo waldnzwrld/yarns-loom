@@ -238,7 +238,14 @@ class Multi {
   bool NoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     bool thru = true;
     bool has_notes = false;
-    if (recording_ && part_accepts(recording_part_, channel, note)) {
+
+    if (
+      recording_ && part_accepts(recording_part_, channel, note) &&
+      // Recording part currently has the resulting note
+      part_[recording_part_].PressedKeysForLatchUI().stack.Find(
+        part_[recording_part_].TransposeInputPitch(note)
+      )
+    ) {
       thru = part_[recording_part_].NoteOff(channel, part_[recording_part_].TransposeInputPitch(note)) && thru;
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
         has_notes = has_notes || part_[i].has_notes();

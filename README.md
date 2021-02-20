@@ -1,29 +1,24 @@
 # Loom
-An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](https://mutable-instruments.net/modules/yarns/).
-
-### Objectives
-- Enhance Yarns as a tool for solo and collaborative musical composition
-- Obtain maximal functionality from a minimal MIDI controller
-- Expand Yarns' abilities as a digital synthesis voice
+An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](https://mutable-instruments.net/modules/yarns/), with an emphasis on dynamic voicing, open-ended musical composition, and flexible control.
 
 ### Features
-- New layouts, including a layout that features a 3-voice paraphonic part
-- Global control and display of the active part and its play mode
-- Looper with real-time recording and overdubbing
-- Sequencer-driven arpeggiator
-- Internal envelopes, with velocity-modulated segments and amplitude
-- New wave shapes with timbral modulation for Yarns' digital oscillator
-- Velocity filtering
-- More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction
-- New ways to use the hold pedal, including latch and sostenuto
-- Expanded CC support, including start/stop/delete recording
+- [New layouts, including a layout that features a 3-voice paraphonic part](yarns/MANUAL.md#layouts)
+- [Global control and display of the active part and its play mode](yarns/MANUAL.md#global-control-and-display-of-the-active-part-and-its-play-mode)
+- [Looper with real-time recording and overdubbing](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#looper-style-sequencing-mode-with-real-time-recording)
+- [Sequencer-driven arpeggiator](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#sequencer-driven-arpeggiator)
+- [Internal envelopes, with velocity-modulated segments and amplitude](yarns/MANUAL.md#adsr-envelopes-modulated-by-velocity)
+- [New oscillator wave shapes with timbral parameters](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#oscillator-controls)
+- [Velocity filtering](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [New ways to use the hold pedal, including latch and sostenuto](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#hold-pedal)
+- [Expanded CC support, including start/stop/delete recording](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#expanded-support-for-control-change-events)
 - [Check the manual for more!](yarns/MANUAL.md)
 
 ### Caveats
 - Installation of this firmware is at your own risk
 - Presets saved in this firmware cannot be loaded with the manufacturer's firmware, and vice versa
 - Some changes are not documented in the changelog
-- Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 16 notes instead of the original 64)
+- Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 31 notes instead of the original 64)
 
 ### Installation
 1. Download `yarns.syx` from the [latest release's assets](https://github.com/rcrogers/mutable-instruments-eurorack/releases/latest)
