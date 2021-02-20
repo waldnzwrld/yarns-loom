@@ -339,6 +339,14 @@ void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
 }
 
 void Ui::PrintLooperRecordingStatus() {
+  if (
+    recording_part().looper().overwrite_enabled() &&
+    system_clock.milliseconds() % 320 < 40
+  ) {
+    display_.set_brightness(UINT16_MAX);
+    display_.Print("//");
+    return;
+  }
   uint8_t note_index = recording_part().LooperCurrentNoteIndex();
   if (note_index == looper::kNullIndex) {
     SetBrightnessFromSequencerPhase(recording_part());
@@ -752,8 +760,11 @@ void Ui::OnSwitchHeld(const Event& e) {
       break;
 
     case UI_SWITCH_TAP_TEMPO:
-      // Use this to set last step for sequencer?
-      if (!recording_any) {
+      if (recording_any) {
+        if (recording_part().looped()) {
+          mutable_recording_part()->mutable_looper().ToggleOverwrite();
+        } // Else, set last step for sequencer?
+      } else {
         multi.ApplySettingAndSplash(
           setting_defs.get(SETTING_SEQUENCER_PLAY_MODE),
           active_part_,
@@ -983,7 +994,7 @@ void Ui::PrintLatch() {
   uint8_t note_ordinal = 0, display_pos = 0;
   uint8_t note_index = keys.stack.most_recent_note_index();
   stmlib::NoteEntry note_entry;
-  bool blink = queue_.idle_time() % 160 < 80;
+  bool blink = system_clock.milliseconds() % 160 < 80;
   while (note_index) {
     display_pos = note_ordinal / kNotesPerDisplayChar;
     if (display_pos > kDisplayWidth) { break; }
