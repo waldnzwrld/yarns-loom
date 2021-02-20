@@ -137,6 +137,7 @@ class Deck {
   void LinkOn(uint8_t index);
   void LinkOff(uint8_t index);
   void RemoveNote(uint8_t index);
+  void KillNote(uint8_t index);
 
   Part* part_;
 

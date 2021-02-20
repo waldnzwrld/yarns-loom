@@ -42,6 +42,10 @@ void Deck::Init(Part* part) {
 }
 
 void Deck::RemoveAll() {
+  for (uint8_t i = 0; i < size_; ++i) {
+    KillNote(oldest_index_ + i);
+  }
+
   std::fill(
     &notes_[0],
     &notes_[kMaxNotes],
@@ -266,18 +270,7 @@ void Deck::LinkOff(uint8_t index) {
   head_.off = index;
 }
 
-void Deck::RemoveNote(uint8_t target_index) {
-  // Though this takes an arbitrary index, other methods like NoteAgeOrdinal
-  // assume that notes are stored sequentially in memory, so removing a "middle"
-  // note will cause problems
-  if (!size_) {
-    return;
-  }
-
-  size_--;
-  uint8_t search_prev_index;
-  uint8_t search_next_index;
-
+void Deck::KillNote(uint8_t target_index) {
   Note& target_note = notes_[target_index];
   if (
     // Note is being recorded
@@ -287,6 +280,21 @@ void Deck::RemoveNote(uint8_t target_index) {
   ) {
     part_->LooperPlayNoteOff(target_index, target_note.pitch);
   }
+}
+
+void Deck::RemoveNote(uint8_t target_index) {
+  // Though this takes an arbitrary index, other methods like NoteAgeOrdinal
+  // assume that notes are stored sequentially in memory, so removing a "middle"
+  // note will cause problems
+  if (!size_) {
+    return;
+  }
+
+  KillNote(target_index);
+
+  size_--;
+  uint8_t search_prev_index;
+  uint8_t search_next_index;
 
   search_prev_index = target_index;
   while (true) {
