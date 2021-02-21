@@ -59,9 +59,10 @@
 ### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
 - To use, press `REC` to enter real-time recording mode
-  - Play notes to record them
+  - Play notes to record them into the loop
   - Press `START` to delete the oldest note, or `TAP` for the newest
-  - Scroll the encoder to shift the loop phase by 1/128: clockwise to shift notes earlier, counter-clockwise to shift notes later
+  - Scroll the encoder to shift the loop phase by 1/128: clockwise shifts notes earlier, counter-clockwise shits notes later
+  - Hold `TAP` to toggle overwrite mode, which will clear the loop as soon as a new note is recorded
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
 - Holds 31 notes max -- past this limit, overwrites oldest note
@@ -100,7 +101,7 @@
   - `SUSTAIN` is the stock firmware behavior (no notes are released as long as the pedal is down)
   - `SOSTENUTO` sustains only the notes held at the time the pedal goes down
   - `LATCH` uses the semantics of the front-panel latching in stock Yarns
-  - `MOMENTARY LATCH` is identical to `LATCH`, except that it releases latched notes as soon as the pedal is released, instead of on the next note
+  - `MOMENTARY LATCH` resembles `LATCH`, but releases latched notes as soon as the pedal is released, instead of on the next note
   - `CLUTCH UP` is a hybrid of `SOSTENUTO` and `LATCH` -- when the pedal goes down, sustains any held notes; while the pedal is up, pressing any note will release held notes
   - `CLUTCH DOWN` is the same as `CLUTCH UP`, but with reversed up/down semantics
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)

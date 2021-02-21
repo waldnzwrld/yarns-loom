@@ -128,6 +128,12 @@ class Ui {
     SplashOn(SPLASH_SETTING);
   }
 
+  inline bool in_recording_mode() const {
+    return multi.recording() && (
+      mode_ == UI_MODE_PARAMETER_SELECT || mode_ == UI_MODE_PARAMETER_EDIT
+    );
+  }
+
   void Print(const char* text) {
     display_.Print(text, text);
   }
