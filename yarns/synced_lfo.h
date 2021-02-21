@@ -68,7 +68,7 @@ class SyncedLFO {
       : 0x17fff - (phase >> 15);   // y =  1.5 - 2x = 2(3/4 - x)
   }
 
-  void Tap(uint16_t num_ticks) {
+  void Tap(uint16_t num_ticks, uint32_t phase_offset = 0) {
     if (num_ticks != period_ticks_) {
       if (period_ticks_) {
         counter_ = (counter_ * num_ticks + period_ticks_ - 1) / period_ticks_;
@@ -78,6 +78,7 @@ class SyncedLFO {
     }
 
     uint32_t target_phase = (counter_ * 65536 / period_ticks_) << 16;
+    target_phase += phase_offset;
     uint32_t target_increment = target_phase - previous_target_phase_;
 
     int32_t d_error = target_increment - (phase_ - previous_phase_);

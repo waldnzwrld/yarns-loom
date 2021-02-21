@@ -472,6 +472,13 @@ void Ui::SplashOn(Splash s) {
       display_.Print(buffer_);
       break;
 
+    case SPLASH_LOOPER_PHASE_OFFSET:
+      Settings::PrintInteger(
+        buffer_, recording_part().looper().pos_offset >> 9
+      );
+      display_.Print(buffer_);
+      break;
+
     default:
       break;
   }
@@ -613,7 +620,11 @@ void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {
 }
 
 void Ui::OnIncrementRecording(const stmlib::Event& e) {
-  if (recording_part().looped()) { return; }
+  if (recording_part().looped()) {
+    mutable_recording_part()->mutable_looper().pos_offset += e.data * (1 << 9);
+    SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
+    return;
+  }
 
   if (push_it_) {
     if (recording_part().overdubbing()) {
@@ -832,13 +843,18 @@ void Ui::DoEvents() {
     active_part_ = multi.recording_part();
     recording_mode_is_displaying_pitch_ = false;
   }
+
+  bool in_recording_mode = multi.recording() && (
+    mode_ == UI_MODE_PARAMETER_SELECT ||
+    mode_ == UI_MODE_PARAMETER_EDIT
+  );
   
   while (queue_.available()) {
     Event e = queue_.PullEvent();
     const Mode& mode = modes_[mode_];
     splash_ = SPLASH_NONE; // Exit splash on any input
     if (e.control_type == CONTROL_ENCODER_CLICK) {
-      if (multi.recording()) {
+      if (in_recording_mode) {
         OnClickRecording(e);
       } else {
         (this->*mode.on_click)(e);
@@ -847,7 +863,7 @@ void Ui::DoEvents() {
         }
       }
     } else if (e.control_type == CONTROL_ENCODER) {
-      if (multi.recording()) {
+      if (in_recording_mode) {
         OnIncrementRecording(e);
       } else {
         (this->*mode.on_increment)(e);
@@ -909,7 +925,7 @@ void Ui::DoEvents() {
 
   if (refresh_display) {
     queue_.Touch();
-    if (multi.recording()) {
+    if (in_recording_mode) {
       if (active_part().looped()) {
         PrintLooperRecordingStatus();
       } else {

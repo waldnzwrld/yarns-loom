@@ -100,8 +100,8 @@ void Deck::Pack(PackedPart& storage) const {
     PackedNote& packed_note = storage.looper_notes[index];
     const Note& note = notes_[index];
 
-    packed_note.on_pos    = note.on_pos   >> (16 - kBitsPos);
-    packed_note.off_pos   = note.off_pos  >> (16 - kBitsPos);
+    packed_note.on_pos    = (note.on_pos  - pos_offset) >> (16 - kBitsPos);
+    packed_note.off_pos   = (note.off_pos - pos_offset) >> (16 - kBitsPos);
     packed_note.pitch     = note.pitch;
     packed_note.velocity  = note.velocity;
   }
@@ -110,7 +110,7 @@ void Deck::Pack(PackedPart& storage) const {
 void Deck::Clock() {
   SequencerSettings seq = part_->sequencer_settings();
   uint16_t num_ticks = clock_division::list[seq.clock_division].num_ticks;
-  lfo_.Tap(num_ticks * (1 << seq.loop_length));
+  lfo_.Tap(num_ticks * (1 << seq.loop_length), pos_offset << 16);
 }
 
 void Deck::RemoveOldestNote() {

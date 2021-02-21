@@ -303,6 +303,13 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         RecordStep(SEQUENCER_STEP_REST);
       }
       break;
+
+    case 0x73:
+      if (looped()) {
+        looper_.pos_offset = value << 9;
+        ui.SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
+      }
+      break;
     
     case 0x78:
       AllNotesOff();

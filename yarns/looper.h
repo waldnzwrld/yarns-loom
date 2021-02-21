@@ -133,6 +133,8 @@ class Deck {
     return notes_[index];
   }
 
+  uint16_t pos_offset;
+
  private:
 
   inline uint8_t index_mod(int8_t i) const {
