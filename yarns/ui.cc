@@ -470,6 +470,13 @@ void Ui::SplashOn(Splash s) {
       display_.Print(buffer_);
       break;
 
+    case SPLASH_LOOPER_PHASE_OFFSET:
+      Settings::PrintInteger(
+        buffer_, recording_part().looper().pos_offset >> 9
+      );
+      display_.Print(buffer_);
+      break;
+
     default:
       break;
   }
@@ -611,7 +618,11 @@ void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {
 }
 
 void Ui::OnIncrementRecording(const stmlib::Event& e) {
-  if (recording_part().looped()) { return; }
+  if (recording_part().looped()) {
+    mutable_recording_part()->mutable_looper().pos_offset += e.data * (1 << 9);
+    SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
+    return;
+  }
 
   if (push_it_) {
     if (recording_part().overdubbing()) {
