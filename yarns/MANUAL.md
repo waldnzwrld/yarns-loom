@@ -51,9 +51,10 @@
 ### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
 - To use, press `REC` to enter real-time recording mode
-  - Play notes to record them
+  - Play notes to record them into the loop
   - Press `START` to delete the oldest note, or `TAP` for the newest
   - Scroll the encoder to shift the loop phase by 1/128: clockwise to shift notes earlier, counter-clockwise to shift notes later
+  - Hold `TAP` to toggle overwrite mode, which will clear the loop as soon as a new note is recorded
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
 - Holds 31 notes max -- past this limit, overwrites oldest note
