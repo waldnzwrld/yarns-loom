@@ -830,13 +830,18 @@ void Ui::DoEvents() {
     active_part_ = multi.recording_part();
     recording_mode_is_displaying_pitch_ = false;
   }
+
+  bool in_recording_mode = multi.recording() && (
+    mode_ == UI_MODE_PARAMETER_SELECT ||
+    mode_ == UI_MODE_PARAMETER_EDIT
+  );
   
   while (queue_.available()) {
     Event e = queue_.PullEvent();
     const Mode& mode = modes_[mode_];
     splash_ = SPLASH_NONE; // Exit splash on any input
     if (e.control_type == CONTROL_ENCODER_CLICK) {
-      if (multi.recording()) {
+      if (in_recording_mode) {
         OnClickRecording(e);
       } else {
         (this->*mode.on_click)(e);
@@ -845,7 +850,7 @@ void Ui::DoEvents() {
         }
       }
     } else if (e.control_type == CONTROL_ENCODER) {
-      if (multi.recording()) {
+      if (in_recording_mode) {
         OnIncrementRecording(e);
       } else {
         (this->*mode.on_increment)(e);
@@ -907,7 +912,7 @@ void Ui::DoEvents() {
 
   if (refresh_display) {
     queue_.Touch();
-    if (multi.recording()) {
+    if (in_recording_mode) {
       if (active_part().looped()) {
         PrintLooperRecordingStatus();
       } else {

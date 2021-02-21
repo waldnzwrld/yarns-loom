@@ -467,6 +467,7 @@ class Multi {
   
   template<typename T>
   void Deserialize(T* stream_buffer) {
+    StopRecording(recording_part_);
     Stop();
     PackedMulti packed;
     stream_buffer->Read(&packed);
