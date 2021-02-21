@@ -1,7 +1,7 @@
 # Interface
 
 ### Global control and display of the active part and its play mode
-- Display periodically flashes the active part and its play mode (while in the parameter menu)
+- Display periodically flashes the active part and its play mode
 - Hold `START` to switch the active part (the new active part will flash briefly on the screen).  The active part is used for:
   - Selecting the recording part when pressing `REC`
   - Front-panel latching (hold `REC`)
@@ -50,9 +50,11 @@
 
 ### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
-- To record or overdub, press `REC` to enter real-time recording mode, then use the keyboard
-- While recording, delete the oldest note by pressing `START`, newest by `TAP`
-- Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, as applied to the part's `C/`
+- To use, press `REC` to enter real-time recording mode
+  - Play notes to record them
+  - Press `START` to delete the oldest note, or `TAP` for the newest
+  - Scroll the encoder to shift the loop phase by 1/128: clockwise to shift notes earlier, counter-clockwise to shift notes later
+- Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
 - Holds 31 notes max -- past this limit, overwrites oldest note
 - Step sequencer also reduced from 64 to 31 notes, to free up space in the preset storage
