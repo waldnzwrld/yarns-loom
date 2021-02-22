@@ -40,7 +40,11 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
-const uint32_t kEncoderLongPressTime = 600;
+const uint16_t kRefreshPeriod = 900; // msec
+const uint16_t kRefreshOneThird = 300;
+const uint16_t kRefreshTwoThirds = 600;
+const uint32_t kEncoderLongPressTime = kRefreshPeriod * 2 / 3;
+const char* const kVersion = "Loom 2_1_0";
 
 /* static */
 const Ui::Command Ui::commands_[] = {
@@ -102,18 +106,6 @@ Ui::Mode Ui::modes_[] = {
     &Ui::PrintCalibrationNote,
     UI_MODE_CALIBRATION_SELECT_NOTE,
     NULL, 0, 0 },
-  
-  // UI_MODE_RECORDING
-  { &Ui::OnIncrementRecording, &Ui::OnClickRecording,
-    &Ui::PrintRecordingStatus,
-    UI_MODE_RECORDING,
-    NULL, 0, 0 },
-
-  // UI_MODE_OVERDUBBING
-  { &Ui::OnIncrementOverdubbing, &Ui::OnClickOverdubbing,
-    &Ui::PrintRecordingStatus,
-    UI_MODE_OVERDUBBING,
-    NULL, 0, 0 },
 
   // UI_MODE_PUSH_IT_SELECT_NOTE
   { &Ui::OnIncrementPushItNote, &Ui::OnClick,
@@ -132,32 +124,6 @@ Ui::Mode Ui::modes_[] = {
     &Ui::PrintFactoryTesting,
     UI_MODE_PARAMETER_SELECT,
     NULL, 0, 99 },
-    
-  // UI_MODE_SPLASH
-  { &Ui::OnIncrementParameterSelect, &Ui::OnClick,
-    &Ui::PrintVersionNumber,
-    UI_MODE_PARAMETER_SELECT,
-    NULL, 0, 0 },
-
-  // UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE
-  { &Ui::OnIncrementParameterSelect, &Ui::OnClick,
-    &Ui::PrintActivePartAndPlayMode,
-    UI_MODE_PARAMETER_SELECT,
-    NULL, 0, 0 },
-
-  // UI_MODE_TEMPO_RESULT
-  { &Ui::OnIncrementParameterSelect, &Ui::OnClick,
-    &Ui::PrintParameterName,
-    UI_MODE_PARAMETER_SELECT,
-    NULL, 0, 0 },
-
-  // UI_MODE_LOOPER_RECORDING
-  { &Ui::OnIncrement, &Ui::OnClick,
-    &Ui::PrintLooperRecordingStatus,
-    UI_MODE_LOOPER_RECORDING,
-    NULL, 0, 0 },
-
-  // UI_MODE_SEQUENCE_DELETED
 };
 
 void Ui::Init() {
@@ -168,11 +134,10 @@ void Ui::Init() {
   leds_.Init();
   
   mode_ = UI_MODE_PARAMETER_SELECT;
-  splash_mode_ = UI_MODE_SPLASH;
-  show_splash_ = true;
-  PrintVersionNumber();
+  active_part_ = 0;
 
   setup_menu_.Init(SETTING_MENU_SETUP);
+  oscillator_menu_.Init(SETTING_MENU_OSCILLATOR);
   envelope_menu_.Init(SETTING_MENU_ENVELOPE);
   live_menu_.Init(SETTING_LAST);
   current_menu_ = &live_menu_;
@@ -183,7 +148,7 @@ void Ui::Init() {
   
   start_stop_press_time_ = 0;
   
-  push_it_note_ = 60;
+  push_it_note_ = kC4;
   modes_[UI_MODE_MAIN_MENU].incremented_variable = &command_index_;
   modes_[UI_MODE_LOAD_SELECT_PROGRAM].incremented_variable = &program_index_;
   modes_[UI_MODE_SAVE_SELECT_PROGRAM].incremented_variable = &program_index_;
@@ -193,7 +158,8 @@ void Ui::Init() {
       &calibration_note_;
   modes_[UI_MODE_FACTORY_TESTING].incremented_variable = \
       &factory_testing_number_;
-  PrintVersionNumber();
+
+  SplashOn(SPLASH_VERSION);
 }
 
 void Ui::Poll() {
@@ -240,7 +206,7 @@ void Ui::Poll() {
     leds_brightness[1] = (((x + 256) & 511) < 128) ? 255 : 0;
     leds_brightness[2] = (((x + 128) & 511) < 128) ? 255 : 0;
     leds_brightness[3] = (((x + 000) & 511) < 128) ? 255 : 0;
-  } else if (splash_mode_ == UI_MODE_SPLASH && show_splash_) {
+  } else if (splash_ == SPLASH_VERSION) {
     leds_brightness[0] = 255;
     leds_brightness[1] = 0;
     leds_brightness[2] = 0;
@@ -287,7 +253,7 @@ void Ui::PrintParameterName() {
 }
 
 void Ui::PrintParameterValue() {
-  settings.Print(setting(), buffer_);
+  setting_defs.Print(setting(), multi.GetSetting(setting(), active_part_), buffer_);
   display_.Print(buffer_, buffer_);
 }
 
@@ -324,11 +290,13 @@ void Ui::PrintCalibrationNote() {
 void Ui::PrintActivePartAndPlayMode() {
   uint8_t play_mode = active_part().midi_settings().play_mode;
   if (multi.running()) {
-    SetBrightnessFromBarPhase();
+    SetBrightnessFromSequencerPhase(active_part());
+  } else {
+    display_.set_brightness(UINT16_MAX);
   }
   strcpy(buffer_, "1x");
-  buffer_[0] += settings.Get(GLOBAL_ACTIVE_PART);
-  buffer_[1] = settings.setting(SETTING_SEQUENCER_PLAY_MODE).values[play_mode][0];
+  buffer_[0] += active_part_;
+  buffer_[1] = setting_defs.get(SETTING_SEQUENCER_PLAY_MODE).values[play_mode][0];
   buffer_[2] = '\0';
   display_.Print(buffer_);
 }
@@ -360,20 +328,33 @@ void Ui::PrintArpeggiatorMovementStep(SequencerStep step) {
   display_.Print(buffer_, buffer_);
 }
 
-void Ui::SetBrightnessFromBarPhase() {
-  display_.set_brightness(UINT16_MAX - (active_part().BarPhase() >> 16));
+void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
+  uint16_t phase;
+  if (part.looped()) {
+    phase = UINT16_MAX - part.looper().phase();
+  } else {
+    phase = (1 + part.playing_step()) * (UINT16_MAX / part.sequencer_settings().num_steps);
+  }
+  display_.set_brightness(phase);
 }
 
 void Ui::PrintLooperRecordingStatus() {
-  uint8_t note_index = active_part().LooperCurrentNoteIndex();
-  uint32_t pos = active_part().BarPhase();
+  if (
+    recording_part().looper().overwrite_enabled() &&
+    system_clock.milliseconds() % 320 < 40
+  ) {
+    display_.set_brightness(UINT16_MAX);
+    display_.Print("//");
+    return;
+  }
+  uint8_t note_index = recording_part().LooperCurrentNoteIndex();
   if (note_index == looper::kNullIndex) {
-    SetBrightnessFromBarPhase();
+    SetBrightnessFromSequencerPhase(recording_part());
     display_.Print("__");
     return;
   }
-  const looper::Tape& looper_tape = active_part().sequencer_settings().looper_tape;
-  uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index, pos >> 16);
+  const looper::Deck& looper_tape = recording_part().looper();
+  uint16_t note_fraction_completed = looper_tape.NoteFractionCompleted(note_index);
   display_.set_brightness(UINT16_MAX - note_fraction_completed);
   if (recording_mode_is_displaying_pitch_) {
     PrintNote(looper_tape.NotePitch(note_index));
@@ -449,15 +430,56 @@ void Ui::PrintFactoryTesting() {
   }
 }
 
-void Ui::PrintVersionNumber() {
-  display_.Print("L2"); // Loom v1.2.0
+void Ui::SplashOn(Splash s) {
+  splash_ = s;
+  queue_.Touch(); // Reset idle timer
   display_.set_brightness(UINT16_MAX);
-}
+  display_.set_fade(0);
+  display_.set_blink(false);
+  switch (splash_) {
+    case SPLASH_ACTIVE_PART:
+      if (multi.recording()) {
+        strcpy(buffer_, "1R");
+        buffer_[0] += multi.recording_part();
+        buffer_[2] = '\0';
+        display_.Print(buffer_);
+      } else {
+        PrintActivePartAndPlayMode();
+      }
+      break;
 
-void Ui::ChangedActivePartOrPlayMode() {
-  splash_mode_ = UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE;
-  show_splash_ = true;
-  PrintActivePartAndPlayMode();
+    case SPLASH_VERSION:
+      display_.Print(kVersion);
+      display_.Scroll();
+      break;
+
+    case SPLASH_SETTING:
+      SetFadeForSetting(*splash_setting_def_);
+      if (splash_part_ == kNoSplashPart) {
+        display_.Print(splash_setting_def_->short_name, splash_setting_def_->name);
+      } else {
+        setting_defs.Print(*splash_setting_def_, multi.GetSetting(*splash_setting_def_, splash_part_), buffer_);
+        display_.Print(buffer_);
+      }
+      display_.Scroll();
+      break;
+
+    case SPLASH_DELETE_RECORDING:
+      strcpy(buffer_, "1D");
+      buffer_[0] += splash_part_;
+      display_.Print(buffer_);
+      break;
+
+    case SPLASH_LOOPER_PHASE_OFFSET:
+      Settings::PrintInteger(
+        buffer_, recording_part().looper().pos_offset >> 9
+      );
+      display_.Print(buffer_);
+      break;
+
+    default:
+      break;
+  }
 }
 
 // Generic Handlers
@@ -476,10 +498,13 @@ void Ui::OnLongClick(const Event& e) {
 }
 
 void Ui::OnClick(const Event& e) {
-  if (&setting() == &settings.setting(SETTING_MENU_SETUP)) {
+  if (&setting() == &setting_defs.get(SETTING_MENU_SETUP)) {
     current_menu_ = &setup_menu_;
     return;
-  } else if (&setting() == &settings.setting(SETTING_MENU_ENVELOPE)) {
+  } else if (&setting() == &setting_defs.get(SETTING_MENU_OSCILLATOR)) {
+    current_menu_ = &oscillator_menu_;
+    return;
+  } else if (&setting() == &setting_defs.get(SETTING_MENU_ENVELOPE)) {
     current_menu_ = &envelope_menu_;
     return;
   } else if (current_menu_ != &live_menu_ && mode_ == UI_MODE_PARAMETER_EDIT) {
@@ -542,21 +567,22 @@ void Ui::OnClickCalibrationSelectNote(const Event& e) {
 }
 
 void Ui::OnClickRecording(const Event& e) {
-  if (push_it_) {
-    multi.PushItNoteOff(push_it_note_);
-    push_it_ = false;
-    mutable_recording_part()->RecordStep(SequencerStep(push_it_note_, 100));
-  } else {
-    multi.PushItNoteOn(push_it_note_);
-    push_it_ = true;
-  }
-}
+  if (recording_part().looped()) { return; }
 
-void Ui::OnClickOverdubbing(const Event& e) {
   if (push_it_) {
+    if (!recording_part().overdubbing()) {
+      multi.PushItNoteOff(push_it_note_);
+    }
     push_it_ = false;
     mutable_recording_part()->RecordStep(SequencerStep(push_it_note_, 100));
   } else {
+    SequencerStep step = recording_part().sequencer_settings().step[recording_part().recording_step()];
+    if (step.has_note()) {
+      push_it_note_ = step.note();
+    } else {
+      push_it_note_ = recording_part().TransposeInputPitch(kC4);
+      multi.PushItNoteOn(push_it_note_);
+    }
     push_it_ = true;
   }
 }
@@ -575,7 +601,12 @@ void Ui::OnIncrementParameterSelect(const Event& e) {
 }
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
-  settings.Increment(setting(), e.data);
+  int16_t value = multi.GetSetting(setting(), active_part_);
+  if (setting().unit == SETTING_UNIT_INT8) {
+    value = static_cast<int8_t>(value);
+  }
+  value += e.data;
+  multi.ApplySetting(setting(), active_part_, value);
 }
 
 void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {
@@ -587,18 +618,20 @@ void Ui::OnIncrementCalibrationAdjustment(const stmlib::Event& e) {
 }
 
 void Ui::OnIncrementRecording(const stmlib::Event& e) {
-  if (push_it_) {
-    OnIncrementPushItNote(e);
-  } else {
-    mutable_recording_part()->increment_recording_step_index(e.data);
+  if (recording_part().looped()) {
+    mutable_recording_part()->mutable_looper().pos_offset += e.data * (1 << 9);
+    SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
+    return;
   }
-}
 
-void Ui::OnIncrementOverdubbing(const stmlib::Event& e) {
   if (push_it_) {
-    push_it_note_ += e.data;
-    CONSTRAIN(push_it_note_, 0, 127);
-    mutable_recording_part()->ModifyNoteAtCurrentStep(push_it_note_);
+    if (recording_part().overdubbing()) {
+      push_it_note_ += e.data;
+      CONSTRAIN(push_it_note_, 0, 127);
+      mutable_recording_part()->ModifyNoteAtCurrentStep(push_it_note_);
+    } else {
+      OnIncrementPushItNote(e);
+    }
   } else {
     mutable_recording_part()->increment_recording_step_index(e.data);
   }
@@ -619,22 +652,9 @@ void Ui::OnIncrementFactoryTesting(const Event& e) {
   OnIncrement(e);
 }
 
-void Ui::StartRecording() {
-  previous_mode_ = mode_;
-  multi.StartRecording(settings.Get(GLOBAL_ACTIVE_PART));
-  if (active_part().sequencer_settings().clock_quantization == 0) {
-    mode_ = UI_MODE_LOOPER_RECORDING;
-    multi.Start(false);
-  } else {
-    mode_ = active_part().overdubbing() ?
-          UI_MODE_OVERDUBBING : UI_MODE_RECORDING;
-  }
-}
-
 void Ui::StopRecording() {
   push_it_ = false;
-  multi.StopRecording(settings.Get(GLOBAL_ACTIVE_PART));
-  mode_ = previous_mode_;
+  multi.StopRecording(active_part_);
 }
 
 void Ui::OnSwitchPress(const Event& e) {
@@ -650,27 +670,28 @@ void Ui::OnSwitchPress(const Event& e) {
         if (multi.recording()) {
           if (recording_mode_is_displaying_pitch_) {
             StopRecording();
-            ChangedActivePartOrPlayMode();
+            recording_mode_is_displaying_pitch_ = false;
           } else {
             // Toggle pitch display on
             recording_mode_is_displaying_pitch_ = true;
           }
-        } else if (active_part().midi_settings().play_mode != PLAY_MODE_MANUAL) {
-          recording_mode_is_displaying_pitch_ = false;
-          StartRecording();
+        } else {
+          multi.StartRecording(active_part_);
         }
       }
       break;
       
     case UI_SWITCH_START_STOP:
-      if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
-        if (push_it_ && mode_ == UI_MODE_RECORDING) {
-          multi.PushItNoteOff(push_it_note_);
+      if (multi.recording()) {
+        if (recording_part().looped()) {
+          mutable_recording_part()->mutable_looper().RemoveOldestNote();
+        } else {
+          if (push_it_ && !recording_part().overdubbing()) {
+            multi.PushItNoteOff(push_it_note_);
+          }
+          push_it_ = false;
+          mutable_recording_part()->RecordStep(SEQUENCER_STEP_TIE);
         }
-        push_it_ = false;
-        mutable_active_part()->RecordStep(SEQUENCER_STEP_TIE);
-      } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->LooperRemoveOldestNote();
       } else {
         if (!multi.running()) {
           multi.Start(false);
@@ -684,14 +705,16 @@ void Ui::OnSwitchPress(const Event& e) {
       break;
       
     case UI_SWITCH_TAP_TEMPO:
-      if (mode_ == UI_MODE_RECORDING || mode_ == UI_MODE_OVERDUBBING) {
-        if (push_it_ && mode_ == UI_MODE_RECORDING) {
-          multi.PushItNoteOff(push_it_note_);
+      if (multi.recording()) {
+        if (recording_part().looped()) {
+          mutable_recording_part()->mutable_looper().RemoveNewestNote();
+        } else {
+          if (push_it_ && !recording_part().overdubbing()) {
+            multi.PushItNoteOff(push_it_note_);
+          }
+          push_it_ = false;
+          mutable_recording_part()->RecordStep(SEQUENCER_STEP_REST);
         }
-        push_it_ = false;
-        mutable_active_part()->RecordStep(SEQUENCER_STEP_REST);
-      } else if (mode_ == UI_MODE_LOOPER_RECORDING) {
-        mutable_active_part()->LooperRemoveNewestNote();
       } else {
         TapTempo();
       }
@@ -699,22 +722,25 @@ void Ui::OnSwitchPress(const Event& e) {
   }
 }
 
+PressedKeys& Ui::LatchableKeys() {
+  return mutable_active_part()->PressedKeysForLatchUI();
+}
+
 void Ui::OnSwitchHeld(const Event& e) {
-  bool recording_any = (
-    mode_ == UI_MODE_RECORDING ||
-    mode_ == UI_MODE_OVERDUBBING ||
-    mode_ == UI_MODE_LOOPER_RECORDING
-  );
+  bool recording_any = multi.recording();
   switch (e.control_id) {
 
     case UI_SWITCH_REC:
-      if (multi.recording()) {
-        mutable_active_part()->DeleteRecording();
+      if (recording_any) {
+        mutable_recording_part()->DeleteRecording();
+        SetSplashPart(active_part_);
+        SplashOn(SPLASH_DELETE_RECORDING);
       } else {
-        if (active_part().IsLatched()) {
-          mutable_active_part()->SustainOff();
-        } else if (multi.running() && active_part().has_notes()) {
-          mutable_active_part()->SustainOn();
+        PressedKeys &keys = LatchableKeys();
+        if (keys.ignore_note_off_messages) {
+          mutable_active_part()->PressedKeysSustainOff(keys);
+        } else if (multi.running() && keys.stack.most_recent_note_index()) {
+          mutable_active_part()->PressedKeysSustainOn(keys);
         } else {
           if (push_it_) {
             multi.PushItNoteOff(push_it_note_);
@@ -725,6 +751,7 @@ void Ui::OnSwitchHeld(const Event& e) {
           } else {
             mode_ = UI_MODE_PUSH_IT_SELECT_NOTE;
             push_it_ = true;
+            push_it_note_ = kC4;
             multi.PushItNoteOn(push_it_note_);
           }
         }
@@ -735,18 +762,25 @@ void Ui::OnSwitchHeld(const Event& e) {
       if (recording_any) {
         StopRecording();
       }
-      settings.Set(GLOBAL_ACTIVE_PART, (1 + settings.Get(GLOBAL_ACTIVE_PART)) % multi.num_active_parts());
+      // Increment active part
+      active_part_ = (1 + active_part_) % multi.num_active_parts();
       if (recording_any) {
-        StartRecording();
+        multi.StartRecording(active_part_);
       }
-      ChangedActivePartOrPlayMode();
+      SplashOn(SPLASH_ACTIVE_PART);
       break;
 
     case UI_SWITCH_TAP_TEMPO:
-      // Use this to set last step for sequencer?
-      if (!recording_any) {
-        mutable_active_part()->Set(PART_MIDI_PLAY_MODE, (1 + active_part().midi_settings().play_mode) % PLAY_MODE_LAST);
-        ChangedActivePartOrPlayMode();
+      if (recording_any) {
+        if (recording_part().looped()) {
+          mutable_recording_part()->mutable_looper().ToggleOverwrite();
+        } // Else, set last step for sequencer?
+      } else {
+        multi.ApplySettingAndSplash(
+          setting_defs.get(SETTING_SEQUENCER_PLAY_MODE),
+          active_part_,
+          (1 + active_part().midi_settings().play_mode) % PLAY_MODE_LAST
+        );
       }
       break;
 
@@ -789,37 +823,45 @@ void Ui::TapTempo() {
 }
 
 void Ui::SetTempo(uint8_t value) {
-  multi.Set(MULTI_CLOCK_TEMPO, value);
-  if (value == TEMPO_EXTERNAL) {
-    display_.Print("EXTERNAL");
-  } else {
-    settings.PrintInteger(buffer_, value);
-    display_.Print(buffer_);
-  }
-  display_.Scroll();
-
-  splash_mode_ = UI_MODE_TEMPO_CHANGE;
-  show_splash_ = true;
   tap_tempo_resolved_ = true;
-  queue_.Touch();
+  multi.Set(MULTI_CLOCK_TEMPO, value);
+  multi.ApplySettingAndSplash(setting_defs.get(SETTING_CLOCK_TEMPO), active_part_, value);
 }
 
 void Ui::DoEvents() {
   bool refresh_display = false;
   bool scroll_display = false;
+
+  if (active_part_ >= multi.num_active_parts()) {
+    // Handle layout change
+    active_part_ = multi.num_active_parts() - 1;
+  }
+  if (multi.recording() && multi.recording_part() != active_part_) {
+    // If recording state was changed by CC
+    active_part_ = multi.recording_part();
+    recording_mode_is_displaying_pitch_ = false;
+  }
   
   while (queue_.available()) {
     Event e = queue_.PullEvent();
     const Mode& mode = modes_[mode_];
-    show_splash_ = false;
+    splash_ = SPLASH_NONE; // Exit splash on any input
     if (e.control_type == CONTROL_ENCODER_CLICK) {
-      (this->*mode.on_click)(e);
-      if (mode_ == UI_MODE_PARAMETER_EDIT) {
-        scroll_display = true;
+      if (in_recording_mode()) {
+        OnClickRecording(e);
+      } else {
+        (this->*mode.on_click)(e);
+        if (mode_ == UI_MODE_PARAMETER_EDIT) {
+          scroll_display = true;
+        }
       }
     } else if (e.control_type == CONTROL_ENCODER) {
-      (this->*mode.on_increment)(e);
-      scroll_display = true;
+      if (in_recording_mode()) {
+        OnIncrementRecording(e);
+      } else {
+        (this->*mode.on_increment)(e);
+        scroll_display = true;
+      }
     } else if (e.control_type == CONTROL_ENCODER_LONG_CLICK) {
       OnLongClick(e);
     } else if (e.control_type == CONTROL_SWITCH) {
@@ -846,59 +888,44 @@ void Ui::DoEvents() {
     OnClickLearning(Event());
   }
 
-  if (show_splash_) {
-    switch (splash_mode_) {
-      case UI_MODE_SPLASH:
-        show_splash_ = queue_.idle_time() < 1000;
-        break;
-
-      case UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE:
-        if (multi.running()) { SetBrightnessFromBarPhase(); }
-        show_splash_ = queue_.idle_time() < 500;
-        break;
-
-      case UI_MODE_TEMPO_CHANGE:
-        show_splash_ = queue_.idle_time() < 500 || display_.scrolling();
-        break;
-
-      default:
-        show_splash_ = false;
-        break;
+  if (splash_) {
+    if (splash_ == SPLASH_ACTIVE_PART && multi.running()) {
+      SetBrightnessFromSequencerPhase(active_part());
     }
-    if (show_splash_) { return; }
+    if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
+      return; // Splash isn't over yet
+    }
+    if (splash_ == SPLASH_SETTING && splash_part_ != kNoSplashPart) {
+      // If done displaying setting value, switch to displaying setting name
+      SetSplashPart(kNoSplashPart);
+      SplashOn(SPLASH_SETTING);
+      return;
+    }
     // Exit splash
+    splash_ = SPLASH_NONE;
     refresh_display = true;
     if (mode_ == UI_MODE_PARAMETER_EDIT) {
       scroll_display = true;
     }
   }
 
-  if (queue_.idle_time() > 900) {
+  if (queue_.idle_time() > kRefreshPeriod) {
     if (!display_.scrolling()) {
       factory_testing_display_ = UI_FACTORY_TESTING_DISPLAY_EMPTY;
       refresh_display = true;
     }
   }
-  bool print_latch = active_part().IsLatched();
-  bool print_part = !display_.scrolling() && mode_ == UI_MODE_PARAMETER_SELECT;
-  if (queue_.idle_time() > 600) {
-    if (print_part) {
-      PrintActivePartAndPlayMode();
-    } else if (print_latch) {
-      display_.Print("//");
-    }
-  } else if (queue_.idle_time() > 300) {
-    if (print_latch && print_part) {
-      display_.Print("//");
-    }
-  }
 
   if (refresh_display) {
     queue_.Touch();
-    (this->*modes_[mode_].refresh_display)();
-    if (multi.recording()) {
-      // Brightness set in PrintLooperRecordingStatus
+    if (in_recording_mode()) {
+      if (active_part().looped()) {
+        PrintLooperRecordingStatus();
+      } else {
+        PrintRecordingStatus();
+      }
     } else {
+      (this->*modes_[mode_].refresh_display)();
       display_.set_brightness(UINT16_MAX);
     }
     if (scroll_display) {
@@ -908,22 +935,107 @@ void Ui::DoEvents() {
         mode_ == UI_MODE_CALIBRATION_ADJUST_LEVEL ||
         mode_ == UI_MODE_LEARNING
     );
-    if (
+    if (multi.recording()) {
+      display_.set_fade(0);
+    } else if (
       mode_ == UI_MODE_MAIN_MENU || (
         mode_ == UI_MODE_PARAMETER_SELECT && (
-          &setting() == &settings.setting(SETTING_MENU_SETUP) ||
-          &setting() == &settings.setting(SETTING_MENU_ENVELOPE)
+          &setting() == &setting_defs.get(SETTING_MENU_SETUP) ||
+          &setting() == &setting_defs.get(SETTING_MENU_OSCILLATOR) ||
+          &setting() == &setting_defs.get(SETTING_MENU_ENVELOPE) ||
+          current_menu_ != &live_menu_
         )
       )
     ) {
-      display_.set_fade(160);
-    } else if (mode_ == UI_MODE_PARAMETER_EDIT &&
-               setting().unit == SETTING_UNIT_TEMPO) {
-      display_.set_fade(multi.tempo() * 235 >> 8);
+      display_.set_fade((1 << 15) / kRefreshPeriod); // 1/2 frequency
+    } else if (mode_ == UI_MODE_PARAMETER_EDIT) {
+      SetFadeForSetting(setting());
     } else {
       display_.set_fade(0);
     }
+    return;
+  }
+  if (display_.scrolling()) { return; }
+
+  // If display is idle, flash various statuses
+  bool print_latch =
+    active_part().midi_settings().sustain_mode != SUSTAIN_MODE_OFF &&
+    LatchableKeys().stack.most_recent_note_index();
+  bool print_part = mode_ == UI_MODE_PARAMETER_SELECT;
+  if (queue_.idle_time() > kRefreshTwoThirds) {
+    if (print_part) {
+      display_.set_fade(0);
+      PrintActivePartAndPlayMode();
+    } else if (print_latch) {
+      PrintLatch();
+    }
+  } else if (queue_.idle_time() > kRefreshOneThird) {
+    if (print_latch && print_part) {
+      PrintLatch();
+    }
   }
 }
+
+void Ui::SetFadeForSetting(const Setting& setting) {
+if (setting.unit == SETTING_UNIT_TEMPO) {
+    /*
+    increment
+      = (bpm / 60) * (2^16 / 1000)
+      = bpm * 2^16 / 60000
+      = bpm * 2^11 / (60000 / 2^5)
+      = bpm * 2^11 / 1875
+    */
+    display_.set_fade((multi.tempo() << 11) / 1875);
+  } else {
+    display_.set_fade(0);
+  }
+}
+
+const uint8_t kNotesPerDisplayChar = 3;
+// See characters.py for mask-to-segment mapping
+const uint16_t kHoldDisplayMasks[2][3] = {
+  {0x0400, 0x0100, 0x4000}, // Top tick marks
+  {0x0800, 0x0010, 0x2000}, // Bottom tick marks
+};
+void Ui::PrintLatch() {
+  display_.set_fade(0);
+  const PressedKeys& keys = LatchableKeys();
+  uint16_t masks[kDisplayWidth];
+  std::fill(&masks[0], &masks[kDisplayWidth], 0);
+  uint8_t note_ordinal = 0, display_pos = 0;
+  uint8_t note_index = keys.stack.most_recent_note_index();
+  stmlib::NoteEntry note_entry;
+  bool blink = system_clock.milliseconds() % 160 < 80;
+  while (note_index) {
+    display_pos = note_ordinal / kNotesPerDisplayChar;
+    if (display_pos > kDisplayWidth) { break; }
+
+    note_entry = keys.stack.note(note_index);
+    bool sustained = keys.IsSustained(note_entry);
+    bool top;
+    if (sustained) {
+      top = keys.release_latched_keys_on_next_note_on ? blink : true;
+    } else {
+      top = keys.IsSustainable(note_index);
+    }
+    uint8_t index_within_char = note_ordinal % kNotesPerDisplayChar;
+    uint16_t mask;
+    if (top) {
+      mask = kHoldDisplayMasks[0][index_within_char];
+      masks[display_pos] |= mask;
+    }
+    if (!sustained) {
+      mask = kHoldDisplayMasks[1][index_within_char];
+      masks[display_pos] |= mask;
+    }
+
+    note_index = note_entry.next_ptr;
+    ++note_ordinal;
+  }
+  display_.PrintMasks(masks);
+}
+
+/* extern */
+Ui ui;
 
 }  // namespace yarns

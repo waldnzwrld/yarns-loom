@@ -37,6 +37,7 @@
 #include "yarns/part.h"
 #include "yarns/voice.h"
 #include "yarns/storage_manager.h"
+#include "yarns/settings.h"
 
 namespace yarns {
 
@@ -45,6 +46,26 @@ const uint8_t kNumCVOutputs = 4;
 // One paraphonic part, one voice per remaining output
 const uint8_t kNumSystemVoices = kNumParaphonicVoices + (kNumCVOutputs - 1);
 const uint8_t kMaxBarDuration = 32;
+
+struct PackedMulti {
+  PackedPart parts[kNumParts];
+
+  int8_t custom_pitch_table[12];
+
+  unsigned int
+    layout : 4,
+    clock_tempo : 8,
+    clock_swing : 7,
+    clock_input_division : 3, // can 0-index for 1 fewer bit
+    clock_output_division : 5,
+    clock_bar_duration : 6, // barely
+    clock_override : 1,
+    remote_control_channel : 5, // barely
+    nudge_first_tick : 1,
+    clock_manual_start : 1;
+
+  uint8_t flash_padding[2];
+}__attribute__((packed));
 
 struct MultiSettings {
   uint8_t layout;
@@ -59,6 +80,38 @@ struct MultiSettings {
   uint8_t nudge_first_tick;
   uint8_t clock_manual_start;
   uint8_t padding[10];
+
+  void Pack(PackedMulti& packed) {
+    for (uint8_t i = 0; i < 12; i++) {
+      packed.custom_pitch_table[i] = custom_pitch_table[i];
+    }
+    packed.layout = layout;
+    packed.clock_tempo = clock_tempo;
+    packed.clock_swing = clock_swing;
+    packed.clock_input_division = clock_input_division;
+    packed.clock_output_division = clock_output_division;
+    packed.clock_bar_duration = clock_bar_duration;
+    packed.clock_override = clock_override;
+    packed.remote_control_channel = remote_control_channel;
+    packed.nudge_first_tick = nudge_first_tick;
+    packed.clock_manual_start = clock_manual_start;
+  }
+
+  void Unpack(PackedMulti& packed) {
+    for (uint8_t i = 0; i < 12; i++) {
+      custom_pitch_table[i] = packed.custom_pitch_table[i];
+    }
+    layout = packed.layout;
+    clock_tempo = packed.clock_tempo;
+    clock_swing = packed.clock_swing;
+    clock_input_division = packed.clock_input_division;
+    clock_output_division = packed.clock_output_division;
+    clock_bar_duration = packed.clock_bar_duration;
+    clock_override = packed.clock_override;
+    remote_control_channel = packed.remote_control_channel;
+    nudge_first_tick = packed.nudge_first_tick;
+    clock_manual_start = packed.clock_manual_start;
+  }
 };
 
 enum Tempo {
@@ -121,14 +174,49 @@ class Multi {
         settings_.clock_output_division == 6 && \
         settings_.clock_bar_duration == 9;
   }
-  
+
+  inline bool is_remote_control_channel(uint8_t channel) const {
+    return channel + 1 == settings_.remote_control_channel;
+  }
+
+  inline const MidiSettings& midi(uint8_t part) const {
+    return part_[part].midi_settings();
+  }
+
+  inline bool part_accepts(uint8_t part, uint8_t channel) const {
+    return is_remote_control_channel(channel) ||
+      midi(part).channel == 0x10 ||
+      midi(part).channel == channel;
+  }
+
+  inline bool part_accepts(uint8_t part, uint8_t channel, uint8_t note) const {
+    if (!part_accepts(part, channel)) {
+      return false;
+    }
+    if (midi(part).min_note <= midi(part).max_note) {
+      return note >= midi(part).min_note && note <= midi(part).max_note;
+    } else {
+      return note <= midi(part).max_note || note >= midi(part).min_note;
+    }
+  }
+
+  inline bool part_accepts(uint8_t part, uint8_t channel, uint8_t note, uint8_t velocity) const {
+    return part_accepts(part, channel, note) && \
+        velocity >= midi(part).min_velocity && \
+        velocity <= midi(part).max_velocity;
+  }
+
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     layout_configurator_.RegisterNote(channel, note);
 
     bool thru = true;
     bool received = false;
-    for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_[i].accepts(channel, note, velocity)) {
+    if (recording_ && part_accepts(recording_part_, channel, note, velocity)) {
+      received = true;
+      thru = part_[recording_part_].NoteOn(channel, part_[recording_part_].TransposeInputPitch(note), velocity) && thru;
+    } else {
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        if (!part_accepts(i, channel, note, velocity)) { continue; }
         received = true;
         thru = part_[i].NoteOn(channel, part_[i].TransposeInputPitch(note), velocity) && thru;
       }
@@ -150,14 +238,27 @@ class Multi {
   bool NoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     bool thru = true;
     bool has_notes = false;
-    for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_[i].accepts(channel, note)) {
+
+    if (
+      recording_ && part_accepts(recording_part_, channel, note) &&
+      // Recording part currently has the resulting note
+      part_[recording_part_].PressedKeysForLatchUI().stack.Find(
+        part_[recording_part_].TransposeInputPitch(note)
+      )
+    ) {
+      thru = part_[recording_part_].NoteOff(channel, part_[recording_part_].TransposeInputPitch(note)) && thru;
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        has_notes = has_notes || part_[i].has_notes();
+      }
+    } else {
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        has_notes = has_notes || part_[i].has_notes();
+        if (!part_accepts(i, channel, note)) { continue; }
         thru = part_[i].NoteOff(channel, part_[i].TransposeInputPitch(note)) && thru;
       }
-      has_notes = has_notes || part_[i].has_notes();
     }
     
-    if (!has_notes && internal_clock() && started_by_keyboard_) {
+    if (!has_notes && CanAutoStop()) {
       stop_count_down_ = 12;
     }
     
@@ -165,11 +266,15 @@ class Multi {
   }
   
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
+  void SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value);
+  uint8_t GetSetting(const Setting& setting, uint8_t part) const;
+  void ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
+  void ApplySettingAndSplash(const Setting& setting, uint8_t part, int16_t raw_value);
 
   bool PitchBend(uint8_t channel, uint16_t pitch_bend) {
     bool thru = true;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_[i].accepts(channel)) {
+      if (part_accepts(i, channel)) {
         thru = part_[i].PitchBend(channel, pitch_bend) && thru;
       }
     }
@@ -179,7 +284,7 @@ class Multi {
   bool Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity) {
     bool thru = true;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_[i].accepts(channel, note)) {
+      if (part_accepts(i, channel, note)) {
         thru = part_[i].Aftertouch(channel, note, velocity) && thru;
       }
     }
@@ -189,7 +294,7 @@ class Multi {
   bool Aftertouch(uint8_t channel, uint8_t velocity) {
     bool thru = true;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_[i].accepts(channel)) {
+      if (part_accepts(i, channel)) {
         thru = part_[i].Aftertouch(channel, velocity) && thru;
       }
     }
@@ -215,39 +320,13 @@ class Multi {
   void Continue() {
     Start(false);
   }
-  
-  void StartRecording(uint8_t part) {
-    if (!recording_) {
-      part_[part].StartRecording();
-      uint8_t channel = part_[part].midi_settings().channel;
-      bool has_velocity_filtering = part_[part].has_velocity_filtering();
-      for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        bool same_channel = (
-          part_[i].midi_settings().channel == channel ||
-          channel == 0x10 ||
-          part_[i].midi_settings().channel == 0x10
-        );
-        bool both_velocity_filtering = (
-          has_velocity_filtering &&
-          part_[i].has_velocity_filtering()
-        );
-        if (same_channel && !both_velocity_filtering) {
-          part_[i].set_transposable(false);
-        }
-      }
-      recording_ = true;
-    }
+
+  inline bool CanAutoStop() const {
+    return started_by_keyboard_ && internal_clock();
   }
   
-  void StopRecording(uint8_t part) {
-    if (recording_) {
-      part_[part].StopRecording();
-      for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        part_[i].set_transposable(true);
-      }
-      recording_ = false;
-    }
-  }
+  void StartRecording(uint8_t part);
+  void StopRecording(uint8_t part);
   
   void PushItNoteOn(uint8_t note) {
     uint8_t mask = recording_ ? 0x80 : 0;
@@ -277,12 +356,12 @@ class Multi {
       }
       has_notes = has_notes || part_[i].has_notes();
     }
-    if (!has_notes && internal_clock()) {
+    if (!has_notes && CanAutoStop()) {
       Stop();
     }
   }
   
-  void Touch();
+  void AfterDeserialize();
   void Refresh();
   void RefreshInternalClock() {
     if (running() && internal_clock() && internal_clock_.Process()) {
@@ -301,17 +380,18 @@ class Multi {
       return;
     }
     for (uint8_t j = 0; j < num_active_parts_; ++j) {
-      part_[j].LooperAdvance();
+      if (!part_[j].looper_in_use()) { continue; }
+      part_[j].mutable_looper().AdvanceToPresent();
     }
   }
 
   inline void RenderAudio() {
     for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-      cv_outputs_[i].RenderAudio(layout() == LAYOUT_PARAPHONIC_PLUS_TWO);
+      cv_outputs_[i].RenderAudio();
     }
   }
   
-  void Set(uint8_t address, uint8_t value);
+  bool Set(uint8_t address, uint8_t value);
   inline uint8_t Get(uint8_t address) const {
     const uint8_t* bytes;
     bytes = static_cast<const uint8_t*>(static_cast<const void*>(&settings_));
@@ -323,6 +403,7 @@ class Multi {
   inline uint8_t tempo() const { return settings_.clock_tempo; }
   inline bool running() const { return running_; }
   inline bool recording() const { return recording_; }
+  inline uint8_t recording_part() const { return recording_part_; }
   inline bool clock() const {
     return clock_pulse_counter_ > 0 && \
         (!settings_.nudge_first_tick || \
@@ -367,37 +448,34 @@ class Multi {
   
   void AssignVoicesToCVOutputs();
   void GetCvGate(uint16_t* cv, bool* gate);
-  void GetAudioSource(bool* audio_source);
   void GetLedsBrightness(uint8_t* brightness);
 
   template<typename T>
   void Serialize(T* stream_buffer) {
-    stream_buffer->Write(settings());
-    for (uint8_t i = 0; i < kNumParts; ++i) {
-      STATIC_ASSERT(kStreamBufferSize >= (
-        sizeof(settings()) + // 32 bytes
-        kNumParts * ( // Max 248 bytes
-          sizeof(part_[i].midi_settings()) +
-          sizeof(part_[i].voicing_settings()) +
-          sizeof(part_[i].sequencer_settings())
-        )
-      ), buffer_size_exceeded);
-      stream_buffer->Write(part_[i].midi_settings()); // 16 bytes
-      stream_buffer->Write(part_[i].voicing_settings()); // 32 bytes
-      stream_buffer->Write(part_[i].sequencer_settings()); // 176 bytes
+    PackedMulti packed;
+    for (uint8_t i = 0; i < kNumParts; i++) {
+      part_[i].Pack(packed.parts[i]);
     }
+    settings_.Pack(packed);
+    const uint16_t size = sizeof(packed);
+    // char (*__debug)[size] = 1;
+    STATIC_ASSERT(size == 1020, expected);
+    STATIC_ASSERT(size % 4 == 0, flash_word);
+    STATIC_ASSERT(size <= kMaxSize, capacity);
+    stream_buffer->Write(packed);
   };
   
   template<typename T>
   void Deserialize(T* stream_buffer) {
+    StopRecording(recording_part_);
     Stop();
-    stream_buffer->Read(mutable_settings());
-    for (uint8_t i = 0; i < kNumParts; ++i) {
-      stream_buffer->Read(part_[i].mutable_midi_settings());
-      stream_buffer->Read(part_[i].mutable_voicing_settings());
-      stream_buffer->Read(part_[i].mutable_sequencer_settings());
+    PackedMulti packed;
+    stream_buffer->Read(&packed);
+    for (uint8_t i = 0; i < kNumParts; i++) {
+      part_[i].Unpack(packed.parts[i]);
     }
-    Touch();
+    settings_.Unpack(packed);
+    AfterDeserialize();
   };
   
   template<typename T>
@@ -439,13 +517,13 @@ class Multi {
   void ChangeLayout(Layout old_layout, Layout new_layout);
   void AllocateParts();
   void ClockSong();
-  void HandleRemoteControlCC(uint8_t controller, uint8_t value);
   
   MultiSettings settings_;
   
   bool running_;
   bool started_by_keyboard_;
   bool recording_;
+  uint8_t recording_part_;
   
   InternalClock internal_clock_;
   uint8_t internal_clock_ticks_;

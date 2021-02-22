@@ -56,17 +56,20 @@ enum UiMode {
   UI_MODE_CALIBRATION_SELECT_VOICE,
   UI_MODE_CALIBRATION_SELECT_NOTE,
   UI_MODE_CALIBRATION_ADJUST_LEVEL,
-  UI_MODE_RECORDING,
-  UI_MODE_OVERDUBBING,
   UI_MODE_PUSH_IT_SELECT_NOTE,
   UI_MODE_LEARNING,
   UI_MODE_FACTORY_TESTING,
-  UI_MODE_SPLASH,
-  UI_MODE_CHANGED_ACTIVE_PART_OR_PLAY_MODE,
-  UI_MODE_TEMPO_CHANGE,
-  UI_MODE_LOOPER_RECORDING,
 
   UI_MODE_LAST
+};
+
+enum Splash {
+  SPLASH_NONE = 0,
+  SPLASH_VERSION,
+  SPLASH_SETTING,
+  SPLASH_ACTIVE_PART,
+  SPLASH_DELETE_RECORDING,
+  SPLASH_LOOPER_PHASE_OFFSET,
 };
 
 enum MainMenuEntry {
@@ -114,6 +117,22 @@ class Ui {
   }
   void DoEvents();
   void FlushEvents();
+  void SplashOn(Splash s);
+  static const uint8_t kNoSplashPart = 0xff;
+  inline void SetSplashPart(uint8_t part) {
+    splash_part_ = part;
+  }
+  inline void SplashSetting(const Setting& s, uint8_t part) {
+    splash_setting_def_ = &s;
+    SetSplashPart(part);
+    SplashOn(SPLASH_SETTING);
+  }
+
+  inline bool in_recording_mode() const {
+    return multi.recording() && (
+      mode_ == UI_MODE_PARAMETER_SELECT || mode_ == UI_MODE_PARAMETER_EDIT
+    );
+  }
 
   void Print(const char* text) {
     display_.Print(text, text);
@@ -150,16 +169,16 @@ class Ui {
   void TapTempo();
   void SetTempo(uint8_t value);
   inline Part* mutable_recording_part() {
-    return mutable_active_part();
+    return multi.mutable_part(multi.recording_part());
   }
   inline const Part& recording_part() const {
-    return active_part();
+    return multi.part(multi.recording_part());
   }
   inline Part* mutable_active_part() {
-    return multi.mutable_part(settings.Get(GLOBAL_ACTIVE_PART));
+    return multi.mutable_part(active_part_);
   }
   inline const Part& active_part() const {
-    return multi.part(settings.Get(GLOBAL_ACTIVE_PART));
+    return multi.part(active_part_);
   }
   
   // Generic Handler.
@@ -175,7 +194,6 @@ class Ui {
   void OnClickCalibrationSelectVoice(const stmlib::Event& e);
   void OnClickCalibrationSelectNote(const stmlib::Event& e);
   void OnClickRecording(const stmlib::Event& e);
-  void OnClickOverdubbing(const stmlib::Event& e);
   void OnClickLearning(const stmlib::Event& event);
   void OnClickFactoryTesting(const stmlib::Event& event);
 
@@ -183,7 +201,6 @@ class Ui {
   void OnIncrementParameterEdit(const stmlib::Event& e);
   void OnIncrementCalibrationAdjustment(const stmlib::Event& e);
   void OnIncrementRecording(const stmlib::Event& e);
-  void OnIncrementOverdubbing(const stmlib::Event& e);
   void OnIncrementPushItNote(const stmlib::Event& e);
   void OnIncrementFactoryTesting(const stmlib::Event& event);
   
@@ -196,20 +213,21 @@ class Ui {
   void PrintCalibrationNote();
   void PrintRecordingPart();
   void PrintDeleteSequence();
-  void SetBrightnessFromBarPhase();
+  void SetBrightnessFromSequencerPhase(const Part& part);
   void PrintLooperRecordingStatus();
   void PrintRecordingStatus();
   void PrintNote(int16_t note);
   void PrintPushItNote();
   void PrintLearning();
   void PrintFactoryTesting();
-  void PrintVersionNumber();
   void PrintRecordingStep();
   void PrintArpeggiatorMovementStep(SequencerStep step);
   void PrintActivePartAndPlayMode();
+  void PrintLatch();
+  void SetFadeForSetting(const Setting& setting);
+
+  PressedKeys& LatchableKeys();
   
-  void ChangedActivePartOrPlayMode();
-  void StartRecording();
   void StopRecording();
 
   void DoInitCommand();
@@ -254,14 +272,17 @@ class Ui {
   
   UiMode mode_;
   UiMode previous_mode_;
-  UiMode splash_mode_;
-  bool show_splash_;
+  Splash splash_;
+  Setting const* splash_setting_def_;
+  uint8_t splash_part_;
   
   Menu setup_menu_;
+  Menu oscillator_menu_;
   Menu envelope_menu_;
   Menu live_menu_;
   Menu* current_menu_;
 
+  uint8_t active_part_;
   int8_t command_index_;
   int8_t calibration_voice_;
   int8_t calibration_note_;
@@ -282,6 +303,8 @@ class Ui {
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
+
+extern Ui ui;
 
 }  // namespace yarns
 

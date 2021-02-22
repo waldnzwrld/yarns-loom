@@ -32,21 +32,9 @@
 
 #include "stmlib/stmlib.h"
 
-#include "yarns/multi.h"
-#include "yarns/part.h"
-
 namespace yarns {
 
-enum GlobalSetting {
-  GLOBAL_ACTIVE_PART
-};
-
-struct GlobalSettings {
-  uint8_t active_part;
-};
-
 enum SettingDomain {
-  SETTING_DOMAIN_GLOBAL,
   SETTING_DOMAIN_MULTI,
   SETTING_DOMAIN_PART,
 };
@@ -56,22 +44,24 @@ enum SettingUnit {
   SETTING_UNIT_INT8,
   SETTING_UNIT_INDEX,
   SETTING_UNIT_TEMPO,
+  SETTING_UNIT_CLOCK_DIV,
   SETTING_UNIT_MIDI_CHANNEL,
   SETTING_UNIT_MIDI_CHANNEL_OFF,
   SETTING_UNIT_BAR_DURATION,
   SETTING_UNIT_VIBRATO_SPEED,
   SETTING_UNIT_PORTAMENTO,
   SETTING_UNIT_ENUMERATION,
+  SETTING_UNIT_ARP_PATTERN,
+  SETTING_UNIT_LOOP_LENGTH,
+  SETTING_UNIT
 };
 
 enum SettingIndex {
   SETTING_MENU_SETUP,
+  SETTING_MENU_OSCILLATOR,
   SETTING_MENU_ENVELOPE,
 
   SETTING_LAYOUT,
-  SETTING_ACTIVE_PART_4,
-  SETTING_ACTIVE_PART_3,
-  SETTING_ACTIVE_PART_2,
   SETTING_CLOCK_TEMPO,
   SETTING_CLOCK_SWING,
   SETTING_CLOCK_INPUT_DIVISION,
@@ -96,7 +86,6 @@ enum SettingIndex {
   SETTING_VOICING_VIBRATO_RANGE,
   SETTING_VOICING_MODULATION_RATE,
   SETTING_VOICING_VIBRATO_INITIAL,
-  SETTING_VOICING_VIBRATO_CONTROL_SOURCE,
   SETTING_VOICING_TUNING_TRANSPOSE,
   SETTING_VOICING_TUNING_FINE,
   SETTING_VOICING_TUNING_ROOT,
@@ -107,13 +96,20 @@ enum SettingIndex {
   SETTING_VOICING_CV_OUT,
   SETTING_VOICING_CV_OUT_3,
   SETTING_VOICING_CV_OUT_4,
-  SETTING_VOICING_AUDIO_MODE,
+  SETTING_VOICING_OSCILLATOR_MODE,
+  SETTING_VOICING_OSCILLATOR_SHAPE,
   SETTING_VOICING_OSCILLATOR_PW_INITIAL,
   SETTING_VOICING_OSCILLATOR_PW_MOD,
-  SETTING_VOICING_ENVELOPE_ATTACK,
-  SETTING_VOICING_ENVELOPE_DECAY,
-  SETTING_VOICING_ENVELOPE_SUSTAIN,
-  SETTING_VOICING_ENVELOPE_RELEASE,
+  SETTING_VOICING_ENVELOPE_AMPLITUDE_INIT,
+  SETTING_VOICING_ENVELOPE_AMPLITUDE_MOD,
+  SETTING_VOICING_ENV_INIT_ATTACK,
+  SETTING_VOICING_ENV_INIT_DECAY,
+  SETTING_VOICING_ENV_INIT_SUSTAIN,
+  SETTING_VOICING_ENV_INIT_RELEASE,
+  SETTING_VOICING_ENV_MOD_ATTACK,
+  SETTING_VOICING_ENV_MOD_DECAY,
+  SETTING_VOICING_ENV_MOD_SUSTAIN,
+  SETTING_VOICING_ENV_MOD_RELEASE,
   SETTING_SEQUENCER_CLOCK_DIVISION,
   SETTING_SEQUENCER_GATE_LENGTH,
   SETTING_SEQUENCER_ARP_RANGE,
@@ -126,7 +122,9 @@ enum SettingIndex {
   SETTING_SEQUENCER_PLAY_MODE,
   SETTING_MIDI_INPUT_RESPONSE,
   SETTING_SEQUENCER_CLOCK_QUANTIZATION,
+  SETTING_SEQUENCER_LOOP_LENGTH,
   SETTING_MIDI_SUSTAIN_MODE,
+  SETTING_MIDI_SUSTAIN_POLARITY,
   SETTING_REMOTE_CONTROL_CHANNEL,
   SETTING_VOICING_TUNING_FACTOR,
 
@@ -144,45 +142,21 @@ struct Setting {
   const char* const* values;
   uint8_t part_cc;
   uint8_t remote_control_cc;
-  
-  uint8_t Scale(uint8_t value_7bits) const {
-    uint8_t scaled_value;
-    uint8_t range = max_value - min_value + 1;
-    scaled_value = range * value_7bits >> 7;
-    scaled_value += min_value;
-    if (unit == SETTING_UNIT_TEMPO) {
-      scaled_value &= 0xfe;
-      if (scaled_value < TEMPO_EXTERNAL) {
-        scaled_value = TEMPO_EXTERNAL;
-      }
-    }
-    return scaled_value;
-  }
 };
 
 class Settings {
  public:
   Settings() { }
   ~Settings() { }
+
+  uint8_t part_cc_map[128];
+  uint8_t remote_control_cc_map[128];
   
   void Init();
-  void Set(const Setting& setting, uint8_t value);
-  void Set(const Setting& setting, uint8_t* part, uint8_t value);
-  void SetFromCC(uint8_t part, uint8_t controller, uint8_t value);
-
-  uint8_t Get(const Setting& setting) const;
-  void Increment(const Setting& setting, int16_t increment);
-
-  void Set(uint8_t address, uint8_t value);
-  inline uint8_t Get(uint8_t address) const {
-    const uint8_t* bytes;
-    bytes = static_cast<const uint8_t*>(static_cast<const void*>(&global_));
-    return bytes[address];
-  }
   
-  void Print(const Setting& setting, char* buffer) const;
+  void Print(const Setting& setting, uint8_t value, char* buffer) const;
   
-  inline const Setting& setting(uint8_t index) const {
+  inline const Setting& get(uint8_t index) const {
     return settings_[index];
   }
   
@@ -190,17 +164,13 @@ class Settings {
   static void PrintSignedInteger(char* buffer, int8_t number);
   
  private:
-  GlobalSettings global_;
    
   static const Setting settings_[SETTING_LAST];
-
-  uint8_t part_cc_map_[128];
-  uint8_t remote_control_cc_map_[128];
   
   DISALLOW_COPY_AND_ASSIGN(Settings);
 };
 
-extern Settings settings;
+extern Settings setting_defs;
 
 }  // namespace yarns
 

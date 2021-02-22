@@ -37,17 +37,21 @@
 #include "stmlib/algorithms/note_stack.h"
 
 #include "yarns/looper.h"
-#include "yarns/synced_lfo.h"
 
 namespace yarns {
 
 class Voice;
 
-const uint8_t kNumSteps = 16;
+const uint8_t kNumSteps = 31;
 const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
+const uint8_t kNoteStackMapping = kNoteStackSize + 1; // 1-based
 
+const uint8_t kCCRecordOffOn = 110;
+const uint8_t kCCDeleteRecording = 111;
+
+const uint8_t kC4 = 60;
 const uint8_t whiteKeyValues[] = {
   0,    0xff, 1,    0xff,
   2,    3,    0xff, 4,
@@ -107,26 +111,28 @@ enum TuningSystem {
 };
 
 enum SequencerInputResponse {
+  SEQUENCER_INPUT_RESPONSE_OFF,
   SEQUENCER_INPUT_RESPONSE_TRANSPOSE,
   SEQUENCER_INPUT_RESPONSE_REPLACE,
   SEQUENCER_INPUT_RESPONSE_DIRECT,
-  SEQUENCER_INPUT_RESPONSE_OFF,
   SEQUENCER_INPUT_RESPONSE_LAST,
 };
 
 enum PlayMode {
   PLAY_MODE_MANUAL,
   PLAY_MODE_ARPEGGIATOR,
-  PLAY_MODE_RECORD,
+  PLAY_MODE_SEQUENCER,
   PLAY_MODE_LAST
 };
 
 enum SustainMode {
+  SUSTAIN_MODE_OFF,
   SUSTAIN_MODE_NORMAL,
-  // SUSTAIN_MODE_SOSTENUTO,
+  SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
   SUSTAIN_MODE_MOMENTARY_LATCH,
-  SUSTAIN_MODE_OFF,
+  SUSTAIN_MODE_CLUTCH_UP,
+  SUSTAIN_MODE_CLUTCH_DOWN,
   SUSTAIN_MODE_LAST,
 };
 
@@ -136,6 +142,91 @@ enum LegatoMode {
   LEGATO_MODE_ON,
   LEGATO_MODE_LAST
 };
+struct PackedPart {
+  // Currently has 4 bits to spare
+
+  struct PackedSequencerStep {
+    unsigned int
+      pitch : 8,
+      velocity: 8;
+  }__attribute__((packed));
+  PackedSequencerStep sequencer_steps[kNumSteps];
+
+  looper::PackedNote looper_notes[looper::kMaxNotes];
+  unsigned int
+    looper_oldest_index : looper::kBitsNoteIndex,
+    looper_size         : looper::kBitsNoteIndex;
+
+  static const uint8_t kTimbreBits = 6;
+
+  signed int
+    // MidiSettings
+    transpose_octaves : 3,
+    // VoicingSettings
+    tuning_transpose : 7,
+    tuning_fine : 7,
+    oscillator_pw_mod : kTimbreBits,
+    envelope_amplitude_mod : kTimbreBits,
+    env_mod_attack : kTimbreBits,
+    env_mod_decay : kTimbreBits,
+    env_mod_sustain : kTimbreBits,
+    env_mod_release : kTimbreBits;
+
+  // MidiSettings
+  unsigned int
+    channel : 5,
+    min_note : 7,
+    max_note : 7,
+    min_velocity : 7,
+    max_velocity : 7,
+    out_mode : 2,
+    sustain_mode : 3,
+    play_mode : 2,
+    input_response : 2,
+    sustain_polarity : 1;
+
+  // VoicingSettings
+  unsigned int
+    allocation_mode : 4,
+    allocation_priority : 2,
+    portamento : 7,
+    legato_mode : 2,
+    pitch_bend_range : 5,
+    vibrato_range : 4,
+    vibrato_initial : kTimbreBits,
+    modulation_rate : 7,
+    tuning_root : 4,
+    tuning_system : 6,
+    trigger_duration : 7, // probably excessive
+    trigger_scale : 1,
+    trigger_shape : 3,
+    aux_cv : 4, // barely
+    aux_cv_2 : 4, // barely
+    tuning_factor : 4,
+    oscillator_mode : 2,
+    oscillator_shape : 3,
+    oscillator_pw_initial : kTimbreBits,
+    envelope_amplitude_init : kTimbreBits,
+    env_init_attack : kTimbreBits,
+    env_init_decay : kTimbreBits,
+    env_init_sustain : kTimbreBits,
+    env_init_release : kTimbreBits;
+
+  // SequencerSettings
+  unsigned int
+    clock_division : 5,
+    gate_length : 6,
+    arp_range : 2,
+    arp_direction : 3,
+    arp_pattern : 5,
+    euclidean_length : 5,
+    euclidean_fill : 5,
+    euclidean_rotate : 5,
+    num_steps : 5,
+    clock_quantization : 1,
+    loop_length : 3;
+
+}__attribute__((packed));
 
 struct MidiSettings {
   uint8_t channel;
@@ -148,7 +239,37 @@ struct MidiSettings {
   int8_t transpose_octaves;
   uint8_t play_mode;
   uint8_t input_response;
-  uint8_t padding[6];
+  uint8_t sustain_polarity;
+  uint8_t padding[5];
+
+  void Pack(PackedPart& packed) const {
+    packed.channel = channel;
+    packed.min_note = min_note;
+    packed.max_note = max_note;
+    packed.min_velocity = min_velocity;
+    packed.max_velocity = max_velocity;
+    packed.out_mode = out_mode;
+    packed.sustain_mode = sustain_mode;
+    packed.transpose_octaves = transpose_octaves;
+    packed.play_mode = play_mode;
+    packed.input_response = input_response;
+    packed.sustain_polarity = sustain_polarity;
+  }
+
+  void Unpack(PackedPart& packed) {
+    channel = packed.channel;
+    min_note = packed.min_note;
+    max_note = packed.max_note;
+    min_velocity = packed.min_velocity;
+    max_velocity = packed.max_velocity;
+    out_mode = packed.out_mode;
+    sustain_mode = packed.sustain_mode;
+    transpose_octaves = packed.transpose_octaves;
+    play_mode = packed.play_mode;
+    input_response = packed.input_response;
+    sustain_polarity = packed.sustain_polarity;
+  }
+
 };
 
 struct VoicingSettings {
@@ -159,7 +280,6 @@ struct VoicingSettings {
   uint8_t pitch_bend_range;
   uint8_t vibrato_range;
   uint8_t vibrato_initial;
-  uint8_t vibrato_control_source;
   uint8_t modulation_rate;
   int8_t tuning_transpose;
   int8_t tuning_fine;
@@ -169,16 +289,94 @@ struct VoicingSettings {
   uint8_t trigger_scale;
   uint8_t trigger_shape;
   uint8_t aux_cv;
-  uint8_t audio_mode;
   uint8_t aux_cv_2;
   uint8_t tuning_factor;
+  uint8_t oscillator_mode;
+  uint8_t oscillator_shape;
   uint8_t oscillator_pw_initial;
   int8_t oscillator_pw_mod;
-  uint8_t envelope_attack;
-  uint8_t envelope_decay;
-  uint8_t envelope_sustain;
-  uint8_t envelope_release;
-  uint8_t padding[6];
+  uint8_t envelope_amplitude_init;
+  int8_t envelope_amplitude_mod;
+  uint8_t env_init_attack;
+  uint8_t env_init_decay;
+  uint8_t env_init_sustain;
+  uint8_t env_init_release;
+  int8_t env_mod_attack;
+  int8_t env_mod_decay;
+  int8_t env_mod_sustain;
+  int8_t env_mod_release;
+  uint8_t padding[1];
+
+  void Pack(PackedPart& packed) const {
+    packed.allocation_mode = allocation_mode;
+    packed.allocation_priority = allocation_priority;
+    packed.portamento = portamento;
+    packed.legato_mode = legato_mode;
+    packed.pitch_bend_range = pitch_bend_range;
+    packed.vibrato_range = vibrato_range;
+    packed.vibrato_initial = vibrato_initial;
+    packed.modulation_rate = modulation_rate;
+    packed.tuning_transpose = tuning_transpose;
+    packed.tuning_fine = tuning_fine;
+    packed.tuning_root = tuning_root;
+    packed.tuning_system = tuning_system;
+    packed.trigger_duration = trigger_duration;
+    packed.trigger_scale = trigger_scale;
+    packed.trigger_shape = trigger_shape;
+    packed.aux_cv = aux_cv;
+    packed.aux_cv_2 = aux_cv_2;
+    packed.tuning_factor = tuning_factor;
+    packed.oscillator_mode = oscillator_mode;
+    packed.oscillator_shape = oscillator_shape;
+    packed.oscillator_pw_initial = oscillator_pw_initial;
+    packed.oscillator_pw_mod = oscillator_pw_mod;
+    packed.envelope_amplitude_init = envelope_amplitude_init;
+    packed.envelope_amplitude_mod = envelope_amplitude_mod;
+    packed.env_init_attack = env_init_attack;
+    packed.env_init_decay = env_init_decay;
+    packed.env_init_sustain = env_init_sustain;
+    packed.env_init_release = env_init_release;
+    packed.env_mod_attack = env_mod_attack;
+    packed.env_mod_decay = env_mod_decay;
+    packed.env_mod_sustain = env_mod_sustain;
+    packed.env_mod_release = env_mod_release;
+  }
+
+  void Unpack(PackedPart& packed) {
+    allocation_mode = packed.allocation_mode;
+    allocation_priority = packed.allocation_priority;
+    portamento = packed.portamento;
+    legato_mode = packed.legato_mode;
+    pitch_bend_range = packed.pitch_bend_range;
+    vibrato_range = packed.vibrato_range;
+    vibrato_initial = packed.vibrato_initial;
+    modulation_rate = packed.modulation_rate;
+    tuning_transpose = packed.tuning_transpose;
+    tuning_fine = packed.tuning_fine;
+    tuning_root = packed.tuning_root;
+    tuning_system = packed.tuning_system;
+    trigger_duration = packed.trigger_duration;
+    trigger_scale = packed.trigger_scale;
+    trigger_shape = packed.trigger_shape;
+    aux_cv = packed.aux_cv;
+    aux_cv_2 = packed.aux_cv_2;
+    tuning_factor = packed.tuning_factor;
+    oscillator_mode = packed.oscillator_mode;
+    oscillator_shape = packed.oscillator_shape;
+    oscillator_pw_initial = packed.oscillator_pw_initial;
+    oscillator_pw_mod = packed.oscillator_pw_mod;
+    envelope_amplitude_init = packed.envelope_amplitude_init;
+    envelope_amplitude_mod = packed.envelope_amplitude_mod;
+    env_init_attack = packed.env_init_attack;
+    env_init_decay = packed.env_init_decay;
+    env_init_sustain = packed.env_init_sustain;
+    env_init_release = packed.env_init_release;
+    env_mod_attack = packed.env_mod_attack;
+    env_mod_decay = packed.env_mod_decay;
+    env_mod_sustain = packed.env_mod_sustain;
+    env_mod_release = packed.env_mod_release;
+  }
+
 };
 
 
@@ -193,6 +391,7 @@ enum PartSetting {
   PART_MIDI_TRANSPOSE_OCTAVES,
   PART_MIDI_PLAY_MODE,
   PART_MIDI_INPUT_RESPONSE,
+  PART_MIDI_SUSTAIN_POLARITY,
   PART_MIDI_LAST = PART_MIDI_CHANNEL + sizeof(MidiSettings) - 1,
   PART_VOICING_ALLOCATION_MODE,
   PART_VOICING_ALLOCATION_PRIORITY,
@@ -201,7 +400,6 @@ enum PartSetting {
   PART_VOICING_PITCH_BEND_RANGE,
   PART_VOICING_VIBRATO_RANGE,
   PART_VOICING_VIBRATO_INITIAL,
-  PART_VOICING_VIBRATO_CONTROL_SOURCE,
   PART_VOICING_MODULATION_RATE,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
@@ -211,15 +409,22 @@ enum PartSetting {
   PART_VOICING_TRIGGER_SCALE,
   PART_VOICING_TRIGGER_SHAPE,
   PART_VOICING_AUX_CV,
-  PART_VOICING_AUDIO_MODE,
   PART_VOICING_AUX_CV_2,
   PART_VOICING_TUNING_FACTOR,
+  PART_VOICING_OSCILLATOR_MODE,
+  PART_VOICING_OSCILLATOR_SHAPE,
   PART_VOICING_OSCILLATOR_PW_INITIAL,
   PART_VOICING_OSCILLATOR_PW_MOD,
-  PART_VOICING_ENVELOPE_ATTACK,
-  PART_VOICING_ENVELOPE_DECAY,
-  PART_VOICING_ENVELOPE_SUSTAIN,
-  PART_VOICING_ENVELOPE_RELEASE,
+  PART_VOICING_ENVELOPE_AMPLITUDE_INIT,
+  PART_VOICING_ENVELOPE_AMPLITUDE_MOD,
+  PART_VOICING_ENV_INIT_ATTACK,
+  PART_VOICING_ENV_INIT_DECAY,
+  PART_VOICING_ENV_INIT_SUSTAIN,
+  PART_VOICING_ENV_INIT_RELEASE,
+  PART_VOICING_ENV_MOD_ATTACK,
+  PART_VOICING_ENV_MOD_DECAY,
+  PART_VOICING_ENV_MOD_SUSTAIN,
+  PART_VOICING_ENV_MOD_RELEASE,
   PART_VOICING_LAST = PART_VOICING_ALLOCATION_MODE + sizeof(VoicingSettings) - 1,
   PART_SEQUENCER_CLOCK_DIVISION,
   PART_SEQUENCER_GATE_LENGTH,
@@ -231,7 +436,7 @@ enum PartSetting {
   PART_SEQUENCER_EUCLIDEAN_ROTATE,
   PART_SEQUENCER_NUM_STEPS,
   PART_SEQUENCER_CLOCK_QUANTIZATION,
-  // PART_SEQUENCER_LOOPER_CLOCK_DIVISION,
+  PART_SEQUENCER_LOOP_LENGTH,
 };
 
 enum SequencerStepFlags {
@@ -288,9 +493,51 @@ struct SequencerSettings {
   uint8_t euclidean_rotate;
   uint8_t num_steps;
   uint8_t clock_quantization;
-  uint8_t padding[1];
+  uint8_t loop_length;
+  uint8_t padding_fields[5];
+
   SequencerStep step[kNumSteps];
-  looper::Tape looper_tape;
+  uint8_t padding_steps[2];
+
+  void Pack(PackedPart& packed) const {
+    for (uint8_t i = 0; i < kNumSteps; i++) {
+      PackedPart::PackedSequencerStep& packed_step = packed.sequencer_steps[i];
+      packed_step.pitch = step[i].data[0];
+      packed_step.velocity = step[i].data[1];
+    }
+
+    packed.clock_division = clock_division;
+    packed.gate_length = gate_length;
+    packed.arp_range = arp_range;
+    packed.arp_direction = arp_direction;
+    packed.arp_pattern = arp_pattern;
+    packed.euclidean_length = euclidean_length;
+    packed.euclidean_fill = euclidean_fill;
+    packed.euclidean_rotate = euclidean_rotate;
+    packed.num_steps = num_steps;
+    packed.clock_quantization = clock_quantization;
+    packed.loop_length = loop_length;
+  }
+
+  void Unpack(PackedPart& packed) {
+    for (uint8_t i = 0; i < kNumSteps; i++) {
+      PackedPart::PackedSequencerStep& packed_step = packed.sequencer_steps[i];
+      step[i].data[0] = packed_step.pitch;
+      step[i].data[1] = packed_step.velocity;
+    }
+
+    clock_division = packed.clock_division;
+    gate_length = packed.gate_length;
+    arp_range = packed.arp_range;
+    arp_direction = packed.arp_direction;
+    arp_pattern = packed.arp_pattern;
+    euclidean_length = packed.euclidean_length;
+    euclidean_fill = packed.euclidean_fill;
+    euclidean_rotate = packed.euclidean_rotate;
+    num_steps = packed.num_steps;
+    clock_quantization = packed.clock_quantization;
+    loop_length = packed.loop_length;
+  }
   
   int16_t first_note() const {
     for (uint8_t i = 0; i < num_steps; ++i) {
@@ -322,23 +569,21 @@ struct PressedKeys {
   stmlib::NoteStack<kNoteStackSize> stack;
   bool ignore_note_off_messages;
   bool release_latched_keys_on_next_note_on;
+  bool sustainable[kNoteStackMapping];
 
   void Init() {
     stack.Init();
-    ResetLatch();
+    Reset();
   }
 
-  void ResetLatch() {
+  void Reset() {
     ignore_note_off_messages = false;
     release_latched_keys_on_next_note_on = false;
-  }
-  void Latch() {
-    ignore_note_off_messages = true;
-    release_latched_keys_on_next_note_on = true;
-  }
-  void UnlatchOnNextNoteOn() {
-    ignore_note_off_messages = false;
-    release_latched_keys_on_next_note_on = true;
+    std::fill(
+      &sustainable[0],
+      &sustainable[kNoteStackMapping],
+      false
+    );
   }
 
   bool SustainableNoteOff(uint8_t pitch) {
@@ -349,27 +594,46 @@ struct PressedKeys {
   }
 
   void SetSustain(uint8_t pitch) {
-    if (!ignore_note_off_messages) { return; }
-    for (uint8_t i = 1; i <= stack.max_size(); ++i) {
-      // Flag the note so that it is removed once the sustain pedal is released.
-      stmlib::NoteEntry* e = stack.mutable_note(i);
-      if (e->note == pitch && e->velocity) {
-        e->velocity |= VELOCITY_SUSTAIN_MASK;
-      }
-    }
+    uint8_t i = stack.Find(pitch);
+    if (!i || !IsSustainable(i)) { return; }
+    // Flag the note so that it is removed once the sustain pedal is released.
+    stack.mutable_note(i)->velocity |= VELOCITY_SUSTAIN_MASK;
   }
 
-  void SustainAll() {
+  bool SustainAll() {
+    bool changed = false;
     for (uint8_t i = 1; i <= stack.max_size(); ++i) {
       stmlib::NoteEntry* e = stack.mutable_note(i);
       if (e->note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
+      if (IsSustained(*e)) { continue; }
       e->velocity |= VELOCITY_SUSTAIN_MASK;
+      changed = true;
+    }
+    return changed;
+  }
+
+  void SetSustainable(bool value) {
+    for (uint8_t i = 1; i <= stack.max_size(); ++i) {
+      if (stack.note(i).note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
+      sustainable[i - 1] = value;
     }
   }
 
-  bool IsSustained(uint8_t pitch) const {
+  void Clutch(bool on) {
+    release_latched_keys_on_next_note_on = on;
+    SetSustainable(!on);
+  }
+
+  bool IsSustainable(uint8_t index) const {
+    return ignore_note_off_messages || sustainable[index - 1];
+  }
+
+  bool IsSustained(const stmlib::NoteEntry &note_entry) const {
     // If the note is flagged, it can only be released by ReleaseLatchedNotes
-    return stack.note(stack.Find(pitch)).velocity & VELOCITY_SUSTAIN_MASK;
+    return note_entry.velocity & VELOCITY_SUSTAIN_MASK;
+  }
+  bool IsSustained(uint8_t pitch) const {
+    return IsSustained(stack.note(stack.Find(pitch)));
   }
 
 };
@@ -393,11 +657,11 @@ class Part {
   uint8_t PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t velocity);
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
   bool NoteOff(uint8_t channel, uint8_t note);
-  uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) {
+  uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) const {
     CONSTRAIN(transpose_octaves, (0 - pitch) / 12, (127 - pitch) / 12);
     return pitch + 12 * transpose_octaves;
   }
-  uint8_t TransposeInputPitch(uint8_t pitch) {
+  uint8_t TransposeInputPitch(uint8_t pitch) const {
     return TransposeInputPitch(pitch, midi_.transpose_octaves);
   }
   void InternalNoteOn(uint8_t note, uint8_t velocity);
@@ -407,6 +671,7 @@ class Part {
   bool Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity);
   bool Aftertouch(uint8_t channel, uint8_t velocity);
   void AllNotesOff();
+  void StopSequencerArpeggiatorNotes();
   void Reset();
   void Clock();
   void Start();
@@ -427,28 +692,8 @@ class Part {
     voicing_.legato_mode = LEGATO_MODE_OFF;
   }
 
-  inline void Refresh() {
-    uint16_t new_pos = bar_lfo_.Refresh() >> 16;
-    if (
-      // phase has definitely changed, or
-      looper_pos_ != new_pos ||
-      // phase has wrapped exactly around
-      bar_lfo_.GetPhaseIncrement() > UINT16_MAX
-    ) {
-      looper_needs_advance_ = true;
-    }
-  }
-  void LooperRewind();
-  void LooperAdvance();
-  inline void LooperRemoveOldestNote() {
-    seq_.looper_tape.RemoveOldestNote(this, looper_pos_);
-  }
-  inline void LooperRemoveNewestNote() {
-    seq_.looper_tape.RemoveNewestNote(this, looper_pos_);
-  }
-  inline uint32_t BarPhase() const {
-    return bar_lfo_.GetPhase();
-  }
+  inline const looper::Deck& looper() const { return looper_; }
+  inline looper::Deck& mutable_looper() { return looper_; }
   inline uint8_t LooperCurrentNoteIndex() const {
     return looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()];
   }
@@ -460,10 +705,31 @@ class Part {
   inline bool looper_can_control(uint8_t pitch) const {
     if (!manual_control()) { return true; }
     uint8_t key = manual_keys_.stack.Find(pitch);
-    return !key || looper_is_recording(key);
+    if (!key) { return true; } // We got here first
+    if (manual_keys_.IsSustained(pitch)) {
+      // Manual control has not been relinquished
+      return false;
+    }
+    return looper_is_recording(key);
+  }
+
+  inline bool looped() const {
+    return seq_.clock_quantization == 0;
+  }
+
+  inline bool looper_in_use() const {
+    return looped() && (
+      midi_.play_mode == PLAY_MODE_SEQUENCER ||
+      (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && seq_driven_arp())
+    );
+  }
+
+  inline bool seq_driven_arp() const {
+    return seq_.arp_pattern == 0;
   }
 
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
+    if (!looper_in_use()) { return; }
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
     pitch = ApplySequencerInputResponse(pitch);
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
@@ -484,12 +750,15 @@ class Part {
   }
 
   inline void LooperPlayNoteOff(uint8_t looper_note_index, uint8_t pitch) {
+    if (!looper_in_use()) { return; }
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOff(pitch)] = looper::kNullIndex;
     pitch = output_pitch_for_looper_note_[looper_note_index];
+    if (pitch == looper::kNullIndex) { return; }
+    output_pitch_for_looper_note_[looper_note_index] = looper::kNullIndex;
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Peek at next looper note
-      uint8_t next_on_index = seq_.looper_tape.PeekNextOn();
-      const looper::Note& next_on_note = seq_.looper_tape.NoteAt(next_on_index);
+      uint8_t next_on_index = looper_.PeekNextOn();
+      const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
       next_step = BuildArpState(next_step).step;
       if (next_step.is_continuation()) {
@@ -505,9 +774,7 @@ class Part {
 
   inline void LooperRecordNoteOn(uint8_t pressed_key_index) {
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
-    uint8_t looper_note_index = seq_.looper_tape.RecordNoteOn(
-      this, looper_pos_, e.note, e.velocity & 0x7f
-    );
+    uint8_t looper_note_index = looper_.RecordNoteOn(e.note, e.velocity & 0x7f);
     looper_note_recording_pressed_key_[pressed_key_index] = looper_note_index;
     LooperPlayNoteOn(looper_note_index, e.note, e.velocity & 0x7f);
   }
@@ -515,25 +782,13 @@ class Part {
   inline void LooperRecordNoteOff(uint8_t pressed_key_index) {
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
     uint8_t looper_note_index = looper_note_recording_pressed_key_[pressed_key_index];
-    if (seq_.looper_tape.RecordNoteOff(looper_pos_, looper_note_index)) {
+    if (looper_.RecordNoteOff(looper_note_index)) {
       LooperPlayNoteOff(looper_note_index, e.note);
     }
     looper_note_recording_pressed_key_[pressed_key_index] = looper::kNullIndex;
   }
 
-  inline bool Stepped() const {
-    return seq_.clock_quantization == 1;
-  }
-
-  inline void DeleteRecording() {
-    if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
-    StopSequencerArpeggiatorNotes();
-    if (seq_.clock_quantization) {
-      DeleteSequence();
-    } else {
-      seq_.looper_tape.RemoveAll();
-    }
-  }
+  void DeleteRecording();
 
   inline void SustainOn() {
     PressedKeysSustainOn(manual_keys_);
@@ -545,8 +800,19 @@ class Part {
   }
   void PressedKeysSustainOn(PressedKeys &keys);
   void PressedKeysSustainOff(PressedKeys &keys);
+  inline PressedKeys& PressedKeysForLatchUI() {
+    return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
+  }
+  inline void PressedKeysResetLatch(PressedKeys &keys) {
+    ReleaseLatchedNotes(keys);
+    keys.Reset();
+  }
+  inline void ResetLatch() {
+    PressedKeysResetLatch(manual_keys_);
+    PressedKeysResetLatch(arp_keys_);
+  }
 
-  inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) {
+  inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
       // This is an arpeggiation control step, so undo input transpose
       pitch = TransposeInputPitch(pitch, -midi_.transpose_octaves);
@@ -586,33 +852,9 @@ class Part {
     return (
       midi_.play_mode == PLAY_MODE_MANUAL || (
         midi_.input_response == SEQUENCER_INPUT_RESPONSE_DIRECT &&
-        midi_.play_mode == PLAY_MODE_RECORD
+        midi_.play_mode == PLAY_MODE_SEQUENCER
       )
     );
-  }
-
-  inline bool accepts(uint8_t channel) const {
-    if (!(transposable_ || seq_recording_)) {
-      return false;
-    }
-    return midi_.channel == 0x10 || midi_.channel == channel;
-  }
-  
-  inline bool accepts(uint8_t channel, uint8_t note) const {
-    if (!accepts(channel)) {
-      return false;
-    }
-    if (midi_.min_note <= midi_.max_note) {
-      return note >= midi_.min_note && note <= midi_.max_note;
-    } else {
-      return note <= midi_.max_note || note >= midi_.min_note;
-    }
-  }
-  
-  inline bool accepts(uint8_t channel, uint8_t note, uint8_t velocity) const {
-    return accepts(channel, note) && \
-        velocity >= midi_.min_velocity && \
-        velocity <= midi_.max_velocity;
   }
   
   void AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain);
@@ -656,7 +898,7 @@ class Part {
   inline Voice* voice(uint8_t index) const { return voice_[index]; }
   inline uint8_t num_voices() const { return num_voices_; }
   
-  void Set(uint8_t address, uint8_t value);
+  bool Set(uint8_t address, uint8_t value);
   inline uint8_t Get(uint8_t address) const {
     const uint8_t* bytes;
     bytes = static_cast<const uint8_t*>(static_cast<const void*>(&midi_));
@@ -671,7 +913,8 @@ class Part {
   inline SequencerSettings* mutable_sequencer_settings() { return &seq_; }
 
   inline bool has_notes() const {
-    return manual_keys_.stack.size() || arp_keys_.stack.size();
+    return arp_keys_.stack.most_recent_note_index() ||
+      manual_keys_.stack.most_recent_note_index();
   }
   
   inline bool recording() const { return seq_recording_; }
@@ -686,28 +929,33 @@ class Part {
     seq_rec_step_ += n;
     seq_rec_step_ = stmlib::modulo(seq_rec_step_, overdubbing() ? seq_.num_steps : kNumSteps);
   }
+
+  void Pack(PackedPart& packed) const {
+    looper_.Pack(packed);
+    midi_.Pack(packed);
+    voicing_.Pack(packed);
+    seq_.Pack(packed);
+  }
+
+  void Unpack(PackedPart& packed) {
+    looper_.Unpack(packed);
+    midi_.Unpack(packed);
+    voicing_.Unpack(packed);
+    seq_.Unpack(packed);
+  }
   
-  void Touch() {
+  void AfterDeserialize() {
     CONSTRAIN(midi_.play_mode, 0, PLAY_MODE_LAST - 1);
     CONSTRAIN(seq_.clock_quantization, 0, 1);
+    CONSTRAIN(seq_.loop_length, 0, 7);
+    CONSTRAIN(seq_.arp_range, 0, 3);
+    CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();
     TouchVoiceAllocation();
   }
 
-  inline bool IsLatched() const {
-    return manual_keys_.ignore_note_off_messages;
-  }
-  
-  inline void SetMultiIsRecording(bool b) {
-    multi_is_recording_ = b;
-  }
-
   void set_siblings(bool has_siblings) {
     has_siblings_ = has_siblings;
-  }
-  
-  void set_transposable(bool transposable) {
-    transposable_ = transposable;
   }
   
  private:
@@ -719,12 +967,12 @@ class Part {
   void ReleaseLatchedNotes(PressedKeys &keys);
   void DispatchSortedNotes(bool unison, bool force_legato);
   void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato);
+  void VoiceNoteOnWithADSR(Voice* voice, int16_t pitch, uint8_t velocity, uint8_t portamento, bool trigger);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
   const SequencerStep BuildSeqStep() const;
   const ArpeggiatorState BuildArpState(SequencerStep seq_step) const;
-  void StopSequencerArpeggiatorNotes();
 
   MidiSettings midi_;
   VoicingSettings voicing_;
@@ -752,22 +1000,20 @@ class Part {
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
   
-  SyncedLFO bar_lfo_;
-  uint16_t looper_pos_;
-  bool looper_needs_advance_;
+  looper::Deck looper_;
 
   // Tracks which looper notes are currently being recorded
-  uint8_t looper_note_recording_pressed_key_[kNoteStackSize];
+  uint8_t looper_note_recording_pressed_key_[kNoteStackMapping];
 
   // Tracks which looper notes are currently playing, so they can be turned off later
-  uint8_t looper_note_index_for_generated_note_index_[kNoteStackSize];
+  uint8_t looper_note_index_for_generated_note_index_[kNoteStackMapping];
 
-  uint8_t output_pitch_for_looper_note_[kNoteStackSize];
+  // Post-transpose
+  uint8_t output_pitch_for_looper_note_[looper::kMaxNotes];
 
   uint16_t gate_length_counter_;
   
   bool has_siblings_;
-  bool transposable_;
   
   bool multi_is_recording_;
 

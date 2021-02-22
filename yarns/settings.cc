@@ -31,7 +31,9 @@
 #include "yarns/resources.h"
 #include "yarns/clock_division.h"
 
-#include <algorithm>
+#include "yarns/multi.h"
+#include "yarns/part.h"
+
 #include <cstring>
 
 namespace yarns {
@@ -54,19 +56,23 @@ const char* const voicing_allocation_mode_values[] = {
 };
 
 const char* const sequencer_arp_direction_values[] = {
-  "LINEAR", "BOUNCE", "RANDOM", "ROTATE BY STEP", "SUBROTATE BY STEP"
+  "LINEAR", "BOUNCE", "RANDOM", "ROTATE", "SUBROTATE"
 };
 
 const char* const voicing_aux_cv_values[] = {
-  "VELOCITY", "MODULATION", "AT", "BREATH", "PEDAL", "BEND", "VIBRATO LFO", "LFO"
+  "VELOCITY", "MODULATION", "AT", "BREATH", "PEDAL", "BEND", "VIBRATO LFO", "LFO", "ENVELOPE"
 };
 
 const char* const legato_mode_values[] = {
   "OFF", "AUTO PORTAMENTO", "ON"
 };
 
-const char* const voicing_oscillator_values[] = {
-  "OF", "\x88\x88", "\x8C\x8C", "\x8C_", "/\\", "SINE", "**"
+const char* const voicing_oscillator_mode_values[] = {
+  "OFF", "DRONE", "ENVELOPED"
+};
+
+const char* const voicing_oscillator_shape_values[] = {
+  "\x88\x88", "\x8C\x8C", "\x8C_", "/\\", "SINE", "**"
 };
 
 const char* const voicing_allocation_priority_values[] = {
@@ -119,9 +125,9 @@ const char* const tuning_system_values[] = {
 };
 
 const char* const sequencer_play_mode_values[] = {
-  "M",
-  "A",
-  "R",
+  "MANUAL",
+  "ARPEGGIATOR",
+  "SEQUENCER",
 };
 
 const char* const sequencer_clock_quantization_values[] = {
@@ -130,19 +136,22 @@ const char* const sequencer_clock_quantization_values[] = {
 };
 
 const char* const sequencer_input_response_values[] = {
-  "TRANSPOSE", "REPLACE", "DIRECT", "OFF"
+  "OFF", "TRANSPOSE", "REPLACE", "DIRECT"
 };
 
 const char* const sustain_mode_values[] = {
-  "NORMAL",
-  // "SOSTENUTO",
+  "OFF",
+  "SUSTAIN",
+  "SOSTENUTO",
   "LATCH",
   "MOMENTARY LATCH",
-  "OFF"
+  "C\x83 CLUTCH UP",
+  "C\x82 CLUTCH DOWN",
 };
 
-const char* const vibrato_control_source_values[] = {
-  "MODWHEEL", "AFTERTOUCH"
+const char* const hold_pedal_polarity_values[] = {
+  "- NEG YAMAHA ROLAND",
+  "+ POS CASIO KORG",
 };
 
 const char* const tuning_factor_values[] = {
@@ -162,10 +171,19 @@ const char* const tuning_factor_values[] = {
   "ALPHA"
 };
 
+const uint8_t kVibratoSpeedMax = LUT_LFO_INCREMENTS_SIZE + clock_division::count - 1;
+STATIC_ASSERT(kVibratoSpeedMax <= 127, overflow);
+
 /* static */
 const Setting Settings::settings_[] = {
   {
     "\x82""S", "SETUP MENU",
+    SETTING_DOMAIN_MULTI, { 0, 0 },
+    SETTING_UNIT_UINT8, 0, 0, NULL,
+    0, 0,
+  },
+  {
+    "\x82""O", "OSCILLATOR MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
     0, 0,
@@ -181,24 +199,6 @@ const Setting Settings::settings_[] = {
     SETTING_DOMAIN_MULTI, { MULTI_LAYOUT, 0 },
     SETTING_UNIT_ENUMERATION, LAYOUT_MONO, LAYOUT_LAST - 1, layout_values,
     0, 1,
-  },
-  {
-    "PA", "PART",
-    SETTING_DOMAIN_GLOBAL, { GLOBAL_ACTIVE_PART, 0 },
-    SETTING_UNIT_INDEX, 0, 3, NULL,
-    0, 0,
-  },
-  {
-    "PA", "PART",
-    SETTING_DOMAIN_GLOBAL, { GLOBAL_ACTIVE_PART, 0 },
-    SETTING_UNIT_INDEX, 0, 2, NULL,
-    0, 0,
-  },
-  {
-    "PA", "PART",
-    SETTING_DOMAIN_GLOBAL, { GLOBAL_ACTIVE_PART, 0 },
-    SETTING_UNIT_INDEX, 0, 1, NULL,
-    0, 0,
   },
   {
     "TE", "TEMPO",
@@ -219,9 +219,9 @@ const Setting Settings::settings_[] = {
     0, 0,
   },
   {
-    "O/", "OUTPUT CLK DIV",
+    "O/", "OUTPUT CLK RATIO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, clock_division::count - 1, clock_division::display,
+    SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
     0, 0,
   },
   {
@@ -293,8 +293,8 @@ const Setting Settings::settings_[] = {
   {
     "IT", "INPUT TRANSPOSE OCTAVES",
     SETTING_DOMAIN_PART, { PART_MIDI_TRANSPOSE_OCTAVES, 0 },
-    SETTING_UNIT_INT8, -10, 10, NULL,
-    0, 0,
+    SETTING_UNIT_INT8, -4, 3, NULL,
+    73, 0,
   },
   {
     "VO", "VOICING",
@@ -336,20 +336,14 @@ const Setting Settings::settings_[] = {
   {
     "VS", "VIBRATO SPEED",
     SETTING_DOMAIN_PART, { PART_VOICING_MODULATION_RATE, 0 },
-    SETTING_UNIT_VIBRATO_SPEED, 0, 100 + clock_division::count - 1, NULL,
+    SETTING_UNIT_VIBRATO_SPEED, 0, kVibratoSpeedMax, NULL,
     23, 14,
   },
   {
     "VI", "VIBRATO AMP INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_INITIAL, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
-    0, 0,
-  },
-  {
-    "VC", "VIBRATO CONTROL SOURCE",
-    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_CONTROL_SOURCE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, VIBRATO_CONTROL_SOURCE_LAST - 1, vibrato_control_source_values,
-    0, 0,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    81, 0,
   },
   {
     "TT", "TRANSPOSE",
@@ -360,7 +354,7 @@ const Setting Settings::settings_[] = {
   {
     "TF", "FINE TUNING",
     SETTING_DOMAIN_PART, { PART_VOICING_TUNING_FINE, 0 },
-    SETTING_UNIT_INT8, -64, 64, NULL,
+    SETTING_UNIT_INT8, -64, 63, NULL,
     25, 16,
   },
   {
@@ -413,51 +407,93 @@ const Setting Settings::settings_[] = {
     72, 0,
   },
   {
-    "OS", "OSC WAVE",
-    SETTING_DOMAIN_PART, { PART_VOICING_AUDIO_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, AUDIO_MODE_LAST - 1, voicing_oscillator_values,
+    "OM", "OSC MODE",
+    SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_MODE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_MODE_LAST - 1, voicing_oscillator_mode_values,
+    70, 0,
+  },
+  {
+    "OS", "OSC SHAPE",
+    SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_SHAPE_LAST - 1, voicing_oscillator_shape_values,
     71, 23,
   },
   {
     "PW", "OSC PW INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_INITIAL, 0 },
-    SETTING_UNIT_UINT8, 0, 127, NULL,
-    0, 0,
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    82, 0,
   },
   {
     "PM", "OSC PW MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_MOD, 0 },
-    SETTING_UNIT_INT8, -64, 63, NULL,
-    0, 0,
+    SETTING_UNIT_INT8, -32, 31, NULL,
+    83, 0,
   },
   {
-    "\x8F""A", "ENV ATTACK TIME",
-    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_ATTACK, 0 },
-    SETTING_UNIT_INT8, 0, 127, NULL,
-    0, 0,
+    "GI", "GAIN INITIAL",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_INIT, 0 },
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    90, 0,
   },
   {
-    "\x8F""D", "ENV DECAY TIME",
-    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_DECAY, 0 },
-    SETTING_UNIT_INT8, 0, 127, NULL,
-    0, 0,
+    "GM", "GAIN MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_MOD, 0 },
+    SETTING_UNIT_INT8, -32, 31, NULL,
+    91, 0,
   },
   {
-    "\x8F""S", "ENV SUSTAIN LEVEL",
-    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_SUSTAIN, 0 },
-    SETTING_UNIT_INT8, 0, 127, NULL,
-    0, 0,
+    "AI", "ATTACK TIME INIT",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_ATTACK, 0 },
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    77, 0,
   },
   {
-    "\x8F""R", "ENV RELEASE TIME",
-    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_RELEASE, 0 },
-    SETTING_UNIT_INT8, 0, 127, NULL,
-    0, 0,
+    "DI", "DECAY TIME INIT",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_DECAY, 0 },
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    78, 0,
   },
   {
-    "C/", "CLOCK DIV",
+    "SI", "SUSTAIN LEVEL INIT",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_SUSTAIN, 0 },
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    79, 0,
+  },
+  {
+    "RI", "RELEASE TIME INIT",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_RELEASE, 0 },
+    SETTING_UNIT_UINT8, 0, 63, NULL,
+    80, 0,
+  },
+  {
+    "AM", "ATTACK TIME MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_ATTACK, 0 },
+    SETTING_UNIT_INT8, -32, 31, NULL,
+    86, 0,
+  },
+  {
+    "DM", "DECAY TIME MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_DECAY, 0 },
+    SETTING_UNIT_INT8, -32, 31, NULL,
+    87, 0,
+  },
+  {
+    "SM", "SUSTAIN LEVEL MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_SUSTAIN, 0 },
+    SETTING_UNIT_INT8, -32, 31, NULL,
+    88, 0,
+  },
+  {
+    "RM", "RELEASE TIME MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_RELEASE, 0 },
+    SETTING_UNIT_INT8, -32, 31, NULL,
+    89, 0,
+  },
+  {
+    "C/", "CLK RATIO OUT-IN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_DIVISION, 0 },
-    SETTING_UNIT_ENUMERATION, 0, clock_division::count - 1, clock_division::display,
+    SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
     102, 24,
   },
   {
@@ -469,7 +505,7 @@ const Setting Settings::settings_[] = {
   {
     "AR", "ARP RANGE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_RANGE, 0 },
-    SETTING_UNIT_UINT8, 1, 4, NULL,
+    SETTING_UNIT_INDEX, 0, 3, NULL,
     104, 26,
   },
   {
@@ -477,61 +513,73 @@ const Setting Settings::settings_[] = {
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_DIRECTION, 0 },
     SETTING_UNIT_ENUMERATION, 0, ARPEGGIATOR_DIRECTION_LAST - 1,
     sequencer_arp_direction_values,
-    0, 0,
+    105, 27,
   },
   {
     "AP", "ARP PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
+    SETTING_UNIT_ARP_PATTERN, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE, NULL,
     106, 28,
   },
   {
     "RP", "RHYTHMIC PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_INDEX, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE - 1, NULL,
+    SETTING_UNIT_ARP_PATTERN, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE, NULL,
     0, 0,
   },
   {
     "E-", "EUCLIDEAN LENGTH",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_EUCLIDEAN_LENGTH, 0 },
-    SETTING_UNIT_UINT8, 0, 32, NULL,
+    SETTING_UNIT_UINT8, 0, 31, NULL,
     107, 29,
   },
   {
-    "EF", "EUCLIEAN FILL",
+    "EF", "EUCLIDEAN FILL",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_EUCLIDEAN_FILL, 0 },
-    SETTING_UNIT_UINT8, 0, 32, NULL,
+    SETTING_UNIT_UINT8, 0, 31, NULL,
     108, 30,
   },
   {
-    "ER", "EUCLIEAN ROTATE",
+    "ER", "EUCLIDEAN ROTATE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_EUCLIDEAN_ROTATE, 0 },
-    SETTING_UNIT_UINT8, 0, 32, NULL,
+    SETTING_UNIT_UINT8, 0, 31, NULL,
     109, 31,
   },
   {
-    "SP", "SEQUENCER PLAY MODE",
+    "PM", "PLAY MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_PLAY_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
-    0, 0,
+    114, 0,
   },
   {
-    "SI", "SEQUENCER INPUT RESPONSE",
+    "SI", "SEQ INPUT RESPONSE",
     SETTING_DOMAIN_PART, { PART_MIDI_INPUT_RESPONSE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SEQUENCER_INPUT_RESPONSE_LAST - 1, sequencer_input_response_values,
-    0, 0,
+    76, 0,
   },
   {
-    "RQ", "RECORD TIME QUANTIZATION",
+    "SM", "SEQ MODE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_QUANTIZATION, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, sequencer_clock_quantization_values,
-    0, 0,
+    75, 0,
   },
   {
-    "SU", "SUSTAIN MODE",
+    "L-", "LOOP LENGTH",
+    SETTING_DOMAIN_PART, { PART_SEQUENCER_LOOP_LENGTH, 0 },
+    SETTING_UNIT_LOOP_LENGTH, 0, 7, NULL,
+    84, 0,
+  },
+  {
+    "HM", "HOLD PEDAL MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SUSTAIN_MODE_LAST - 1, sustain_mode_values,
-    0, 0,
+    74, 0,
+  },
+  {
+    "HP", "HOLD PEDAL POLARITY",
+    SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_POLARITY, 0 },
+    SETTING_UNIT_ENUMERATION, 0, 1, hold_pedal_polarity_values,
+    85, 0,
   },
   {
     "RC", "REMOTE CONTROL CHANNEL",
@@ -549,97 +597,26 @@ const Setting Settings::settings_[] = {
 };
 
 void Settings::Init() {
-  global_.active_part = 0;
-  
   // Build tables used to convert from a CC to a parameter number.
-  std::fill(&part_cc_map_[0], &part_cc_map_[128], 0xff);
-  std::fill(&remote_control_cc_map_[0], &remote_control_cc_map_[128], 0xff);
+  std::fill(&part_cc_map[0], &part_cc_map[128], 0xff);
+  std::fill(&remote_control_cc_map[0], &remote_control_cc_map[128], 0xff);
   
   for (uint8_t i = 0; i < SETTING_LAST; ++i) {
     const Setting& setting = settings_[i];
     if (setting.part_cc) {
       if (setting.domain != SETTING_DOMAIN_PART) while (1);
-      part_cc_map_[setting.part_cc] = i;
+      part_cc_map[setting.part_cc] = i;
     }
     if (setting.remote_control_cc) {
       uint8_t num_instances = setting.domain == SETTING_DOMAIN_PART ? 4 : 1;
       for (uint8_t j = 0; j < num_instances; ++j) {
-        remote_control_cc_map_[setting.remote_control_cc + j * 32] = i;
+        remote_control_cc_map[setting.remote_control_cc + j * 32] = i;
       }
     }
   }
 }
 
-void Settings::Set(uint8_t address, uint8_t value) {
-  uint8_t* bytes;
-  bytes = static_cast<uint8_t*>(static_cast<void*>(&global_));
-  bytes[address] = value;
-}
-
-void Settings::SetFromCC(
-    uint8_t part_index,
-    uint8_t controller,
-    uint8_t value) {
-  uint8_t* map = part_index == 0xff ? remote_control_cc_map_ : part_cc_map_;
-  uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
-  uint8_t setting_index = map[controller];
-  if (setting_index != 0xff) {
-    const Setting& setting = settings_[setting_index];
-    Set(setting, &part, setting.Scale(value));
-  }
-}
-
-void Settings::Set(const Setting& setting, uint8_t* part, uint8_t value) {
-  switch (setting.domain) {
-    case SETTING_DOMAIN_GLOBAL:
-      Set(setting.address[0], value);
-      break;
-
-    case SETTING_DOMAIN_MULTI:
-      multi.Set(setting.address[0], value);
-      if (*part >= multi.num_active_parts()) {
-        *part = multi.num_active_parts() - 1;
-      }
-      break;
-
-    case SETTING_DOMAIN_PART:
-      multi.mutable_part(*part)->Set(setting.address[0], value);
-      // When the module is configured in *triggers* mode, each part is mapped
-      // to a single note. To edit this setting, both the "note min" and
-      // "note max" parameters are simultaneously changed to the same value.
-      // This is a bit more user friendly than letting the user set note min
-      // and note max to the same value.
-      if (setting.address[1]) {
-        multi.mutable_part(*part)->Set(setting.address[1], value);
-      }
-      break;
-  }
-}
-
-void Settings::Set(const Setting& setting, uint8_t value) {
-  Set(setting, &global_.active_part, value);
-}
-
-uint8_t Settings::Get(const Setting& setting) const {
-  uint8_t value = 0;
-  switch (setting.domain) {
-    case SETTING_DOMAIN_GLOBAL:
-      value = Get(setting.address[0]);
-      break;
-      
-    case SETTING_DOMAIN_MULTI:
-      value = multi.Get(setting.address[0]);
-      break;
-      
-    case SETTING_DOMAIN_PART:
-      value = multi.part(global_.active_part).Get(setting.address[0]);
-      break;
-  }
-  return value;
-}
-
-void Settings::Print(const Setting& setting, char* buffer) const {
-  uint8_t value = Get(setting);
+void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const {
   switch (setting.unit) {
     case SETTING_UNIT_UINT8:
       PrintInteger(buffer, value);
@@ -684,12 +661,16 @@ void Settings::Print(const Setting& setting, char* buffer) const {
         PrintInteger(buffer, value);
       }
       break;
+
+    case SETTING_UNIT_CLOCK_DIV:
+      strcpy(buffer, clock_division::list[value].display);
+      break;
     
     case SETTING_UNIT_VIBRATO_SPEED:
-      if (value < 100) {
+      if (value < LUT_LFO_INCREMENTS_SIZE) {
         PrintInteger(buffer, value);
       } else {
-        strcpy(buffer, clock_division::display[value - 100]);
+        Print(settings_[SETTING_SEQUENCER_CLOCK_DIVISION], value - LUT_LFO_INCREMENTS_SIZE, buffer);
       }
       break;
       
@@ -707,35 +688,22 @@ void Settings::Print(const Setting& setting, char* buffer) const {
     case SETTING_UNIT_ENUMERATION:
       strcpy(buffer, setting.values[value]);
       break;
+
+    case SETTING_UNIT_ARP_PATTERN:
+      if (value == 0) {
+        strcpy(buffer, "SEQUENCER");
+      } else {
+        PrintInteger(buffer, value);
+      }
+      break;
+
+    case SETTING_UNIT_LOOP_LENGTH:
+      PrintInteger(buffer, 1 << value);
+      break;
       
     default:
       strcpy(buffer, "??");
   }
-}
-
-void Settings::Increment(const Setting& setting, int16_t increment) {
-  int16_t value = Get(setting);
-  if (setting.unit == SETTING_UNIT_INT8) {
-    value = static_cast<int8_t>(value);
-  }
-  value += increment;
-  int16_t min_value = setting.min_value;
-  int16_t max_value = setting.max_value;
-  if (
-    &setting == &settings_[SETTING_VOICING_ALLOCATION_MODE] &&
-    multi.part(global_.active_part).num_voices() == 1
-  ) {
-    max_value = VOICE_ALLOCATION_MODE_MONO;
-  }
-  if (
-    multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
-    global_.active_part == 0 &&
-    &setting == &settings_[SETTING_VOICING_AUDIO_MODE]
-  ) {
-    min_value = AUDIO_MODE_SAW;
-  }
-  CONSTRAIN(value, min_value, max_value);
-  Set(setting, static_cast<uint8_t>(value));
 }
 
 /* static */
@@ -768,6 +736,6 @@ void Settings::PrintSignedInteger(char* buffer, int8_t number) {
 }
 
 /* extern */
-Settings settings;
+Settings setting_defs;
 
 }  // namespace yarns

@@ -37,6 +37,7 @@
 #include "yarns/midi_handler.h"
 #include "yarns/settings.h"
 #include "yarns/clock_division.h"
+#include "yarns/ui.h"
 
 namespace yarns {
   
@@ -60,17 +61,18 @@ void Multi::Init(bool reset_calibration) {
   }
   for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
     cv_outputs_[i].Init(reset_calibration);
-    cv_outputs_[i].assign_voices(&voice_[i]);
   }
   running_ = false;
   recording_ = false;
+  recording_part_ = 0;
+  started_by_keyboard_ = true;
   
   // Put the multi in a usable state. Even if these settings will later be
   // overriden with some data retrieved from Flash (presets).
   settings_.clock_tempo = 120;
   settings_.clock_swing = 0;
   settings_.clock_input_division = 1;
-  settings_.clock_output_division = 6; // /4
+  settings_.clock_output_division = clock_division::unity;
   settings_.clock_bar_duration = 4;
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
@@ -86,13 +88,12 @@ void Multi::Init(bool reset_calibration) {
   // seq->step[2].data[1] = 0x7f;
   // seq->step[3].data[0] = 72;
   // seq->step[3].data[1] = 0x7f;
-  // voicing->audio_mode = 1;
+  // voicing->oscillator_shape = 1;
   // settings_.clock_tempo = 100;
   // settings_.clock_swing = 99;
 
-  num_active_parts_ = 1;
-  part_[0].AllocateVoices(&voice_[0], 1, false);
   settings_.layout = LAYOUT_MONO;
+  AfterDeserialize();
 }
 
 void Multi::Clock() {
@@ -100,7 +101,7 @@ void Multi::Clock() {
     return;
   }
   
-  uint16_t output_division = clock_division::num_ticks[settings_.clock_output_division];
+  uint16_t output_division = clock_division::list[settings_.clock_output_division].num_ticks;
   uint16_t input_division = settings_.clock_input_division;
   
   if (previous_output_division_ &&
@@ -182,7 +183,7 @@ void Multi::Clock() {
   
   if (stop_count_down_) {
     --stop_count_down_;
-    if (!stop_count_down_ && started_by_keyboard_ && internal_clock()) {
+    if (!stop_count_down_ && CanAutoStop()) {
       Stop();
     }
   }
@@ -199,7 +200,6 @@ void Multi::Start(bool started_by_keyboard) {
   }
   midi_handler.OnStart();
 
-  started_by_keyboard_ = started_by_keyboard;
   running_ = true;
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;
@@ -230,7 +230,7 @@ void Multi::Stop() {
   reset_pulse_counter_ = 0;
   stop_count_down_ = 0;
   running_ = false;
-  started_by_keyboard_ = false;
+  started_by_keyboard_ = true;
   song_pointer_ = NULL;
 }
 
@@ -255,7 +255,11 @@ void Multi::Refresh() {
   }
 
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
-    part_[j].Refresh();
+    Part& part = part_[j];
+    part.mutable_looper().Refresh();
+    for (uint8_t v = 0; v < part.num_voices(); ++v) {
+      part.voice(v)->Refresh(v);
+    }
   }
 
   for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
@@ -263,40 +267,41 @@ void Multi::Refresh() {
   }
 }
 
-void Multi::Set(uint8_t address, uint8_t value) {
+bool Multi::Set(uint8_t address, uint8_t value) {
   uint8_t* bytes;
   bytes = static_cast<uint8_t*>(static_cast<void*>(&settings_));
   uint8_t previous_value = bytes[address];
   bytes[address] = value;
-  if (value != previous_value) {
-    if (address == MULTI_LAYOUT) {
-      ChangeLayout(
-          static_cast<Layout>(previous_value),
-          static_cast<Layout>(value));
-    } else if (address == MULTI_CLOCK_TEMPO) {
-      internal_clock_.set_tempo(settings_.clock_tempo);
-    } else if (address == MULTI_CLOCK_SWING) {
-      internal_clock_.set_swing(settings_.clock_swing);
-    }
+  if (value == previous_value) { return false; }
+  if (address == MULTI_LAYOUT) {
+    ChangeLayout(
+        static_cast<Layout>(previous_value),
+        static_cast<Layout>(value));
+  } else if (address == MULTI_CLOCK_TEMPO) {
+    internal_clock_.set_tempo(settings_.clock_tempo);
+  } else if (address == MULTI_CLOCK_SWING) {
+    internal_clock_.set_swing(settings_.clock_swing);
   }
+  return true;
 }
 
 void Multi::AssignVoicesToCVOutputs() {
   switch (settings_.layout) {
     case LAYOUT_MONO:
     case LAYOUT_DUAL_POLYCHAINED:
-      for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-        cv_outputs_[i].assign_voices(&voice_[0]);
-      }
+      cv_outputs_[0].assign(&voice_[0], 0);
+      cv_outputs_[1].assign(&voice_[0], 0);
+      cv_outputs_[2].assign(&voice_[0], 0);
+      cv_outputs_[3].assign(&voice_[0], 1);
       break;
 
     case LAYOUT_DUAL_MONO:
     case LAYOUT_DUAL_POLY:
     case LAYOUT_QUAD_POLYCHAINED:
-      cv_outputs_[0].assign_voices(&voice_[0]);
-      cv_outputs_[1].assign_voices(&voice_[1]);
-      cv_outputs_[2].assign_voices(&voice_[0]);
-      cv_outputs_[3].assign_voices(&voice_[1]);
+      cv_outputs_[0].assign(&voice_[0], 0);
+      cv_outputs_[1].assign(&voice_[1], 0);
+      cv_outputs_[2].assign(&voice_[0], 1);
+      cv_outputs_[3].assign(&voice_[1], 1);
       break;
 
     case LAYOUT_QUAD_MONO:
@@ -307,22 +312,22 @@ void Multi::AssignVoicesToCVOutputs() {
     case LAYOUT_QUAD_TRIGGERS:
     case LAYOUT_QUAD_VOLTAGES:
       for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-        cv_outputs_[i].assign_voices(&voice_[i]);
+        cv_outputs_[i].assign(&voice_[i], 1);
       }
       break;
 
     case LAYOUT_TWO_ONE:
-      cv_outputs_[0].assign_voices(&voice_[0]);
-      cv_outputs_[1].assign_voices(&voice_[1]);
-      cv_outputs_[2].assign_voices(&voice_[2]);
-      cv_outputs_[3].assign_voices(&voice_[2]);
+      cv_outputs_[0].assign(&voice_[0], 1);
+      cv_outputs_[1].assign(&voice_[1], 1);
+      cv_outputs_[2].assign(&voice_[2], 1);
+      cv_outputs_[3].assign(&voice_[2], 0);
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      cv_outputs_[0].assign_voices(&voice_[0], kNumParaphonicVoices);
-      cv_outputs_[1].assign_voices(&voice_[kNumParaphonicVoices]);
-      cv_outputs_[2].assign_voices(&voice_[kNumParaphonicVoices]);
-      cv_outputs_[3].assign_voices(&voice_[kNumParaphonicVoices + 1]);
+      cv_outputs_[0].assign(&voice_[0], kNumParaphonicVoices);
+      cv_outputs_[1].assign(&voice_[kNumParaphonicVoices], 1);
+      cv_outputs_[2].assign(&voice_[kNumParaphonicVoices], 0);
+      cv_outputs_[3].assign(&voice_[kNumParaphonicVoices + 1], 1);
       break;
   }
 }
@@ -449,60 +454,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
   }
 }
 
-void Multi::GetAudioSource(bool* audio_source) {
-  switch (settings_.layout) {
-    case LAYOUT_MONO:
-    case LAYOUT_DUAL_POLYCHAINED:
-      audio_source[0] = false;
-      audio_source[1] = false;
-      audio_source[2] = false;
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-      
-    case LAYOUT_DUAL_MONO:
-    case LAYOUT_DUAL_POLY:
-    case LAYOUT_QUAD_POLYCHAINED:
-      audio_source[0] = false;
-      audio_source[1] = false;
-      audio_source[2] = cv_outputs_[2].has_audio();
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-      
-    case LAYOUT_QUAD_MONO:
-    case LAYOUT_QUAD_POLY:
-    case LAYOUT_OCTAL_POLYCHAINED:
-    case LAYOUT_THREE_ONE:
-    case LAYOUT_TWO_TWO:
-      audio_source[0] = cv_outputs_[0].has_audio();
-      audio_source[1] = cv_outputs_[1].has_audio();
-      audio_source[2] = cv_outputs_[2].has_audio();
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-    
-    case LAYOUT_TWO_ONE:
-      audio_source[0] = cv_outputs_[0].has_audio();
-      audio_source[1] = cv_outputs_[1].has_audio();
-      audio_source[2] = false;
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-
-    case LAYOUT_PARAPHONIC_PLUS_TWO:
-      audio_source[0] = true;
-      audio_source[1] = cv_outputs_[1].has_audio();
-      audio_source[2] = false;
-      audio_source[3] = cv_outputs_[3].has_audio();
-      break;
-
-    case LAYOUT_QUAD_TRIGGERS:
-    case LAYOUT_QUAD_VOLTAGES:
-      audio_source[0] = false;
-      audio_source[1] = false;
-      audio_source[2] = false;
-      audio_source[3] = false;
-      break;
-  }
-}
-
 void Multi::GetLedsBrightness(uint8_t* brightness) {
   if (layout_configurator_.learning()) {
     fill(&brightness[0], &brightness[kNumCVOutputs], 0);
@@ -561,8 +512,7 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
         const uint8_t last_voice_index = part_[0].FindVoiceForNote(last_note.note);
         brightness[0] = (cv_outputs_[0].gate() && last_voice_index != VOICE_ALLOCATION_NOT_FOUND) ? (part_[0].voice(last_voice_index)->velocity() << 1) : 0;
         brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
-        bool on_2 = settings_.clock_override ? clock() : voice_[kNumParaphonicVoices].trigger();
-        brightness[2] = on_2 ? voice_[kNumParaphonicVoices].aux_cv() : 0;
+        brightness[2] = voice_[kNumParaphonicVoices].aux_cv();
         brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;
       }
       break;
@@ -638,7 +588,7 @@ void Multi::AllocateParts() {
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
       {
-        CONSTRAIN(part_[0].mutable_voicing_settings()->audio_mode, 1, AUDIO_MODE_LAST - 1);
+        CONSTRAIN(part_[0].mutable_voicing_settings()->oscillator_mode, OSCILLATOR_MODE_OFF + 1, OSCILLATOR_MODE_LAST - 1);
         part_[0].AllocateVoices(&voice_[0], kNumParaphonicVoices, false);
         part_[1].AllocateVoices(&voice_[kNumParaphonicVoices], 1, false);
         part_[2].AllocateVoices(&voice_[kNumParaphonicVoices + 1], 1, false);
@@ -717,14 +667,14 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
   }
 }
 
-void Multi::Touch() {
+void Multi::AfterDeserialize() {
   Stop();
 
   internal_clock_.set_tempo(settings_.clock_tempo);
   AllocateParts();
   
   for (uint8_t i = 0; i < kNumParts; ++i) {
-    part_[i].Touch();
+    part_[i].AfterDeserialize();
   }
 }
 
@@ -736,10 +686,10 @@ const uint8_t song[] = {
 
 void Multi::StartSong() {
   Set(MULTI_LAYOUT, LAYOUT_QUAD_MONO);
-  part_[0].mutable_voicing_settings()->audio_mode = 0x83;
-  part_[1].mutable_voicing_settings()->audio_mode = 0x83;
-  part_[2].mutable_voicing_settings()->audio_mode = 0x84;
-  part_[3].mutable_voicing_settings()->audio_mode = 0x86;
+  part_[0].mutable_voicing_settings()->oscillator_shape = 0x83;
+  part_[1].mutable_voicing_settings()->oscillator_shape = 0x83;
+  part_[2].mutable_voicing_settings()->oscillator_shape = 0x84;
+  part_[3].mutable_voicing_settings()->oscillator_shape = 0x86;
   AllocateParts();
   settings_.clock_tempo = 140;
   Stop();
@@ -773,29 +723,162 @@ void Multi::ClockSong() {
   ++song_clock_;
 }
 
-bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
-  bool thru = true;
-  
-  if (channel + 1 == settings_.remote_control_channel) {
-    yarns::settings.SetFromCC(0xff, controller, value);
-    if (num_active_parts_ >= 4 && \
-        (controller == 0x78 || controller == 0x79 || controller == 0x7b)) {
-      // Do not continue to avoid treating these messages as "all sound off",
-      // "reset all controllers" and "all notes off" CC.
-      return true;
+void Multi::StartRecording(uint8_t part) {
+  if (
+    part_[part].midi_settings().play_mode == PLAY_MODE_MANUAL ||
+    part >= num_active_parts_
+  ) {
+    return;
+  }
+  if (recording_) {
+    if (recording_part_ == part) {
+      return;
+    } else {
+      StopRecording(recording_part_);
     }
   }
-  
-  for (uint8_t i = 0; i < num_active_parts_; ++i) {
-    if (part_[i].accepts(channel) && \
-        channel + 1 != settings_.remote_control_channel) {
-      thru = part_[i].ControlChange(channel, controller, value) && thru;
-      yarns::settings.SetFromCC(i, controller, value);
+  if (part_[part].looper_in_use()) {
+    // Looper needs a running clock
+    Start(false);
+  }
+  part_[part].StartRecording();
+  recording_ = true;
+  recording_part_ = part;
+}
+
+void Multi::StopRecording(uint8_t part) {
+  if (recording_ && recording_part_ == part) {
+    part_[part].StopRecording();
+    recording_ = false;
+  }
+}
+
+bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
+  bool thru = true;
+  if (
+    is_remote_control_channel(channel) &&
+    setting_defs.remote_control_cc_map[controller] != 0xff
+  ) {
+    SetFromCC(0xff, controller, value);
+  } else {
+    for (uint8_t i = 0; i < num_active_parts_; ++i) {
+      if (!part_accepts(i, channel)) { continue; }
+      if (controller == kCCRecordOffOn) {
+        // Intercept this CC so multi can update its own recording state
+        value >= 64 ? StartRecording(i) : StopRecording(i);
+        ui.SplashOn(SPLASH_ACTIVE_PART);
+      } else if (controller == kCCDeleteRecording) {
+        // Splash needs part index
+        part_[i].DeleteRecording();
+        ui.SetSplashPart(i);
+        ui.SplashOn(SPLASH_DELETE_RECORDING);
+      } else {
+        thru = part_[i].ControlChange(channel, controller, value) && thru;
+        SetFromCC(i, controller, value);
+      }
     }
   }
   return thru;
 }
 
+void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bits) {
+  uint8_t* map = part_index == 0xff ?
+    setting_defs.remote_control_cc_map : setting_defs.part_cc_map;
+  uint8_t setting_index = map[controller];
+  if (setting_index == 0xff) { return; }
+  const Setting& setting = setting_defs.get(setting_index);
+
+  int16_t scaled_value;
+  uint8_t range = setting.max_value - setting.min_value + 1;
+  scaled_value = range * value_7bits >> 7;
+  scaled_value += setting.min_value;
+  if (setting.unit == SETTING_UNIT_TEMPO) {
+    scaled_value &= 0xfe;
+    if (scaled_value < TEMPO_EXTERNAL) {
+      scaled_value = TEMPO_EXTERNAL;
+    }
+  }
+
+  uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
+  ApplySettingAndSplash(setting, part, scaled_value);
+}
+
+void Multi::ApplySettingAndSplash(const Setting& setting, uint8_t part, int16_t raw_value) {
+  ApplySetting(setting, part, raw_value);
+  ui.SplashSetting(setting, part);
+}
+
+void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value) {
+  // Apply dynamic min/max as needed
+  int16_t min_value = setting.min_value;
+  int16_t max_value = setting.max_value;
+  if (
+    &setting == &setting_defs.get(SETTING_VOICING_ALLOCATION_MODE) &&
+    multi.part(part).num_voices() == 1
+  ) {
+    max_value = VOICE_ALLOCATION_MODE_MONO;
+  }
+  if (
+    multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&
+    part == 0 &&
+    &setting == &setting_defs.get(SETTING_VOICING_OSCILLATOR_MODE)
+  ) {
+    min_value = OSCILLATOR_MODE_DRONE;
+  }
+  CONSTRAIN(raw_value, min_value, max_value);
+  uint8_t value = static_cast<uint8_t>(raw_value);
+
+  uint8_t prev_value = GetSetting(setting, part);
+  if (prev_value == value) { return; }
+
+  bool layout = &setting == &setting_defs.get(SETTING_LAYOUT);
+  bool sequencer_semantics = \
+    &setting == &setting_defs.get(SETTING_SEQUENCER_PLAY_MODE) ||
+    &setting == &setting_defs.get(SETTING_SEQUENCER_CLOCK_QUANTIZATION) || (
+      &setting == &setting_defs.get(SETTING_SEQUENCER_ARP_PATTERN) && (
+        prev_value == 0 || value == 0
+      )
+    );
+
+  if (running_ && layout) { Stop(); }
+  if (recording_ && (
+    layout || (recording_part_ == part && sequencer_semantics)
+  )) { StopRecording(recording_part_); }
+  if (sequencer_semantics) { part_[part].StopSequencerArpeggiatorNotes(); }
+
+  switch (setting.domain) {
+    case SETTING_DOMAIN_MULTI:
+      multi.Set(setting.address[0], value);
+      break;
+    case SETTING_DOMAIN_PART:
+      // When the module is configured in *triggers* mode, each part is mapped
+      // to a single note. To edit this setting, both the "note min" and
+      // "note max" parameters are simultaneously changed to the same value.
+      // This is a bit more user friendly than letting the user set note min
+      // and note max to the same value.
+      if (setting.address[1]) {
+        multi.mutable_part(part)->Set(setting.address[1], value);
+      }
+      multi.mutable_part(part)->Set(setting.address[0], value);
+      break;
+
+    default:
+      break;
+  }
+}
+
+uint8_t Multi::GetSetting(const Setting& setting, uint8_t part) const {
+  uint8_t value = 0;
+  switch (setting.domain) {
+    case SETTING_DOMAIN_MULTI:
+      value = multi.Get(setting.address[0]);
+      break;
+    case SETTING_DOMAIN_PART:
+      value = multi.part(part).Get(setting.address[0]);
+      break;
+  }
+  return value;
+}
 
 /* extern */
 Multi multi;

@@ -31,6 +31,7 @@
 #define YARNS_DRIVERS_DISPLAY_H_
 
 #include <cmath>
+#include <algorithm>
 #include "stmlib/stmlib.h"
 
 namespace yarns {
@@ -59,20 +60,24 @@ class Display {
     Print(string, string);
   }
   void Print(const char* short_string, const char* long_string);
+
+  inline void PrintMasks(const uint16_t* masks) {
+    std::copy(&masks[0], &masks[kDisplayWidth], &mask_[0]);
+    use_mask_ = true;
+  }
   
   char* mutable_buffer() { return short_buffer_; }
   void set_brightness(uint16_t fraction) {
     uint16_t base = fraction >> (16 - kDisplayBrightnessLinearizingBaseBits);
-    uint32_t power = pow(base, kDisplayBrightnessLinearizingExponent);
+    uint32_t power = base * base;
     brightness_ = power >> (kDisplayBrightnessLinearizingPowerBits - 16);
   }
   void Scroll();
   
   inline bool scrolling() const { return scrolling_; }
   inline void set_blink(bool blinking) { blinking_ = blinking; }
-  inline void set_fade(uint16_t increment) {
+  inline void set_fade(uint16_t increment) { // Applied at 1kHz
     fading_increment_ = increment;
-    fading_counter_ = 0;
   }
  
  private:
@@ -81,6 +86,8 @@ class Display {
   char short_buffer_[kDisplayWidth];
   char long_buffer_[kScrollBufferSize];
   char* displayed_buffer_;
+  uint16_t mask_[kDisplayWidth];
+  bool use_mask_;
   uint8_t long_buffer_size_;
   uint16_t actual_brightness_;
 
@@ -96,6 +103,7 @@ class Display {
   uint16_t active_position_;
   uint16_t brightness_pwm_cycle_;
   uint16_t brightness_;
+  bool redraw_[kDisplayWidth];
   uint16_t blink_counter_;
   
   DISALLOW_COPY_AND_ASSIGN(Display);

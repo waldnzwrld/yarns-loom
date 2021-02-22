@@ -45,7 +45,6 @@ using namespace stmlib;
 
 Dac dac;
 GateOutput gate_output;
-Ui ui;
 MidiIO midi_io;
 System sys;
 
@@ -108,7 +107,10 @@ void SysTick_Handler() {
   gate_output.Write(gate);
   multi.Refresh();
   multi.GetCvGate(cv, gate);
-  multi.GetAudioSource(audio_source);
+  audio_source[0] = multi.cv_output(0).has_audio();
+  audio_source[1] = multi.cv_output(1).has_audio();
+  audio_source[2] = multi.cv_output(2).has_audio();
+  audio_source[3] = multi.cv_output(3).has_audio();
   has_audio_sources = audio_source[0] || audio_source[1] || audio_source[2] || audio_source[3];
   
   // In calibration mode, overrides the DAC outputs with the raw calibration
@@ -166,7 +168,7 @@ void TIM1_UP_IRQHandler(void) {
 void Init() {
   sys.Init();
   
-  settings.Init();
+  setting_defs.Init();
   multi.Init(true);
   ui.Init();
 
