@@ -90,24 +90,26 @@ class Oscillator {
   Oscillator() { }
   ~Oscillator() { }
   void Init(int32_t scale, int32_t offset);
-  void Render(uint8_t shape, int16_t note, bool gate, uint16_t gain);
+  void Render(uint8_t shape, int16_t note, bool gate);
   inline uint16_t ReadSample() {
     return audio_buffer_.ImmediateRead();
   }
   inline void SetPulseWidth(uint32_t pw) { pulse_width_ = pw; }
+  inline void set_gain(uint16_t gain) {
+    amplitude_ = (scale_ * gain) >> 16;
+  }
 
  private:
   uint32_t ComputePhaseIncrement(int16_t pitch) const;
   
   void RenderSilence();
-  void RenderNoise(uint16_t gain);
-  void RenderSine(uint16_t gain, uint32_t phase_increment);
-  void RenderSaw(uint16_t gain, uint32_t phase_increment);
-  void RenderSquare(uint16_t gain, uint32_t phase_increment, uint32_t pw, bool integrate);
+  void RenderNoise();
+  void RenderSine(uint32_t phase_increment);
+  void RenderSaw(uint32_t phase_increment);
+  void RenderSquare(uint32_t phase_increment, uint32_t pw, bool integrate);
 
-  inline void WriteSample(uint16_t gain, int16_t sample) {
-    int32_t amplitude = (scale_ * gain) >> 16;
-    audio_buffer_.Overwrite(offset_ - ((amplitude * sample) >> 16));
+  inline void WriteSample(int16_t sample) {
+    audio_buffer_.Overwrite(offset_ - ((amplitude_ * sample) >> 16));
   }
 
   inline int32_t ThisBlepSample(uint32_t t) const {
@@ -127,6 +129,7 @@ class Oscillator {
   
   int32_t scale_;
   int32_t offset_;
+  int32_t amplitude_;
   uint32_t phase_;
   int32_t next_sample_;
   int32_t integrator_state_;
@@ -236,26 +239,8 @@ class Voice {
     envelope_amplitude_ = a;
   }
 
-  inline uint16_t scaled_envelope() const {
-    uint32_t value = envelope_.value();
-    value = (value * envelope_amplitude_) >> 16;
-    return value;
-  }
-
   inline void RenderAudio() {
-    uint16_t gain;
-    switch (oscillator_mode_) {
-      case OSCILLATOR_MODE_DRONE:
-        gain = UINT16_MAX;
-        break;
-      case OSCILLATOR_MODE_ENVELOPED:
-        gain = scaled_envelope();
-        break;
-      case OSCILLATOR_MODE_OFF:
-      default:
-        return;
-    }
-    oscillator_.Render(oscillator_shape_, note_, gate_, gain);
+    oscillator_.Render(oscillator_shape_, note_, gate_);
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
