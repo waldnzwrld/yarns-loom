@@ -152,27 +152,28 @@ void Voice::Refresh(uint8_t voice_index) {
   } else {
     synced_lfo_.Refresh();
   }
-  uint32_t lfo_phase = synced_lfo_.GetPhase() + voice_index * kQuadrature;
+  uint32_t lfo_phase = synced_lfo_.GetPhase() + (voice_index << 30);
   int32_t lfo = synced_lfo_.Triangle(lfo_phase);
   uint16_t vibrato_level = mod_wheel_ + (vibrato_initial_ << 1);
   CONSTRAIN(vibrato_level, 0, 127);
-  note += lfo * vibrato_level * vibrato_range_ >> 15;
+  int32_t attenuated_lfo = lfo * vibrato_level;
+  note += attenuated_lfo * vibrato_range_ >> 15;
   mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
   mod_aux_[MOD_AUX_MODULATION] = mod_wheel_ << 9;
   mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[MOD_AUX_VIBRATO_LFO] = (lfo * vibrato_level >> 7) + 32768;
+  mod_aux_[MOD_AUX_VIBRATO_LFO] = (attenuated_lfo >> 7) + 32768;
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
   
   // Use quadrature phase for PWM LFO
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
-  int32_t pw_30bit = \
+  int32_t pw_20bit = \
     // Initial range 0..1
-    (oscillator_pw_initial_ << (30 - 6)) +
+    (oscillator_pw_initial_ << (20 - 6)) +
     // Mod range -1..1 with cubic scaling
-    lfo * oscillator_pw_mod_ * oscillator_pw_mod_ * oscillator_pw_mod_;
-  int32_t min_pw = 1 << (30 - kOscillatorPWMRatioBits);
-  CONSTRAIN(pw_30bit, min_pw, (1 << 30) - min_pw)
-  oscillator_.SetPulseWidth(pw_30bit << (32 - 30));
+    lfo * oscillator_pw_mod_;
+  int32_t min_pw = 1 << (20 - kOscillatorPWMRatioBits);
+  CONSTRAIN(pw_20bit, min_pw, (1 << 20) - min_pw)
+  oscillator_.SetPulseWidth(pw_20bit << (32 - 20));
 
   if (retrigger_delay_) {
     --retrigger_delay_;
