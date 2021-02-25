@@ -15,8 +15,8 @@
 - If a single tap is received without follow-up, the tempo is set to use external clocking
 - After setting a tempo, the result flashes on the screen
 
-### Other tweaks
-- Moved configuration-type settings into a submenu, accessed by opening `▽S (SETUP MENU)`.  Settings relevant to live performance remain in the top-level menu
+### Other changes
+- Moved configuration-type settings into a submenu, accessed by opening `▽S (SETUP MENU)`
 - Print flat notes as lowercase character (instead of denoting flatness with `b`) so that octave can always be displayed
 - Improved clock-sync of display fade for the `TE(MPO)` setting
 

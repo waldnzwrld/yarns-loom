@@ -39,7 +39,7 @@ APPLICATION_SMALL = TRUE
 UPLOAD_COMMAND  = upload_combo_jtag
 
 # Packages to build
-TARGET         = yarns
+TARGET         = yarns-loom
 PACKAGES       = yarns yarns/drivers stmlib/utils stmlib/system
 RESOURCES      = yarns/resources
 

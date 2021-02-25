@@ -16,7 +16,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 
 ### Caveats
 - Installation of this firmware is at your own risk
-- Presets saved in this firmware cannot be loaded with the manufacturer's firmware, and vice versa
+- Presets saved in this firmware cannot be loaded with the manufacturer's firmware, and vice versa.  Users are advised to run `INIT` from the main menu after switching firmware
 - Some changes are not documented in the changelog
 - Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 31 notes instead of the original 64)
 
@@ -24,10 +24,11 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 1. Download `yarns.syx` from the [latest release's assets](https://github.com/rcrogers/mutable-instruments-eurorack/releases/latest)
 2. [Follow the manufacturer's instructions for installing new firmware](https://mutable-instruments.net/modules/yarns/manual/#firmware)
 
-### Contributing
+### Contributions and support
 - License: MIT License
 - Forks, pull requests, feature ideas, and bug reports are welcome
 - Responses and merges are at my discretion
+- [Patreon link](https://www.patreon.com/rcrogers)
 
 ### Acknowledgements
 - Thanks to [forum user `Airell`](https://forum.mutable-instruments.net/t/yarns-firmware-wish-list/8051/39) for the idea of per-part latching
