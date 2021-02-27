@@ -180,79 +180,79 @@ const Setting Settings::settings_[] = {
     "\x82""S", "SETUP MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "\x82""O", "OSCILLATOR MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "\x82""\x8F", "ENVELOPE MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "LA", "LAYOUT",
     SETTING_DOMAIN_MULTI, { MULTI_LAYOUT, 0 },
     SETTING_UNIT_ENUMERATION, LAYOUT_MONO, LAYOUT_LAST - 1, layout_values,
-    0, 1,
+    0xff, 1,
   },
   {
     "TE", "TEMPO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_TEMPO, 0 },
     SETTING_UNIT_TEMPO, TEMPO_EXTERNAL, 240, NULL,
-    0, 2,
+    0xff, 2,
   },
   {
     "SW", "SWING",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_SWING, 0 },
     SETTING_UNIT_UINT8, 0, 99, NULL,
-    0, 3,
+    0xff, 3,
   },
   {
     "I/", "INPUT CLK DIV",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_INPUT_DIVISION, 0 },
     SETTING_UNIT_UINT8, 1, 4, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "O/", "OUTPUT CLK RATIO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
     SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
-    0, 0,
+    0xff, 0,
   },
   {
     "B-", "BAR DURATION",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_BAR_DURATION, 0 },
     SETTING_UNIT_BAR_DURATION, 0, kMaxBarDuration + 1, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "NU", "NUDGE 1ST TICK",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_NUDGE_FIRST_TICK, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, boolean_values,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "MS", "CLOCK MANUAL START",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_MANUAL_START, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, boolean_values,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "C>", "CLOCK OUTPUT",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OVERRIDE, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, boolean_values,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "CH", "CHANNEL",
     SETTING_DOMAIN_PART, { PART_MIDI_CHANNEL, 0 },
     SETTING_UNIT_MIDI_CHANNEL, 0, 16, NULL,
-    0, 4,
+    0xff, 4,
   },
   {
     "N>", "NOTE>",
@@ -270,31 +270,31 @@ const Setting Settings::settings_[] = {
     "NO", "NOTE",
     SETTING_DOMAIN_PART, { PART_MIDI_MIN_NOTE, PART_MIDI_MAX_NOTE },
     SETTING_UNIT_UINT8, 0, 127, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "V>", "VELO>",
     SETTING_DOMAIN_PART, { PART_MIDI_MIN_VELOCITY, 0 },
     SETTING_UNIT_UINT8, 0, 127, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "V<", "VELO<",
     SETTING_DOMAIN_PART, { PART_MIDI_MAX_VELOCITY, 0 },
     SETTING_UNIT_UINT8, 0, 127, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     ">>", "OUTPUT MIDI MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_OUT_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, 2, midi_out_mode_values,
-    0, 7,
+    0xff, 7,
   },
   {
     "IT", "INPUT TRANSPOSE OCTAVES",
     SETTING_DOMAIN_PART, { PART_MIDI_TRANSPOSE_OCTAVES, 0 },
     SETTING_UNIT_INT8, -4, 3, NULL,
-    73, 0,
+    73, 0xff,
   },
   {
     "VO", "VOICING",
@@ -343,7 +343,7 @@ const Setting Settings::settings_[] = {
     "VI", "VIBRATO AMP INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_INITIAL, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    81, 0,
+    81, 0xff,
   },
   {
     "TT", "TRANSPOSE",
@@ -404,13 +404,13 @@ const Setting Settings::settings_[] = {
     "4>", "CV OUT 4",
     SETTING_DOMAIN_PART, { PART_VOICING_AUX_CV_2, 0 },
     SETTING_UNIT_ENUMERATION, 0, MOD_AUX_LAST - 1, voicing_aux_cv_values,
-    72, 0,
+    72, 0xff,
   },
   {
     "OM", "OSC MODE",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_MODE_LAST - 1, voicing_oscillator_mode_values,
-    70, 0,
+    70, 0xff,
   },
   {
     "OS", "OSC SHAPE",
@@ -422,73 +422,73 @@ const Setting Settings::settings_[] = {
     "PW", "OSC PW INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_INITIAL, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    82, 0,
+    82, 0xff,
   },
   {
     "PM", "OSC PW MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_MOD, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
-    83, 0,
+    83, 0xff,
   },
   {
     "GI", "GAIN INITIAL",
     SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_INIT, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    90, 0,
+    90, 0xff,
   },
   {
     "GM", "GAIN MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_MOD, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
-    91, 0,
+    91, 0xff,
   },
   {
     "AI", "ATTACK TIME INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_ATTACK, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    77, 0,
+    77, 0xff,
   },
   {
     "DI", "DECAY TIME INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_DECAY, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    78, 0,
+    78, 0xff,
   },
   {
     "SI", "SUSTAIN LEVEL INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_SUSTAIN, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    79, 0,
+    79, 0xff,
   },
   {
     "RI", "RELEASE TIME INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_RELEASE, 0 },
     SETTING_UNIT_UINT8, 0, 63, NULL,
-    80, 0,
+    80, 0xff,
   },
   {
     "AM", "ATTACK TIME MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_ATTACK, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
-    86, 0,
+    86, 0xff,
   },
   {
     "DM", "DECAY TIME MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_DECAY, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
-    87, 0,
+    87, 0xff,
   },
   {
     "SM", "SUSTAIN LEVEL MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_SUSTAIN, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
-    88, 0,
+    88, 0xff,
   },
   {
     "RM", "RELEASE TIME MOD",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_RELEASE, 0 },
     SETTING_UNIT_INT8, -32, 31, NULL,
-    89, 0,
+    89, 0xff,
   },
   {
     "C/", "CLK RATIO OUT-IN",
@@ -525,7 +525,7 @@ const Setting Settings::settings_[] = {
     "RP", "RHYTHMIC PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
     SETTING_UNIT_ARP_PATTERN, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "E-", "EUCLIDEAN LENGTH",
@@ -549,50 +549,50 @@ const Setting Settings::settings_[] = {
     "PM", "PLAY MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_PLAY_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, PLAY_MODE_LAST - 1, sequencer_play_mode_values,
-    114, 0,
+    114, 0xff,
   },
   {
     "SI", "SEQ INPUT RESPONSE",
     SETTING_DOMAIN_PART, { PART_MIDI_INPUT_RESPONSE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SEQUENCER_INPUT_RESPONSE_LAST - 1, sequencer_input_response_values,
-    76, 0,
+    76, 0xff,
   },
   {
     "SM", "SEQ MODE",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_QUANTIZATION, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, sequencer_clock_quantization_values,
-    75, 0,
+    75, 0xff,
   },
   {
     "L-", "LOOP LENGTH",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_LOOP_LENGTH, 0 },
     SETTING_UNIT_LOOP_LENGTH, 0, 7, NULL,
-    84, 0,
+    84, 0xff,
   },
   {
     "HM", "HOLD PEDAL MODE",
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_MODE, 0 },
     SETTING_UNIT_ENUMERATION, 0, SUSTAIN_MODE_LAST - 1, sustain_mode_values,
-    74, 0,
+    74, 0xff,
   },
   {
     "HP", "HOLD PEDAL POLARITY",
     SETTING_DOMAIN_PART, { PART_MIDI_SUSTAIN_POLARITY, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, hold_pedal_polarity_values,
-    85, 0,
+    85, 0xff,
   },
   {
     "RC", "REMOTE CONTROL CHANNEL",
     SETTING_DOMAIN_MULTI, { MULTI_REMOTE_CONTROL_CHANNEL, 0 },
     SETTING_UNIT_MIDI_CHANNEL_OFF, 0, 16, NULL,
-    0, 0,
+    0xff, 0xff,
   },
   {
     "T*", "TUNING FACTOR",
     SETTING_DOMAIN_PART, { PART_VOICING_TUNING_FACTOR, 0 },
     SETTING_UNIT_ENUMERATION, 0, 13,
     tuning_factor_values,
-    0, 0,
+    0xff, 0xff,
   }
 };
 
@@ -603,11 +603,11 @@ void Settings::Init() {
   
   for (uint8_t i = 0; i < SETTING_LAST; ++i) {
     const Setting& setting = settings_[i];
-    if (setting.part_cc) {
+    if (setting.part_cc != 0xff) {
       if (setting.domain != SETTING_DOMAIN_PART) while (1);
       part_cc_map[setting.part_cc] = i;
     }
-    if (setting.remote_control_cc) {
+    if (setting.remote_control_cc != 0xff) {
       uint8_t num_instances = setting.domain == SETTING_DOMAIN_PART ? 4 : 1;
       for (uint8_t j = 0; j < num_instances; ++j) {
         remote_control_cc_map[setting.remote_control_cc + j * 32] = i;
