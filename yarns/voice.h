@@ -393,7 +393,7 @@ class CVOutput {
     dirty_ = true;
   }
 
-  inline uint16_t volts_dac_code(uint8_t volts) const {
+  inline uint16_t volts_dac_code(int8_t volts) const {
     return calibration_dac_code(volts + 3);
   }
 
