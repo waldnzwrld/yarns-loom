@@ -654,17 +654,20 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       break;
     case ARPEGGIATOR_DIRECTION_STEP_ROTATE:
       {
-        next.key_increment = 0; // These arp directions move before playing the note
         if (seq_step.is_white()) {
+          // Move immediately
+          next.key_increment = 0;
           next.key_index = key_with_octave + seq_step.white_key_distance_from_middle_c();
-          next.octave = next.key_index / num_keys;
         } else { // If black key
-          next.key_index = seq_step.black_key_distance_from_middle_c();
-          next.octave = abs(next.key_index / num_keys);
-          if (next.octave > seq_.arp_range) {
-            return next; // Rest
+          int8_t key_offset = seq_step.black_key_distance_from_middle_c();
+          if (abs(key_offset) >= num_keys * (seq_.arp_range + 1)) {
+            // If offset is outside range, rest
+            return next;
           }
+          next.key_index += key_offset;
+          next.key_increment = -key_offset;
         }
+        next.octave = next.key_index / num_keys;
       }
       break;
     case ARPEGGIATOR_DIRECTION_STEP_SUBROTATE:
