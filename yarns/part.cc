@@ -790,40 +790,40 @@ void Part::ReleaseLatchedNotes(PressedKeys &keys) {
 }
 
 void Part::DispatchSortedNotes(bool unison, bool force_legato) {
-  uint8_t n = mono_allocator_.size();
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    uint8_t index = 0xff;
-    if (unison && n < num_voices_) {
+  uint8_t num_notes = mono_allocator_.size();
+  for (uint8_t voice_i = 0; voice_i < num_voices_; ++voice_i) {
+    uint8_t note_i = 0xff;
+    if (unison && num_notes < num_voices_) {
       // distribute extra voices evenly among notes
-      index = n ? (i * n / num_voices_) : 0xff;
+      note_i = num_notes ? (voice_i * num_notes / num_voices_) : 0xff;
     } else {
-      index = i < mono_allocator_.size() ? i : 0xff;
+      note_i = voice_i < mono_allocator_.size() ? voice_i : 0xff;
     }
-    if (index != 0xff) {
-      const NoteEntry& note_entry = priority_note(index);
-      bool legato = force_legato || active_note_[i] == note_entry.note;
-      VoiceNoteOn(voice_[i], note_entry.note, note_entry.velocity, legato);
-      active_note_[i] = note_entry.note;
+    if (note_i != 0xff) {
+      const NoteEntry& note_entry = priority_note(note_i);
+      bool legato = force_legato || active_note_[voice_i] == note_entry.note;
+      VoiceNoteOnLegato(voice_[voice_i], note_entry.note, note_entry.velocity, legato);
+      active_note_[voice_i] = note_entry.note;
     } else {
-      voice_[i]->NoteOff();
-      active_note_[i] = VOICE_ALLOCATION_NOT_FOUND;
+      voice_[voice_i]->NoteOff();
+      active_note_[voice_i] = VOICE_ALLOCATION_NOT_FOUND;
     }
   }
 }
 
-void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
-  VoiceNoteOnWithADSR(
+void Part::VoiceNoteOnLegato(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
+  VoiceNoteOn(
     voice,
-    Tune(pitch),
+    pitch,
     velocity,
     (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
     (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato
   );
 }
 
-void Part::VoiceNoteOnWithADSR(
+void Part::VoiceNoteOn(
   Voice* voice,
-  int16_t pitch,
+  uint8_t pitch,
   uint8_t vel,
   uint8_t portamento,
   bool trigger
@@ -839,7 +839,7 @@ void Part::VoiceNoteOnWithADSR(
     modulate_7bit(voicing_.env_init_release << 1, voicing_.env_mod_release << 1, vel)
   );
 
-  voice->NoteOn(pitch, vel, portamento, trigger);
+  voice->NoteOn(Tune(pitch), vel, portamento, trigger);
 }
 
 void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
@@ -856,7 +856,7 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     if (before.note != after.note) {
       bool legato = mono_allocator_.size() > 1;
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOn(voice_[i], after.note, after.velocity, legato);
+        VoiceNoteOnLegato(voice_[i], after.note, after.velocity, legato);
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
@@ -898,9 +898,9 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     if (voice_index < num_voices_) {
       // Prevent the same note from being simultaneously played on two channels.
       KillAllInstancesOfNote(note);
-      VoiceNoteOnWithADSR(
+      VoiceNoteOn(
         voice_[voice_index],
-        Tune(note),
+        note,
         velocity,
         voicing_.portamento,
         true
@@ -947,9 +947,9 @@ void Part::InternalNoteOff(uint8_t note) {
       // Removing the note gives priority to another note that is still being
       // pressed. Slide to this note (or retrigger is legato mode is off).
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOnWithADSR(
+        VoiceNoteOn(
           voice_[i],
-          Tune(after.note),
+          after.note,
           after.velocity,
           voicing_.portamento,
           voicing_.legato_mode == LEGATO_MODE_OFF
