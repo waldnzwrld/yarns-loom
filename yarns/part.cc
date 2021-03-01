@@ -791,7 +791,7 @@ void Part::ReleaseLatchedNotes(PressedKeys &keys) {
 
 struct DispatchNote {
   NoteEntry const* note;
-  bool done = false;
+  bool done;
 };
 
 void Part::DispatchSortedNotes(bool legato) {
@@ -804,6 +804,7 @@ void Part::DispatchSortedNotes(bool legato) {
   DispatchNote dispatch[num_dispatch];
   for (uint8_t d = 0; d < num_dispatch; ++d) {
     dispatch[d].note = &priority_note(d % num_notes);
+    dispatch[d].done = false;
   }
   bool voice_intact[num_voices_];
   std::fill(&voice_intact[0], &voice_intact[num_voices_], false);
