@@ -965,7 +965,7 @@ class Part {
   void TouchVoices();
   
   void ReleaseLatchedNotes(PressedKeys &keys);
-  void DispatchSortedNotes(bool unison, bool force_legato);
+  void DispatchSortedNotes(bool legato);
   void VoiceNoteOnLegato(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato);
   void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, uint8_t portamento, bool trigger);
   void KillAllInstancesOfNote(uint8_t note);
