@@ -789,24 +789,51 @@ void Part::ReleaseLatchedNotes(PressedKeys &keys) {
   }
 }
 
-void Part::DispatchSortedNotes(bool unison, bool force_legato) {
+struct DispatchNote {
+  NoteEntry const* note;
+  bool done = false;
+};
+
+void Part::DispatchSortedNotes(bool legato) {
   uint8_t num_notes = mono_allocator_.size();
-  for (uint8_t voice_i = 0; voice_i < num_voices_; ++voice_i) {
-    uint8_t note_i = 0xff;
-    if (unison && num_notes < num_voices_) {
-      // distribute extra voices evenly among notes
-      note_i = num_notes ? (voice_i * num_notes / num_voices_) : 0xff;
-    } else {
-      note_i = voice_i < mono_allocator_.size() ? voice_i : 0xff;
+  uint8_t num_dispatch = num_voices_;
+  bool unison = voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED;
+  if (!unison) { num_dispatch = std::min(num_dispatch, num_notes); }
+
+  // Set up structures to track assignments
+  DispatchNote dispatch[num_dispatch];
+  for (uint8_t d = 0; d < num_dispatch; ++d) {
+    dispatch[d].note = &priority_note(d % num_notes);
+  }
+  bool voice_intact[num_voices_];
+  std::fill(&voice_intact[0], &voice_intact[num_voices_], false);
+
+  // First pass: find voices that don't need to change
+  for (uint8_t v = 0; v < num_voices_; ++v) {
+    for (uint8_t d = 0; d < num_dispatch; ++d) {
+      if (dispatch[d].done) { continue; }
+      if (active_note_[v] != dispatch[d].note->note) { continue; }
+      dispatch[d].done = true;
+      voice_intact[v] = true;
+      break; // Voice keeps its current note
     }
-    if (note_i != 0xff) {
-      const NoteEntry& note_entry = priority_note(note_i);
-      bool legato = force_legato || active_note_[voice_i] == note_entry.note;
-      VoiceNoteOnLegato(voice_[voice_i], note_entry.note, note_entry.velocity, legato);
-      active_note_[voice_i] = note_entry.note;
-    } else {
-      voice_[voice_i]->NoteOff();
-      active_note_[voice_i] = VOICE_ALLOCATION_NOT_FOUND;
+  }
+  // Second pass: change remaining voices
+  for (uint8_t v = 0; v < num_voices_; ++v) {
+    if (voice_intact[v]) { continue; }
+    const NoteEntry* note = NULL;
+    for (uint8_t d = 0; d < num_dispatch; ++d) {
+      if (dispatch[d].done) { continue; }
+      dispatch[d].done = true;
+      note = dispatch[d].note;
+      break; // Voice gets this note
+    }
+    if (note) {
+      active_note_[v] = note->note;
+      VoiceNoteOnLegato(voice_[v], note->note, note->velocity, legato);
+    } else if (active_note_[v] != VOICE_ALLOCATION_NOT_FOUND) {
+      voice_[v]->NoteOff();
+      active_note_[v] = VOICE_ALLOCATION_NOT_FOUND;
     }
   }
 }
@@ -862,8 +889,7 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
-    DispatchSortedNotes(
-        voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED, false);
+    DispatchSortedNotes(false);
   } else {
     uint8_t voice_index = 0;
     switch (voicing_.allocation_mode) {
@@ -964,7 +990,7 @@ void Part::InternalNoteOff(uint8_t note) {
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
         mono_allocator_.size() >= num_voices_
     ) {
-      DispatchSortedNotes(true, true);
+      DispatchSortedNotes(true);
     }
   } else {
     uint8_t voice_index = \
