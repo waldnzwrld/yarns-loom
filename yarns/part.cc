@@ -93,7 +93,7 @@ void Part::Init() {
   voicing_.tuning_system = TUNING_SYSTEM_EQUAL;
   voicing_.tuning_factor = 0;
   voicing_.oscillator_mode = OSCILLATOR_MODE_OFF;
-  voicing_.oscillator_shape = OSC_SHAPE_TRIANGLE_FOLD;
+  voicing_.oscillator_shape = OSC_SHAPE_FM;
 
   voicing_.envelope_amplitude_init = 16;
   voicing_.envelope_amplitude_mod = 24;

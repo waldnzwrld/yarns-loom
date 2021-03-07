@@ -333,6 +333,60 @@ void Oscillator::RenderSineSync() {
   modulator_phase_ = slave_phase;
 }
 
+const uint32_t kPhaseReset[] = {
+  0,
+  0x80000000,
+  0x40000000,
+  0x80000000
+};
+
+void Oscillator::RenderDigitalFilter() {
+  int16_t shifted_pitch = pitch_ + ((parameter_ - 2048) >> 2);
+  if (shifted_pitch > 16383) {
+    shifted_pitch = 16383;
+  }
+  uint32_t modulator_phase = modulator_phase_;
+  
+  uint8_t filter_type = 0;
+  size_t size = kAudioBlockSize;
+  
+  uint32_t modulator_phase_increment = modulator_phase_increment_;
+  uint32_t target_increment = ComputePhaseIncrement(shifted_pitch);
+  uint32_t modulator_phase_increment_increment = 
+    modulator_phase_increment < target_increment
+    ? (target_increment - modulator_phase_increment) / size
+    : ~((modulator_phase_increment - target_increment) / size);
+    
+  while (size--) {
+    phase_ += phase_increment_;
+    modulator_phase_increment += modulator_phase_increment_increment;
+    modulator_phase += modulator_phase_increment;
+    
+    if (phase_ < phase_increment_) {
+      modulator_phase = kPhaseReset[filter_type];
+    }
+    
+    int32_t carrier = Interpolate824(wav_sine, modulator_phase);
+    
+    uint16_t saw = ~(phase_ >> 16);
+    // uint16_t triangle = (phase_ >> 15) ^ (phase_ & 0x80000000 ? 0xffff : 0x0000);
+    uint16_t window = saw; // aux_parameter_ < 16384 ? saw : triangle;
+    
+    int16_t saw_tri_signal;
+    
+    if (filter_type & 2) {
+      saw_tri_signal = (carrier * window) >> 16;
+    } else {
+      saw_tri_signal = (window * (carrier + 32768) >> 16) - 32768;
+    }
+    // uint16_t balance = (aux_parameter_ < 16384 ? 
+    //                     aux_parameter_ : ~aux_parameter_) << 2;
+    WriteSample(saw_tri_signal);
+  }
+  modulator_phase_ = modulator_phase;
+  modulator_phase_increment_ = modulator_phase_increment;
+}
+
 void Oscillator::RenderBuzz() {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
@@ -365,10 +419,10 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderVariableSaw,
   &Oscillator::RenderCSaw,
   &Oscillator::RenderSquare,
-  &Oscillator::RenderTriangleFold,
-  &Oscillator::RenderSineFold,
-  &Oscillator::RenderFM,
   &Oscillator::RenderSineSync,
+  &Oscillator::RenderFM,
+  &Oscillator::RenderDigitalFilter,
+  &Oscillator::RenderSineFold,
   &Oscillator::RenderNoise,
 };
 

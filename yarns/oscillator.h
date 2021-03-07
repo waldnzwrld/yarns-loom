@@ -44,10 +44,10 @@ enum OscillatorShape {
   OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_CSAW,
   OSC_SHAPE_SQUARE,
-  OSC_SHAPE_TRIANGLE_FOLD,
-  OSC_SHAPE_SINE_FOLD,
+  OSC_SHAPE_SINE_SYNC,
   OSC_SHAPE_FM,
-  OSC_SHAPE_SYNC,
+  OSC_SHAPE_CZ,
+  OSC_SHAPE_SINE_FOLD,
   OSC_SHAPE_NOISE,
 
   OSC_SHAPE_LAST
@@ -104,9 +104,11 @@ class Oscillator {
       case OSC_SHAPE_SINE_FOLD:
         strength -= 6 * (pitch_ - (92 << 7));
         break;
+      /*
       case OSC_SHAPE_TRIANGLE_FOLD:
         strength -= 7 * (pitch_ - (80 << 7));
         break;
+      */
       default:
         break;
     }
@@ -136,6 +138,7 @@ class Oscillator {
   void RenderSineFold();
   void RenderFM();
   void RenderSineSync();
+  void RenderDigitalFilter();
   void RenderBuzz();
   void RenderNoise();
   
@@ -167,6 +170,7 @@ class Oscillator {
   int16_t discontinuity_depth_;
   int16_t pitch_;
   uint32_t modulator_phase_;
+  uint32_t modulator_phase_increment_;
   
   int32_t next_sample_;
   
