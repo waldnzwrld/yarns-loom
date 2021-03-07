@@ -47,7 +47,7 @@ enum OscillatorShape {
   OSC_SHAPE_TRIANGLE_FOLD,
   OSC_SHAPE_SINE_FOLD,
   OSC_SHAPE_FM,
-  OSC_SHAPE_BUZZ,
+  OSC_SHAPE_SYNC,
   OSC_SHAPE_NOISE,
 
   OSC_SHAPE_LAST
@@ -135,6 +135,7 @@ class Oscillator {
   void RenderTriangleFold();
   void RenderSineFold();
   void RenderFM();
+  void RenderSineSync();
   void RenderBuzz();
   void RenderNoise();
   

@@ -302,6 +302,37 @@ void Oscillator::RenderFM() {
   modulator_phase_ = modulator_phase;
 }
 
+void Oscillator::RenderSineSync() {
+  uint32_t slave_phase = modulator_phase_;
+  uint32_t slave_phase_increment = ComputePhaseIncrement(
+    pitch_ + (parameter_ >> 4)
+  );
+  int32_t next_sample = next_sample_;
+  size_t size = kAudioBlockSize;
+  while (size--) {
+    int32_t this_sample = next_sample;
+    next_sample = 0;
+    phase_ += phase_increment_;
+    if (phase_ < phase_increment_) {
+      uint8_t master_sync_time = phase_ / (phase_increment_ >> 7);
+      uint32_t master_reset_time = static_cast<uint32_t>(master_sync_time) << 9;
+      uint32_t slave_phase_at_reset = slave_phase + \
+        (65535 - master_reset_time) * (slave_phase_increment >> 16);
+      int32_t before = Interpolate824(wav_sine, slave_phase_at_reset);
+      int32_t after = wav_sine[0];
+      int32_t discontinuity = after - before;
+      this_sample += discontinuity * ThisBlepSample(master_reset_time) >> 15;
+      next_sample += discontinuity * NextBlepSample(master_reset_time) >> 15;
+      slave_phase = master_reset_time * (slave_phase_increment >> 16);
+    } else {
+      slave_phase += slave_phase_increment;
+    }
+    next_sample += Interpolate824(wav_sine, slave_phase);
+    WriteSample(next_sample);
+  }
+  modulator_phase_ = slave_phase;
+}
+
 void Oscillator::RenderBuzz() {
   int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
   uint16_t crossfade = shifted_pitch << 6;
@@ -337,7 +368,7 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderTriangleFold,
   &Oscillator::RenderSineFold,
   &Oscillator::RenderFM,
-  &Oscillator::RenderBuzz,
+  &Oscillator::RenderSineSync,
   &Oscillator::RenderNoise,
 };
 
