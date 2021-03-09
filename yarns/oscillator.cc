@@ -88,11 +88,12 @@ void Oscillator::Render() {
 }
 
 void Oscillator::RenderCSaw() {
+  uint32_t pw = static_cast<uint32_t>(parameter_) * 49152;
+
   size_t size = kAudioBlockSize;
   int32_t next_sample = next_sample_;
   while (size--) {
     bool self_reset = false;
-    uint32_t pw = static_cast<uint32_t>(parameter_) * 49152;
     if (pw < (phase_increment_ << 3)) {
       pw = phase_increment_ << 3;
     }

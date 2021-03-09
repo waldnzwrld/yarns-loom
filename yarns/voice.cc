@@ -172,7 +172,7 @@ void Voice::Refresh(uint8_t voice_index) {
     lfo * oscillator_pw_mod_;
   CONSTRAIN(parameter_20, 0, (1 << 20) - 1);
   oscillator_.set_parameter(parameter_20 >> (20 - 15));
-  oscillator_.set_aux_parameter(parameter_20 >> (20 - 15));
+  oscillator_.set_aux_parameter(32767 - (parameter_20 >> (20 - 15)));
 
   if (retrigger_delay_) {
     --retrigger_delay_;
