@@ -347,7 +347,7 @@ void Oscillator::RenderDigitalFilter() {
   }
   uint32_t modulator_phase = modulator_phase_;
   
-  uint8_t filter_type = 0;
+  uint8_t filter_type = shape_ - OSC_SHAPE_CZ_LP;
   size_t size = kAudioBlockSize;
   
   uint32_t modulator_phase_increment = modulator_phase_increment_;
@@ -422,8 +422,8 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderSineSync,
   &Oscillator::RenderFM,
   &Oscillator::RenderDigitalFilter,
+  &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderSineFold,
-  &Oscillator::RenderNoise,
 };
 
 }  // namespace yarns
