@@ -131,8 +131,8 @@ enum SustainMode {
   SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
   SUSTAIN_MODE_MOMENTARY_LATCH,
-  SUSTAIN_MODE_CLUTCH_UP,
-  SUSTAIN_MODE_CLUTCH_DOWN,
+  SUSTAIN_MODE_CLUTCH,
+  SUSTAIN_MODE_FILTER,
   SUSTAIN_MODE_LAST,
 };
 
@@ -800,7 +800,10 @@ class Part {
   }
   void PressedKeysSustainOn(PressedKeys &keys);
   void PressedKeysSustainOff(PressedKeys &keys);
-  inline PressedKeys& PressedKeysForLatchUI() {
+  inline const PressedKeys& PressedKeysForLatchUI() const {
+    return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
+  }
+  inline PressedKeys& MutablePressedKeysForLatchUI() {
     return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
   }
   inline void PressedKeysResetLatch(PressedKeys &keys) {

@@ -762,7 +762,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
     SetFromCC(0xff, controller, value);
   } else {
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (!part_accepts(i, channel)) { continue; }
+      if (!part_accepts_channel(i, channel)) { continue; }
       if (controller == kCCRecordOffOn) {
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);

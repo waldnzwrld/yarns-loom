@@ -212,14 +212,12 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
       break;
     case SUSTAIN_MODE_LATCH:
     case SUSTAIN_MODE_MOMENTARY_LATCH:
+    case SUSTAIN_MODE_FILTER:
       keys.ignore_note_off_messages = true;
       keys.release_latched_keys_on_next_note_on = true;
       break;
-    case SUSTAIN_MODE_CLUTCH_UP:
+    case SUSTAIN_MODE_CLUTCH:
       keys.Clutch(false);
-      break;
-    case SUSTAIN_MODE_CLUTCH_DOWN:
-      keys.Clutch(true);
       break;
     case SUSTAIN_MODE_OFF:
     default:
@@ -238,16 +236,14 @@ void Part::PressedKeysSustainOff(PressedKeys &keys) {
       ReleaseLatchedNotes(keys);
       break;
     case SUSTAIN_MODE_LATCH:
+    case SUSTAIN_MODE_FILTER:
       keys.ignore_note_off_messages = false;
       keys.release_latched_keys_on_next_note_on = true;
       break;
     case SUSTAIN_MODE_MOMENTARY_LATCH:
       PressedKeysResetLatch(keys);
-    case SUSTAIN_MODE_CLUTCH_UP:
+    case SUSTAIN_MODE_CLUTCH:
       keys.Clutch(true);
-      break;
-    case SUSTAIN_MODE_CLUTCH_DOWN:
-      keys.Clutch(false);
       break;
     case SUSTAIN_MODE_OFF:
     default:
@@ -1053,6 +1049,7 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_MIDI_SUSTAIN_MODE:
     case PART_MIDI_SUSTAIN_POLARITY:
       ResetLatch();
+      AllNotesOff();
       break;
 
     default:

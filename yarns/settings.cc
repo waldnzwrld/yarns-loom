@@ -145,8 +145,8 @@ const char* const sustain_mode_values[] = {
   "SOSTENUTO",
   "LATCH",
   "MOMENTARY LATCH",
-  "C\x83 CLUTCH UP",
-  "C\x82 CLUTCH DOWN",
+  "CLUTCH",
+  "FILTER",
 };
 
 const char* const hold_pedal_polarity_values[] = {

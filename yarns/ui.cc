@@ -723,7 +723,7 @@ void Ui::OnSwitchPress(const Event& e) {
 }
 
 PressedKeys& Ui::LatchableKeys() {
-  return mutable_active_part()->PressedKeysForLatchUI();
+  return mutable_active_part()->MutablePressedKeysForLatchUI();
 }
 
 void Ui::OnSwitchHeld(const Event& e) {

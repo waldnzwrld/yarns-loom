@@ -183,14 +183,16 @@ class Multi {
     return part_[part].midi_settings();
   }
 
-  inline bool part_accepts(uint8_t part, uint8_t channel) const {
+  inline bool part_accepts_channel(uint8_t part, uint8_t channel) const {
     return is_remote_control_channel(channel) ||
       midi(part).channel == 0x10 ||
       midi(part).channel == channel;
   }
 
-  inline bool part_accepts(uint8_t part, uint8_t channel, uint8_t note) const {
-    if (!part_accepts(part, channel)) {
+  inline bool part_accepts_note(
+    uint8_t part, uint8_t channel, uint8_t note
+  ) const {
+    if (!part_accepts_channel(part, channel)) {
       return false;
     }
     if (midi(part).min_note <= midi(part).max_note) {
@@ -200,8 +202,16 @@ class Multi {
     }
   }
 
-  inline bool part_accepts(uint8_t part, uint8_t channel, uint8_t note, uint8_t velocity) const {
-    return part_accepts(part, channel, note) && \
+  inline bool part_accepts_note_on(
+    uint8_t part, uint8_t channel, uint8_t note, uint8_t velocity
+  ) const {
+    if (
+      midi(part).sustain_mode == SUSTAIN_MODE_FILTER &&
+      part_[part].PressedKeysForLatchUI().ignore_note_off_messages
+    ) {
+      return false;
+    }
+    return part_accepts_note(part, channel, note) && \
         velocity >= midi(part).min_velocity && \
         velocity <= midi(part).max_velocity;
   }
@@ -211,12 +221,12 @@ class Multi {
 
     bool thru = true;
     bool received = false;
-    if (recording_ && part_accepts(recording_part_, channel, note, velocity)) {
+    if (recording_ && part_accepts_note_on(recording_part_, channel, note, velocity)) {
       received = true;
       thru = part_[recording_part_].NoteOn(channel, part_[recording_part_].TransposeInputPitch(note), velocity) && thru;
     } else {
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        if (!part_accepts(i, channel, note, velocity)) { continue; }
+        if (!part_accepts_note_on(i, channel, note, velocity)) { continue; }
         received = true;
         thru = part_[i].NoteOn(channel, part_[i].TransposeInputPitch(note), velocity) && thru;
       }
@@ -240,7 +250,7 @@ class Multi {
     bool has_notes = false;
 
     if (
-      recording_ && part_accepts(recording_part_, channel, note) &&
+      recording_ && part_accepts_note(recording_part_, channel, note) &&
       // Recording part currently has the resulting note
       part_[recording_part_].PressedKeysForLatchUI().stack.Find(
         part_[recording_part_].TransposeInputPitch(note)
@@ -253,7 +263,7 @@ class Multi {
     } else {
       for (uint8_t i = 0; i < num_active_parts_; ++i) {
         has_notes = has_notes || part_[i].has_notes();
-        if (!part_accepts(i, channel, note)) { continue; }
+        if (!part_accepts_note(i, channel, note)) { continue; }
         thru = part_[i].NoteOff(channel, part_[i].TransposeInputPitch(note)) && thru;
       }
     }
@@ -274,7 +284,7 @@ class Multi {
   bool PitchBend(uint8_t channel, uint16_t pitch_bend) {
     bool thru = true;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_accepts(i, channel)) {
+      if (part_accepts_channel(i, channel)) {
         thru = part_[i].PitchBend(channel, pitch_bend) && thru;
       }
     }
@@ -284,7 +294,7 @@ class Multi {
   bool Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity) {
     bool thru = true;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_accepts(i, channel, note)) {
+      if (part_accepts_note(i, channel, note)) {
         thru = part_[i].Aftertouch(channel, note, velocity) && thru;
       }
     }
@@ -294,7 +304,7 @@ class Multi {
   bool Aftertouch(uint8_t channel, uint8_t velocity) {
     bool thru = true;
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (part_accepts(i, channel)) {
+      if (part_accepts_channel(i, channel)) {
         thru = part_[i].Aftertouch(channel, velocity) && thru;
       }
     }
