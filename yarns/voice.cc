@@ -46,7 +46,6 @@ using namespace stmlib_midi;
 const int32_t kOctave = 12 << 7;
 const int32_t kMaxNote = 120 << 7;
 const int32_t kQuadrature = 0x40000000;
-const uint8_t kOscillatorPWMRatioBits = 7;
 
 void Voice::Init() {
   note_ = -1;

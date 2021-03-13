@@ -167,7 +167,7 @@ struct PackedPart {
     tuning_fine : 7;
   unsigned int timbre_mod_lfo : kTimbreBits;
   signed int
-    envelope_amplitude_mod : kTimbreBits,
+    timbre_mod_velocity : kTimbreBits,
     env_mod_attack : kTimbreBits,
     env_mod_decay : kTimbreBits,
     env_mod_sustain : kTimbreBits,
@@ -206,7 +206,7 @@ struct PackedPart {
     tuning_factor : 4,
     oscillator_mode : 2,
     oscillator_shape : 3,
-    oscillator_pw_initial : kTimbreBits;
+    timbre_initial : kTimbreBits;
   signed int timbre_mod_envelope : kTimbreBits;
   unsigned int
     env_init_attack : kTimbreBits,
@@ -295,10 +295,10 @@ struct VoicingSettings {
   uint8_t tuning_factor;
   uint8_t oscillator_mode;
   uint8_t oscillator_shape;
-  uint8_t oscillator_pw_initial;
+  uint8_t timbre_initial;
   uint8_t timbre_mod_lfo;
   int8_t timbre_mod_envelope;
-  int8_t envelope_amplitude_mod;
+  int8_t timbre_mod_velocity;
   uint8_t env_init_attack;
   uint8_t env_init_decay;
   uint8_t env_init_sustain;
@@ -330,10 +330,10 @@ struct VoicingSettings {
     packed.tuning_factor = tuning_factor;
     packed.oscillator_mode = oscillator_mode;
     packed.oscillator_shape = oscillator_shape;
-    packed.oscillator_pw_initial = oscillator_pw_initial;
+    packed.timbre_initial = timbre_initial;
     packed.timbre_mod_lfo = timbre_mod_lfo;
     packed.timbre_mod_envelope = timbre_mod_envelope;
-    packed.envelope_amplitude_mod = envelope_amplitude_mod;
+    packed.timbre_mod_velocity = timbre_mod_velocity;
     packed.env_init_attack = env_init_attack;
     packed.env_init_decay = env_init_decay;
     packed.env_init_sustain = env_init_sustain;
@@ -365,10 +365,10 @@ struct VoicingSettings {
     tuning_factor = packed.tuning_factor;
     oscillator_mode = packed.oscillator_mode;
     oscillator_shape = packed.oscillator_shape;
-    oscillator_pw_initial = packed.oscillator_pw_initial;
+    timbre_initial = packed.timbre_initial;
     timbre_mod_lfo = packed.timbre_mod_lfo;
     timbre_mod_envelope = packed.timbre_mod_envelope;
-    envelope_amplitude_mod = packed.envelope_amplitude_mod;
+    timbre_mod_velocity = packed.timbre_mod_velocity;
     env_init_attack = packed.env_init_attack;
     env_init_decay = packed.env_init_decay;
     env_init_sustain = packed.env_init_sustain;
