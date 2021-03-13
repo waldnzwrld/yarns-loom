@@ -1025,7 +1025,7 @@ void Part::TouchVoices() {
     voice_[i]->set_oscillator_mode(voicing_.oscillator_mode);
     voice_[i]->set_oscillator_shape(voicing_.oscillator_shape);
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
-    voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
+    voice_[i]->set_timbre_init(voicing_.oscillator_pw_initial);
     voice_[i]->set_timbre_mod_lfo(voicing_.timbre_mod_lfo);
   }
 }

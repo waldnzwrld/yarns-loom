@@ -167,11 +167,21 @@ void Voice::Refresh(uint8_t voice_index) {
 
   uint16_t envelope_value = envelope_.Render();
   uint32_t scaled_envelope = envelope_value * envelope_amplitude_;
+
+  // Apply a simple slew to the initial timbre
+  int32_t timbre_init_delta = timbre_init_target_21_ - timbre_init_current_21_;
+  if (timbre_init_delta) {
+    int32_t timbre_init_increment = timbre_init_delta >> 5;
+    if (!timbre_init_increment) {
+      timbre_init_increment = timbre_init_delta > 0 ? 1 : -1;
+    }
+    timbre_init_current_21_ += timbre_init_increment;
+  }
   
   // Use quadrature phase for timbre modulation
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
   int32_t parameter_21 = \
-    (oscillator_pw_initial_ << (21 - 6)) +
+    timbre_init_current_21_ +
     (scaled_envelope >> (32 - 21)) +
     lfo * timbre_mod_lfo_;
   CONSTRAIN(parameter_21, 0, (1 << 21) - 1);
@@ -237,6 +247,7 @@ void Voice::NoteOn(
     CONSTRAIN(portamento_phase_increment_, 1, 0x7FFFFFFF);
     portamento_exponential_shape_ = false;
   }
+  timbre_init_current_21_ = timbre_init_target_21_;
 
   mod_velocity_ = velocity;
 

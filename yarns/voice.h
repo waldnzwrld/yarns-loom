@@ -146,8 +146,8 @@ class Voice {
   inline void set_oscillator_shape(uint8_t s) {
     oscillator_.set_shape(static_cast<OscillatorShape>(s));
   }
-  inline void set_oscillator_pw_initial(uint8_t pw) {
-    oscillator_pw_initial_ = pw;
+  inline void set_timbre_init(uint8_t n) {
+    timbre_init_target_21_ = n << (21 - 6);
   }
   inline void set_timbre_mod_lfo(uint8_t n) { timbre_mod_lfo_ = n; }
   
@@ -222,7 +222,8 @@ class Voice {
   uint32_t trigger_phase_;
   
   uint8_t oscillator_mode_;
-  uint8_t oscillator_pw_initial_;
+  int32_t timbre_init_target_21_;
+  int32_t timbre_init_current_21_;
   int8_t timbre_mod_lfo_;
   Oscillator oscillator_;
   Envelope envelope_;
