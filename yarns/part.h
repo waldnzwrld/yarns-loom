@@ -164,8 +164,9 @@ struct PackedPart {
     transpose_octaves : 3,
     // VoicingSettings
     tuning_transpose : 7,
-    tuning_fine : 7,
-    oscillator_pw_mod : kTimbreBits,
+    tuning_fine : 7;
+  unsigned int timbre_mod_lfo : kTimbreBits;
+  signed int
     envelope_amplitude_mod : kTimbreBits,
     env_mod_attack : kTimbreBits,
     env_mod_decay : kTimbreBits,
@@ -205,8 +206,9 @@ struct PackedPart {
     tuning_factor : 4,
     oscillator_mode : 2,
     oscillator_shape : 3,
-    oscillator_pw_initial : kTimbreBits,
-    envelope_amplitude_init : kTimbreBits,
+    oscillator_pw_initial : kTimbreBits;
+  signed int timbre_mod_envelope : kTimbreBits;
+  unsigned int
     env_init_attack : kTimbreBits,
     env_init_decay : kTimbreBits,
     env_init_sustain : kTimbreBits,
@@ -294,8 +296,8 @@ struct VoicingSettings {
   uint8_t oscillator_mode;
   uint8_t oscillator_shape;
   uint8_t oscillator_pw_initial;
-  int8_t oscillator_pw_mod;
-  uint8_t envelope_amplitude_init;
+  uint8_t timbre_mod_lfo;
+  int8_t timbre_mod_envelope;
   int8_t envelope_amplitude_mod;
   uint8_t env_init_attack;
   uint8_t env_init_decay;
@@ -329,8 +331,8 @@ struct VoicingSettings {
     packed.oscillator_mode = oscillator_mode;
     packed.oscillator_shape = oscillator_shape;
     packed.oscillator_pw_initial = oscillator_pw_initial;
-    packed.oscillator_pw_mod = oscillator_pw_mod;
-    packed.envelope_amplitude_init = envelope_amplitude_init;
+    packed.timbre_mod_lfo = timbre_mod_lfo;
+    packed.timbre_mod_envelope = timbre_mod_envelope;
     packed.envelope_amplitude_mod = envelope_amplitude_mod;
     packed.env_init_attack = env_init_attack;
     packed.env_init_decay = env_init_decay;
@@ -364,8 +366,8 @@ struct VoicingSettings {
     oscillator_mode = packed.oscillator_mode;
     oscillator_shape = packed.oscillator_shape;
     oscillator_pw_initial = packed.oscillator_pw_initial;
-    oscillator_pw_mod = packed.oscillator_pw_mod;
-    envelope_amplitude_init = packed.envelope_amplitude_init;
+    timbre_mod_lfo = packed.timbre_mod_lfo;
+    timbre_mod_envelope = packed.timbre_mod_envelope;
     envelope_amplitude_mod = packed.envelope_amplitude_mod;
     env_init_attack = packed.env_init_attack;
     env_init_decay = packed.env_init_decay;
@@ -413,10 +415,10 @@ enum PartSetting {
   PART_VOICING_TUNING_FACTOR,
   PART_VOICING_OSCILLATOR_MODE,
   PART_VOICING_OSCILLATOR_SHAPE,
-  PART_VOICING_OSCILLATOR_PW_INITIAL,
-  PART_VOICING_OSCILLATOR_PW_MOD,
-  PART_VOICING_ENVELOPE_AMPLITUDE_INIT,
-  PART_VOICING_ENVELOPE_AMPLITUDE_MOD,
+  PART_VOICING_TIMBRE_INIT,
+  PART_VOICING_TIMBRE_MOD_LFO,
+  PART_VOICING_TIMBRE_MOD_ENVELOPE,
+  PART_VOICING_TIMBRE_MOD_VELOCITY,
   PART_VOICING_ENV_INIT_ATTACK,
   PART_VOICING_ENV_INIT_DECAY,
   PART_VOICING_ENV_INIT_SUSTAIN,

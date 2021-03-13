@@ -166,17 +166,17 @@ void Voice::Refresh(uint8_t voice_index) {
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
 
   uint16_t envelope_value = envelope_.Render();
-  uint16_t scaled_envelope = (envelope_value * envelope_amplitude_) >> 16;
+  uint32_t scaled_envelope = envelope_value * envelope_amplitude_;
   
   // Use quadrature phase for timbre modulation
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
-  int32_t parameter_20 = \
-    (oscillator_pw_initial_ << (20 - 6)) +
-    (scaled_envelope << (20 - 16)) +
-    lfo * oscillator_pw_mod_;
-  CONSTRAIN(parameter_20, 0, (1 << 20) - 1);
-  oscillator_.set_parameter(parameter_20 >> (20 - 15));
-  oscillator_.set_aux_parameter(32767 - (parameter_20 >> (20 - 15)));
+  int32_t parameter_21 = \
+    (oscillator_pw_initial_ << (21 - 6)) +
+    (scaled_envelope >> (32 - 21)) +
+    lfo * timbre_mod_lfo_;
+  CONSTRAIN(parameter_21, 0, (1 << 21) - 1);
+  oscillator_.set_parameter(parameter_21 >> (21 - 15));
+  oscillator_.set_aux_parameter(32767 - (parameter_21 >> (21 - 15)));
 
   if (retrigger_delay_) {
     --retrigger_delay_;

@@ -149,9 +149,7 @@ class Voice {
   inline void set_oscillator_pw_initial(uint8_t pw) {
     oscillator_pw_initial_ = pw;
   }
-  inline void set_oscillator_pw_mod(int8_t pwm) {
-    oscillator_pw_mod_ = pwm;
-  }
+  inline void set_timbre_mod_lfo(uint8_t n) { timbre_mod_lfo_ = n; }
   
   inline void set_tuning(int8_t coarse, int8_t fine) {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
@@ -225,7 +223,7 @@ class Voice {
   
   uint8_t oscillator_mode_;
   uint8_t oscillator_pw_initial_;
-  int8_t oscillator_pw_mod_;
+  int8_t timbre_mod_lfo_;
   Oscillator oscillator_;
   Envelope envelope_;
   uint16_t envelope_amplitude_;

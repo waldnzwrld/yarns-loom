@@ -86,7 +86,7 @@ void Part::Init() {
   voicing_.aux_cv = MOD_AUX_MODULATION;
   voicing_.aux_cv_2 = MOD_AUX_VIBRATO_LFO;
   voicing_.oscillator_pw_initial = 40;
-  voicing_.oscillator_pw_mod = 5;
+  voicing_.timbre_mod_lfo = 10;
   voicing_.tuning_transpose = 0;
   voicing_.tuning_fine = 0;
   voicing_.tuning_root = 0;
@@ -95,7 +95,7 @@ void Part::Init() {
   voicing_.oscillator_mode = OSCILLATOR_MODE_OFF;
   voicing_.oscillator_shape = OSC_SHAPE_FM;
 
-  voicing_.envelope_amplitude_init = 16;
+  voicing_.timbre_mod_envelope = 16;
   voicing_.envelope_amplitude_mod = 24;
   voicing_.env_init_attack = 30;
   voicing_.env_init_decay = 20;
@@ -852,7 +852,7 @@ void Part::VoiceNoteOn(
   uint8_t portamento,
   bool trigger
 ) {
-  int32_t amplitude_12bit = (voicing_.envelope_amplitude_init << 6) + vel * voicing_.envelope_amplitude_mod;
+  int32_t amplitude_12bit = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.envelope_amplitude_mod;
   CONSTRAIN(amplitude_12bit, 0, (1 << 12) - 1)
   voice->set_envelope_amplitude(amplitude_12bit << 4);
 
@@ -1026,7 +1026,7 @@ void Part::TouchVoices() {
     voice_[i]->set_oscillator_shape(voicing_.oscillator_shape);
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
     voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
-    voice_[i]->set_oscillator_pw_mod(voicing_.oscillator_pw_mod);
+    voice_[i]->set_timbre_mod_lfo(voicing_.timbre_mod_lfo);
   }
 }
 
@@ -1065,8 +1065,8 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_AUX_CV_2:
     case PART_VOICING_OSCILLATOR_MODE:
     case PART_VOICING_OSCILLATOR_SHAPE:
-    case PART_VOICING_OSCILLATOR_PW_INITIAL:
-    case PART_VOICING_OSCILLATOR_PW_MOD:
+    case PART_VOICING_TIMBRE_INIT:
+    case PART_VOICING_TIMBRE_MOD_LFO:
     case PART_VOICING_TUNING_TRANSPOSE:
     case PART_VOICING_TUNING_FINE:
       TouchVoices();
