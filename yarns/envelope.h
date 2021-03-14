@@ -54,9 +54,9 @@ class Envelope {
 
   inline void GateOn() {
     if (!gate_) {
+      gate_ = true;
       Trigger(ENV_SEGMENT_ATTACK);
     }
-    gate_ = true;
   }
 
   inline void GateOff() {
@@ -89,8 +89,11 @@ class Envelope {
     if (segment == ENV_SEGMENT_DEAD) {
       value_ = 0;
     }
-    if (segment == ENV_SEGMENT_SUSTAIN && !gate_) {
-      segment = ENV_SEGMENT_RELEASE; // Skip sustain
+    if (!gate_) {
+      CONSTRAIN(target_[segment], 0, value_); // No rise without gate
+      if (segment == ENV_SEGMENT_SUSTAIN) {
+        segment = ENV_SEGMENT_RELEASE; // Skip sustain
+      }
     }
     a_ = value_;
     b_ = target_[segment];
