@@ -165,7 +165,7 @@ void Voice::Refresh(uint8_t voice_index) {
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
 
   uint16_t envelope_value = envelope_.Render();
-  uint32_t scaled_envelope = envelope_value * envelope_amplitude_;
+  int32_t timbre_envelope = envelope_value * timbre_mod_envelope_;
 
   // Apply a simple slew to the initial timbre
   int32_t timbre_init_delta = timbre_init_target_21_ - timbre_init_current_21_;
@@ -181,7 +181,7 @@ void Voice::Refresh(uint8_t voice_index) {
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
   int32_t parameter_21 = \
     timbre_init_current_21_ +
-    (scaled_envelope >> (32 - 21)) +
+    (timbre_envelope >> (31 - 21)) +
     lfo * timbre_mod_lfo_;
   CONSTRAIN(parameter_21, 0, (1 << 21) - 1);
   oscillator_.set_parameter(parameter_21 >> (21 - 15));

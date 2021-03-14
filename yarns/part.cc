@@ -852,9 +852,9 @@ void Part::VoiceNoteOn(
   uint8_t portamento,
   bool trigger
 ) {
-  int32_t amplitude_12bit = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
-  CONSTRAIN(amplitude_12bit, 0, (1 << 12) - 1)
-  voice->set_envelope_amplitude(amplitude_12bit << 4);
+  int32_t timbre_13 = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
+  CONSTRAIN(timbre_13, -1 << 12, (1 << 12) - 1)
+  voice->set_timbre_mod_envelope(timbre_13 << 3);
 
   voice->envelope()->SetADSR(
     modulate_7bit(voicing_.env_init_attack << 1, voicing_.env_mod_attack << 1, vel),
