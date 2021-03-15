@@ -650,17 +650,20 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       break;
     case ARPEGGIATOR_DIRECTION_STEP_ROTATE:
       {
-        next.key_increment = 0; // These arp directions move before playing the note
         if (seq_step.is_white()) {
+          // Move immediately
+          next.key_increment = 0;
           next.key_index = key_with_octave + seq_step.white_key_distance_from_middle_c();
-          next.octave = next.key_index / num_keys;
         } else { // If black key
-          next.key_index = seq_step.black_key_distance_from_middle_c();
-          next.octave = abs(next.key_index / num_keys);
-          if (next.octave > seq_.arp_range) {
-            return next; // Rest
+          int8_t key_offset = seq_step.black_key_distance_from_middle_c();
+          if (abs(key_offset) >= num_keys * (seq_.arp_range + 1)) {
+            // If offset is outside range, rest
+            return next;
           }
+          next.key_index += key_offset;
+          next.key_increment = -key_offset;
         }
+        next.octave = next.key_index / num_keys;
       }
       break;
     case ARPEGGIATOR_DIRECTION_STEP_SUBROTATE:
@@ -782,41 +785,69 @@ void Part::ReleaseLatchedNotes(PressedKeys &keys) {
   }
 }
 
-void Part::DispatchSortedNotes(bool unison, bool force_legato) {
-  uint8_t n = mono_allocator_.size();
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    uint8_t index = 0xff;
-    if (unison && n < num_voices_) {
-      // distribute extra voices evenly among notes
-      index = n ? (i * n / num_voices_) : 0xff;
-    } else {
-      index = i < mono_allocator_.size() ? i : 0xff;
+struct DispatchNote {
+  NoteEntry const* note;
+  bool done;
+};
+
+void Part::DispatchSortedNotes(bool legato) {
+  uint8_t num_notes = mono_allocator_.size();
+  uint8_t num_dispatch = num_voices_;
+  bool unison = voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED;
+  if (!unison) { num_dispatch = std::min(num_dispatch, num_notes); }
+
+  // Set up structures to track assignments
+  DispatchNote dispatch[num_dispatch];
+  for (uint8_t d = 0; d < num_dispatch; ++d) {
+    dispatch[d].note = &priority_note(d % num_notes);
+    dispatch[d].done = false;
+  }
+  bool voice_intact[num_voices_];
+  std::fill(&voice_intact[0], &voice_intact[num_voices_], false);
+
+  // First pass: find voices that don't need to change
+  for (uint8_t v = 0; v < num_voices_; ++v) {
+    for (uint8_t d = 0; d < num_dispatch; ++d) {
+      if (dispatch[d].done) { continue; }
+      if (active_note_[v] != dispatch[d].note->note) { continue; }
+      dispatch[d].done = true;
+      voice_intact[v] = true;
+      break; // Voice keeps its current note
     }
-    if (index != 0xff) {
-      const NoteEntry& note_entry = priority_note(index);
-      bool legato = force_legato || active_note_[i] == note_entry.note;
-      VoiceNoteOn(voice_[i], note_entry.note, note_entry.velocity, legato);
-      active_note_[i] = note_entry.note;
-    } else {
-      voice_[i]->NoteOff();
-      active_note_[i] = VOICE_ALLOCATION_NOT_FOUND;
+  }
+  // Second pass: change remaining voices
+  for (uint8_t v = 0; v < num_voices_; ++v) {
+    if (voice_intact[v]) { continue; }
+    const NoteEntry* note = NULL;
+    for (uint8_t d = 0; d < num_dispatch; ++d) {
+      if (dispatch[d].done) { continue; }
+      dispatch[d].done = true;
+      note = dispatch[d].note;
+      break; // Voice gets this note
+    }
+    if (note) {
+      active_note_[v] = note->note;
+      VoiceNoteOnLegato(voice_[v], note->note, note->velocity, legato);
+    } else if (active_note_[v] != VOICE_ALLOCATION_NOT_FOUND) {
+      voice_[v]->NoteOff();
+      active_note_[v] = VOICE_ALLOCATION_NOT_FOUND;
     }
   }
 }
 
-void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
-  VoiceNoteOnWithADSR(
+void Part::VoiceNoteOnLegato(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
+  VoiceNoteOn(
     voice,
-    Tune(pitch),
+    pitch,
     velocity,
     (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
     (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato
   );
 }
 
-void Part::VoiceNoteOnWithADSR(
+void Part::VoiceNoteOn(
   Voice* voice,
-  int16_t pitch,
+  uint8_t pitch,
   uint8_t vel,
   uint8_t portamento,
   bool trigger
@@ -832,7 +863,7 @@ void Part::VoiceNoteOnWithADSR(
     modulate_7bit(voicing_.env_init_release << 1, voicing_.env_mod_release << 1, vel)
   );
 
-  voice->NoteOn(pitch, vel, portamento, trigger);
+  voice->NoteOn(Tune(pitch), vel, portamento, trigger);
 }
 
 void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
@@ -849,14 +880,13 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     if (before.note != after.note) {
       bool legato = mono_allocator_.size() > 1;
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOn(voice_[i], after.note, after.velocity, legato);
+        VoiceNoteOnLegato(voice_[i], after.note, after.velocity, legato);
       }
     }
   } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
              voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
-    DispatchSortedNotes(
-        voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED, false);
+    DispatchSortedNotes(false);
   } else {
     uint8_t voice_index = 0;
     switch (voicing_.allocation_mode) {
@@ -891,9 +921,9 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     if (voice_index < num_voices_) {
       // Prevent the same note from being simultaneously played on two channels.
       KillAllInstancesOfNote(note);
-      VoiceNoteOnWithADSR(
+      VoiceNoteOn(
         voice_[voice_index],
-        Tune(note),
+        note,
         velocity,
         voicing_.portamento,
         true
@@ -940,9 +970,9 @@ void Part::InternalNoteOff(uint8_t note) {
       // Removing the note gives priority to another note that is still being
       // pressed. Slide to this note (or retrigger is legato mode is off).
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOnWithADSR(
+        VoiceNoteOn(
           voice_[i],
-          Tune(after.note),
+          after.note,
           after.velocity,
           voicing_.portamento,
           voicing_.legato_mode == LEGATO_MODE_OFF
@@ -957,7 +987,7 @@ void Part::InternalNoteOff(uint8_t note) {
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
         mono_allocator_.size() >= num_voices_
     ) {
-      DispatchSortedNotes(true, true);
+      DispatchSortedNotes(true);
     }
   } else {
     uint8_t voice_index = \
