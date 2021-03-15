@@ -59,6 +59,9 @@ void Voice::Init() {
   modulation_sync_ticks_ = 0;
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
+
+  timbre_mod_envelope_current_ = 0;
+  timbre_init_current_21_ = 0;
   
   synced_lfo_.Init();
   envelope_.Init();
@@ -164,18 +167,14 @@ void Voice::Refresh(uint8_t voice_index) {
   mod_aux_[MOD_AUX_VIBRATO_LFO] = (attenuated_lfo >> 7) + 32768;
   mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
 
+  timbre_init_current_21_ = stmlib::slew(
+    timbre_init_current_21_, timbre_init_target_21_
+  );
+  timbre_mod_envelope_current_ = stmlib::slew(
+    timbre_mod_envelope_current_, timbre_mod_envelope_target_
+  );
   uint16_t envelope_value = envelope_.Render();
-  int32_t timbre_envelope = envelope_value * timbre_mod_envelope_;
-
-  // Apply a simple slew to the initial timbre
-  int32_t timbre_init_delta = timbre_init_target_21_ - timbre_init_current_21_;
-  if (timbre_init_delta) {
-    int32_t timbre_init_increment = timbre_init_delta >> 5;
-    if (!timbre_init_increment) {
-      timbre_init_increment = timbre_init_delta > 0 ? 1 : -1;
-    }
-    timbre_init_current_21_ += timbre_init_increment;
-  }
+  int32_t timbre_envelope = envelope_value * timbre_mod_envelope_current_;
   
   // Use quadrature phase for timbre modulation
   lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
@@ -246,7 +245,6 @@ void Voice::NoteOn(
     CONSTRAIN(portamento_phase_increment_, 1, 0x7FFFFFFF);
     portamento_exponential_shape_ = false;
   }
-  timbre_init_current_21_ = timbre_init_target_21_;
 
   mod_velocity_ = velocity;
 

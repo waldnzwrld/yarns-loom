@@ -168,7 +168,7 @@ class Voice {
   }
 
   inline void set_timbre_mod_envelope(int16_t n) {
-    timbre_mod_envelope_ = n;
+    timbre_mod_envelope_target_ = n;
   }
 
   inline void RenderAudio() {
@@ -227,7 +227,8 @@ class Voice {
   int8_t timbre_mod_lfo_;
   Oscillator oscillator_;
   Envelope envelope_;
-  int16_t timbre_mod_envelope_;
+  int16_t timbre_mod_envelope_target_;
+  int16_t timbre_mod_envelope_current_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };
