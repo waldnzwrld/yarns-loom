@@ -873,11 +873,11 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
   const NoteEntry& before = priority_note();
   mono_allocator_.NoteOn(note, velocity);
   const NoteEntry& after = priority_note();
+  bool legato = mono_allocator_.size() > 1;
   if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
     // Check if the note that has been played should be triggered according
     // to selected voice priority rules.
     if (before.note != after.note) {
-      bool legato = mono_allocator_.size() > 1;
       for (uint8_t i = 0; i < num_voices_; ++i) {
         VoiceNoteOnLegato(voice_[i], after.note, after.velocity, legato);
       }
@@ -916,15 +916,20 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     }
     
     if (voice_index < num_voices_) {
+      if (legato) {
+        if (active_note_[voice_index] != VOICE_ALLOCATION_NOT_FOUND) {
+          // Disable legato when stealing
+          legato = false;
+        } else {
+          // Begin portamento from the part's priority note
+          voice_[voice_index]->NoteOn(
+            Tune(priority_note().note), velocity, 0, false
+          );
+        }
+      }
       // Prevent the same note from being simultaneously played on two channels.
       KillAllInstancesOfNote(note);
-      VoiceNoteOn(
-        voice_[voice_index],
-        note,
-        velocity,
-        voicing_.portamento,
-        true
-      );
+      VoiceNoteOnLegato(voice_[voice_index], note, velocity, legato);
       active_note_[voice_index] = note;
     } else {
       // Polychaining forwarding.
