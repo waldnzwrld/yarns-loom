@@ -728,6 +728,20 @@ class Part {
     return seq_.arp_pattern == 0;
   }
 
+  inline bool uses_poly_allocator() const {
+    return
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT;
+  }
+
+  inline bool uses_sorted_dispatch() const {
+    return
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2;
+  }
+
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
     if (!looper_in_use()) { return; }
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;

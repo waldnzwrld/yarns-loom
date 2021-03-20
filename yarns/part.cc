@@ -338,8 +338,7 @@ bool Part::PitchBend(uint8_t channel, uint16_t pitch_bend) {
 bool Part::Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity) {
   if (voicing_.allocation_mode != VOICE_ALLOCATION_MODE_MONO) {
     uint8_t voice_index = \
-        (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY || \
-         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT) ? \
+        uses_poly_allocator() ? \
         poly_allocator_.Find(note) : \
         FindVoiceForNote(note);
     if (voice_index < poly_allocator_.size()) {
@@ -883,9 +882,7 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
         VoiceNoteOnLegato(voice_[i], after.note, after.velocity, legato);
       }
     }
-  } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
-             voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
-             voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
+  } else if (uses_sorted_dispatch()) {
     DispatchSortedNotes(false);
   } else {
     uint8_t voice_index = 0;
@@ -979,9 +976,7 @@ void Part::InternalNoteOff(uint8_t note) {
         );
       }
     }
-  } else if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
-             voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
-             voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2) {
+  } else if (uses_sorted_dispatch()) {
     KillAllInstancesOfNote(note);
     if (
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
@@ -991,8 +986,7 @@ void Part::InternalNoteOff(uint8_t note) {
     }
   } else {
     uint8_t voice_index = \
-        (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY ||
-         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT) ? \
+        uses_poly_allocator() ? \
         poly_allocator_.NoteOff(note) : \
         FindVoiceForNote(note);
     if (voice_index < num_voices_) {
