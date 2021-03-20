@@ -894,6 +894,10 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
       case VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT:
         voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_MRU);
         break;
+
+      case VOICE_ALLOCATION_MODE_POLY_NICE:
+        voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_NONE);
+        break;
         
       case VOICE_ALLOCATION_MODE_POLY_CYCLIC:
         if (cyclic_allocation_note_counter_ >= num_voices_) {
@@ -959,6 +963,7 @@ void Part::InternalNoteOff(uint8_t note) {
     just_intonation_processor.NoteOff(note);
   }
   
+  bool had_extra_notes = mono_allocator_.size() > num_voices_;
   const NoteEntry& before = priority_note();
   mono_allocator_.NoteOff(note);
   const NoteEntry& after = priority_note();
@@ -985,7 +990,7 @@ void Part::InternalNoteOff(uint8_t note) {
     KillAllInstancesOfNote(note);
     if (
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
-        mono_allocator_.size() >= num_voices_
+        had_extra_notes
     ) {
       DispatchSortedNotes(true);
     }
@@ -997,6 +1002,15 @@ void Part::InternalNoteOff(uint8_t note) {
     if (voice_index < num_voices_) {
       voice_[voice_index]->NoteOff();
       active_note_[voice_index] = VOICE_ALLOCATION_NOT_FOUND;
+      if (
+        had_extra_notes &&
+        voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE
+      ) {
+        const NoteEntry& nice_note = priority_note(num_voices_ - 1);
+        poly_allocator_.NoteOn(nice_note.note, VOICE_STEALING_MODE_NONE);
+        VoiceNoteOnLegato(voice_[voice_index], nice_note.note, nice_note.velocity, true);
+        active_note_[voice_index] = nice_note.note;
+      }
     } else {
        midi_handler.OnInternalNoteOff(tx_channel(), note);
     }

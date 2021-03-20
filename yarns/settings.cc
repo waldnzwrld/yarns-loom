@@ -52,7 +52,7 @@ const char* const boolean_values[] = {
 
 const char* const voicing_allocation_mode_values[] = {
   "MONO", "POLY", "CYCLIC", "RANDOM", "VELO", "SORTED", "U1 UNISON",
-  "U2 UNISON 2", "STEAL MOST RECENT"
+  "U2 UNISON 2", "STEAL MOST RECENT", "NICE"
 };
 
 const char* const sequencer_arp_direction_values[] = {
