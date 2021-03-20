@@ -43,7 +43,7 @@ void Deck::Init(Part* part) {
 
 void Deck::RemoveAll() {
   for (uint8_t i = 0; i < size_; ++i) {
-    KillNote(oldest_index_ + i);
+    KillNote(index_mod(oldest_index_ + i));
   }
 
   std::fill(

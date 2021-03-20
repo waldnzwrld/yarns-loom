@@ -84,6 +84,7 @@ enum VoiceAllocationMode {
   VOICE_ALLOCATION_MODE_POLY_UNISON_1,
   VOICE_ALLOCATION_MODE_POLY_UNISON_2,
   VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT,
+  VOICE_ALLOCATION_MODE_POLY_NICE,
   VOICE_ALLOCATION_MODE_LAST
 };
 
@@ -728,6 +729,20 @@ class Part {
 
   inline bool seq_driven_arp() const {
     return seq_.arp_pattern == 0;
+  }
+
+  inline bool uses_poly_allocator() const {
+    return
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT;
+  }
+
+  inline bool uses_sorted_dispatch() const {
+    return
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2;
   }
 
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
