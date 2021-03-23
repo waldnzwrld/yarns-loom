@@ -826,7 +826,7 @@ void Part::DispatchSortedNotes(bool legato) {
     }
     if (note) {
       active_note_[v] = note->note;
-      VoiceNoteOnLegato(voice_[v], note->note, note->velocity, legato);
+      VoiceNoteOn(voice_[v], note->note, note->velocity, legato);
     } else if (active_note_[v] != VOICE_ALLOCATION_NOT_FOUND) {
       voice_[v]->NoteOff();
       active_note_[v] = VOICE_ALLOCATION_NOT_FOUND;
@@ -834,23 +834,20 @@ void Part::DispatchSortedNotes(bool legato) {
   }
 }
 
-void Part::VoiceNoteOnLegato(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato) {
-  VoiceNoteOn(
-    voice,
-    pitch,
-    velocity,
-    (voicing_.legato_mode == LEGATO_MODE_AUTO_PORTAMENTO) && !legato ? 0 : voicing_.portamento,
-    (voicing_.legato_mode == LEGATO_MODE_OFF) || !legato
-  );
-}
+void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato) {
+  uint8_t portamento = voicing_.portamento;
+  bool trigger = !legato;
+  switch (voicing_.legato_mode) {
+    case LEGATO_MODE_OFF:
+      trigger = true;
+      break;
+    case LEGATO_MODE_AUTO_PORTAMENTO:
+      if (trigger) { portamento = 0; }
+      break;
+    default:
+      break;
+  }
 
-void Part::VoiceNoteOn(
-  Voice* voice,
-  uint8_t pitch,
-  uint8_t vel,
-  uint8_t portamento,
-  bool trigger
-) {
   int32_t amplitude_12bit = (voicing_.envelope_amplitude_init << 6) + vel * voicing_.envelope_amplitude_mod;
   CONSTRAIN(amplitude_12bit, 0, (1 << 12) - 1)
   voice->set_envelope_amplitude(amplitude_12bit << 4);
@@ -879,7 +876,7 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
     // to selected voice priority rules.
     if (before.note != after.note) {
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOnLegato(voice_[i], after.note, after.velocity, legato);
+        VoiceNoteOn(voice_[i], after.note, after.velocity, legato);
       }
     }
   } else if (uses_sorted_dispatch()) {
@@ -925,15 +922,13 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
           // Disable legato when stealing
           legato = false;
         } else {
-          // Begin portamento from the part's priority note
-          voice_[voice_index]->NoteOn(
-            Tune(priority_note().note), velocity, 0, false
-          );
+          // Begin portamento from the preceding priority note
+          voice_[voice_index]->NoteOn(Tune(before.note), velocity, 0, false);
         }
       }
       // Prevent the same note from being simultaneously played on two channels.
       KillAllInstancesOfNote(note);
-      VoiceNoteOnLegato(voice_[voice_index], note, velocity, legato);
+      VoiceNoteOn(voice_[voice_index], note, velocity, legato);
       active_note_[voice_index] = note;
     } else {
       // Polychaining forwarding.
@@ -974,16 +969,9 @@ void Part::InternalNoteOff(uint8_t note) {
         voice_[i]->NoteOff();
       }
     } else if (before.note != after.note) {
-      // Removing the note gives priority to another note that is still being
-      // pressed. Slide to this note (or retrigger is legato mode is off).
+      // Removing the note gives priority to another note that is still held
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOn(
-          voice_[i],
-          after.note,
-          after.velocity,
-          voicing_.portamento,
-          voicing_.legato_mode == LEGATO_MODE_OFF
-        );
+        VoiceNoteOn(voice_[i], after.note, after.velocity, true);
       }
     }
   } else if (uses_sorted_dispatch()) {
@@ -1006,10 +994,10 @@ void Part::InternalNoteOff(uint8_t note) {
         had_extra_notes &&
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE
       ) {
-        const NoteEntry& nice_note = priority_note(num_voices_ - 1);
-        poly_allocator_.NoteOn(nice_note.note, VOICE_STEALING_MODE_NONE);
-        VoiceNoteOnLegato(voice_[voice_index], nice_note.note, nice_note.velocity, true);
-        active_note_[voice_index] = nice_note.note;
+        const NoteEntry& nice = priority_note(NOTE_STACK_PRIORITY_LAST);
+        poly_allocator_.NoteOn(nice.note, VOICE_STEALING_MODE_NONE);
+        VoiceNoteOn(voice_[voice_index], nice.note, nice.velocity, true);
+        active_note_[voice_index] = nice.note;
       }
     } else {
        midi_handler.OnInternalNoteOff(tx_channel(), note);

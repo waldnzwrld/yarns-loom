@@ -984,8 +984,7 @@ class Part {
   
   void ReleaseLatchedNotes(PressedKeys &keys);
   void DispatchSortedNotes(bool legato);
-  void VoiceNoteOnLegato(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato);
-  void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, uint8_t portamento, bool trigger);
+  void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
