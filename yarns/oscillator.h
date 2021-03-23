@@ -64,6 +64,7 @@ class Oscillator {
     audio_buffer_.Init();
     scale_ = scale;
     offset_ = offset;
+    amplitude_current_ = amplitude_target_ = 0;
     pitch_ = 60 << 7;
     OnShapeChange();
   }
@@ -72,14 +73,13 @@ class Oscillator {
     phase_ = 0;
     phase_increment_ = 1;
     high_ = false;
-    parameter_ = previous_parameter_ = 0;
-    aux_parameter_ = 0x3fff;
+    parameter_current_ = parameter_target_ = 0;
     discontinuity_depth_ = -16383;
     next_sample_ = 0;
   }
 
   inline void WriteSample(int16_t sample) {
-    audio_buffer_.Overwrite(offset_ - ((amplitude_ * sample) >> 16));
+    audio_buffer_.Overwrite(offset_ - ((amplitude_current_ * sample) >> 16));
   }
 
   inline uint16_t ReadSample() {
@@ -87,7 +87,7 @@ class Oscillator {
   }
 
   inline void set_gain(uint16_t gain) {
-    amplitude_ = (scale_ * gain) >> 16;
+    amplitude_target_ = (scale_ * gain) >> 16;
   }
   
   inline void set_shape(OscillatorShape shape) {
@@ -101,23 +101,25 @@ class Oscillator {
   inline void set_parameter(int16_t parameter) {
     int32_t strength = 32767;
     switch (shape_) {
+      case OSC_SHAPE_SQUARE:
+        CONSTRAIN(parameter, 0, 30000);
+        break;
       case OSC_SHAPE_SINE_FOLD:
         strength -= 6 * (pitch_ - (92 << 7));
+        CONSTRAIN(strength, 0, 32767);
+        parameter = parameter * strength >> 15;
         break;
       /*
       case OSC_SHAPE_TRIANGLE_FOLD:
         strength -= 7 * (pitch_ - (80 << 7));
+        CONSTRAIN(strength, 0, 32767);
+        parameter = parameter * strength >> 15;
         break;
       */
       default:
         break;
     }
-    CONSTRAIN(strength, 0, 32767);
-    parameter_ = parameter * strength >> 15;
-  }
-
-  inline void set_aux_parameter(int16_t parameter) {
-    aux_parameter_ = parameter;
+    parameter_target_ = parameter;
   }
   
   inline uint32_t phase_increment() const {
@@ -164,9 +166,12 @@ class Oscillator {
   uint32_t previous_phase_increment_;
   bool high_;
 
-  int16_t parameter_; // 15-bit
-  int16_t previous_parameter_;
-  int16_t aux_parameter_;
+  int16_t parameter_current_; // 15-bit
+  int16_t parameter_target_;
+
+  int32_t amplitude_current_;
+  int32_t amplitude_target_;
+
   int16_t discontinuity_depth_;
   int16_t pitch_;
   uint32_t modulator_phase_;
@@ -178,7 +183,6 @@ class Oscillator {
   OscillatorShape previous_shape_;
 
   int32_t scale_;
-  int32_t amplitude_;
   int32_t offset_;
   stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;
   

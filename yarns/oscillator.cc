@@ -34,6 +34,35 @@
 
 #include "yarns/resources.h"
 
+// Divide by kAudioBlockSize = 64
+#define INTERPOLATE(target, current) (target - current) / 64
+
+#define PHASE_ACCELERATION(target, current) \
+  current < target ? (target - current) / 64 : ~((current - target) / 64)
+
+#define INIT \
+  size_t size = kAudioBlockSize; \
+  int16_t parameter_increment = INTERPOLATE(parameter_target_, parameter_current_); \
+  int32_t amplitude_increment = INTERPOLATE(amplitude_target_, amplitude_current_);
+
+// int16_t parameter_delta = parameter_target_ - parameter_current_;
+// int8_t parameter_mod = stmlib::modulo(parameter_delta, kAudioBlockSize);
+
+#define FOLD_GAIN(p) (2048 + (p * 30720 >> 15))
+
+#define INIT_FOLD \
+  INIT; \
+  int16_t fold_gain = FOLD_GAIN(parameter_current_); \
+  int16_t fold_gain_increment = (FOLD_GAIN(parameter_target_) - fold_gain) / 64;
+
+#define ITERATE \
+  parameter_current_ += parameter_increment; \
+  amplitude_current_ += amplitude_increment;
+
+#define ITERATE_FOLD \
+  ITERATE; \
+  fold_gain += fold_gain_increment;
+
 namespace yarns {
 
 using namespace stmlib;
@@ -85,14 +114,21 @@ void Oscillator::Render() {
   }
   
   (this->*fn)();
+
+  // Finish interpolation
+  parameter_current_ = parameter_target_;
+  amplitude_current_ = amplitude_target_;
 }
 
 void Oscillator::RenderCSaw() {
-  uint32_t pw = static_cast<uint32_t>(parameter_) * 49152;
-
-  size_t size = kAudioBlockSize;
+  INIT;
+  uint32_t pw = static_cast<uint32_t>(parameter_current_) * 49152;
+  int32_t pw_increment = static_cast<uint32_t>(parameter_increment) * 49152;
   int32_t next_sample = next_sample_;
   while (size--) {
+    ITERATE;
+    pw += pw_increment;
+
     bool self_reset = false;
     if (pw < (phase_increment_ << 3)) {
       pw = phase_increment_ << 3;
@@ -106,7 +142,7 @@ void Oscillator::RenderCSaw() {
       self_reset = true;
     }
     
-    int16_t shift = -(aux_parameter_ - 32767) >> 4;
+    int16_t shift = -(parameter_current_ - 32767) >> 4;
     while (true) {
       if (!high_) {
         if (phase_ < pw) {
@@ -125,7 +161,7 @@ void Oscillator::RenderCSaw() {
           break;
         }
         self_reset = false;
-        discontinuity_depth_ = -2048 + (aux_parameter_ >> 2);
+        discontinuity_depth_ = -2048 + (parameter_current_ >> 2);
         uint32_t t = phase_ / (phase_increment_ >> 16);
         int16_t before = 16383;
         int16_t after = discontinuity_depth_;
@@ -145,16 +181,13 @@ void Oscillator::RenderCSaw() {
 }
 
 void Oscillator::RenderSquare() {
-  size_t size = kAudioBlockSize;
-  if (parameter_ > 30000) {
-    parameter_ = 30000;
-  }
-  
+  INIT;
   int32_t next_sample = next_sample_;
   while (size--) {
+    ITERATE;
     bool self_reset = false;
 
-    uint32_t pw = static_cast<uint32_t>(32768 - parameter_) << 16;
+    uint32_t pw = static_cast<uint32_t>(32768 - parameter_current_) << 16;
     
     int32_t this_sample = next_sample;
     next_sample = 0;
@@ -193,15 +226,13 @@ void Oscillator::RenderSquare() {
 }
 
 void Oscillator::RenderVariableSaw() {
-  size_t size = kAudioBlockSize;
+  INIT;
   int32_t next_sample = next_sample_;
-  if (parameter_ < 1024) {
-    parameter_ = 1024;
-  }
   while (size--) {
+    ITERATE;
     bool self_reset = false;
 
-    uint32_t pw = static_cast<uint32_t>(parameter_) << 16;
+    uint32_t pw = static_cast<uint32_t>(parameter_current_) << 16;
 
     int32_t this_sample = next_sample;
     next_sample = 0;
@@ -242,10 +273,9 @@ void Oscillator::RenderVariableSaw() {
 
 void Oscillator::RenderTriangleFold() {
   uint32_t phase = phase_;
-  int16_t fold_gain = 2048 + (parameter_ * 30720 >> 15);
-
-  size_t size = kAudioBlockSize;
+  INIT_FOLD;
   while (size--) {
+    ITERATE_FOLD;
     uint16_t phase_16;
     int16_t triangle;
     int16_t sample;
@@ -266,10 +296,9 @@ void Oscillator::RenderTriangleFold() {
 
 void Oscillator::RenderSineFold() {
   uint32_t phase = phase_;
-  int16_t fold_gain = 2048 + (parameter_ * 30720 >> 15);
-  
-  size_t size = kAudioBlockSize;
+  INIT_FOLD;
   while (size--) {
+    ITERATE_FOLD;
     int16_t sine;
     int16_t sample;
     
@@ -291,26 +320,32 @@ void Oscillator::RenderFM() {
   //    (12 << 7) + pitch_ + ((aux_parameter_ - 16384) >> 1)) >> 1;
     pitch_ + kOctave + kFifth);
 
-  size_t size = kAudioBlockSize;
+  INIT;
   while (size--) {
+    ITERATE;
     phase_ += phase_increment_;
     modulator_phase += modulator_phase_increment;
 
     uint32_t pm = (
-        Interpolate824(wav_sine, modulator_phase) * parameter_) << 2;
+        Interpolate824(wav_sine, modulator_phase) * parameter_current_) << 2;
     WriteSample(Interpolate824(wav_sine, phase_ + pm));
   }
   modulator_phase_ = modulator_phase;
 }
 
 void Oscillator::RenderSineSync() {
+  INIT;
   uint32_t slave_phase = modulator_phase_;
-  uint32_t slave_phase_increment = ComputePhaseIncrement(
-    pitch_ + (parameter_ >> 4)
+  uint32_t slave_phase_increment = modulator_phase_increment_;
+  uint32_t slave_phase_increment_increment = PHASE_ACCELERATION(
+    ComputePhaseIncrement(
+      pitch_ + (parameter_current_ >> 4)
+    ), slave_phase_increment
   );
   int32_t next_sample = next_sample_;
-  size_t size = kAudioBlockSize;
   while (size--) {
+    ITERATE;
+    slave_phase_increment += slave_phase_increment_increment;
     int32_t this_sample = next_sample;
     next_sample = 0;
     phase_ += phase_increment_;
@@ -332,6 +367,7 @@ void Oscillator::RenderSineSync() {
     WriteSample(next_sample);
   }
   modulator_phase_ = slave_phase;
+  modulator_phase_increment_ = slave_phase_increment;
 }
 
 const uint32_t kPhaseReset[] = {
@@ -342,23 +378,23 @@ const uint32_t kPhaseReset[] = {
 };
 
 void Oscillator::RenderDigitalFilter() {
-  int16_t shifted_pitch = pitch_ + ((parameter_ - 2048) >> 2);
+  int16_t shifted_pitch = pitch_ + ((parameter_target_ - 2048) >> 2);
   if (shifted_pitch > 16383) {
     shifted_pitch = 16383;
   }
   uint32_t modulator_phase = modulator_phase_;
   
   uint8_t filter_type = shape_ - OSC_SHAPE_CZ_LP;
-  size_t size = kAudioBlockSize;
+  INIT;
   
   uint32_t modulator_phase_increment = modulator_phase_increment_;
   uint32_t target_increment = ComputePhaseIncrement(shifted_pitch);
-  uint32_t modulator_phase_increment_increment = 
-    modulator_phase_increment < target_increment
-    ? (target_increment - modulator_phase_increment) / size
-    : ~((modulator_phase_increment - target_increment) / size);
+  uint32_t modulator_phase_increment_increment = PHASE_ACCELERATION(
+    target_increment, modulator_phase_increment
+  );
     
   while (size--) {
+    ITERATE;
     phase_ += phase_increment_;
     modulator_phase_increment += modulator_phase_increment_increment;
     modulator_phase += modulator_phase_increment;
@@ -389,28 +425,30 @@ void Oscillator::RenderDigitalFilter() {
 }
 
 void Oscillator::RenderBuzz() {
-  int32_t shifted_pitch = pitch_ + ((32767 - parameter_) >> 1);
-  uint16_t crossfade = shifted_pitch << 6;
-  size_t index = (shifted_pitch >> 10);
-  if (index >= kNumZones) {
-    index = kNumZones - 1;
-  }
-  const int16_t* wave_1 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
-  index += 1;
-  if (index >= kNumZones) {
-    index = kNumZones - 1;
-  }
-  const int16_t* wave_2 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
-  size_t size = kAudioBlockSize;
+  INIT;
   while (size--) {
+    ITERATE;
+    int32_t shifted_pitch = pitch_ + ((32767 - parameter_current_) >> 1);
+    uint16_t crossfade = shifted_pitch << 6;
+    size_t index = (shifted_pitch >> 10);
+    if (index >= kNumZones) {
+      index = kNumZones - 1;
+    }
+    const int16_t* wave_1 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
+    index += 1;
+    if (index >= kNumZones) {
+      index = kNumZones - 1;
+    }
+    const int16_t* wave_2 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
     phase_ += phase_increment_;
     WriteSample(Crossfade(wave_1, wave_2, phase_, crossfade));
   }
 }
 
 void Oscillator::RenderNoise() {
-  size_t size = kAudioBlockSize;
+  INIT;
   while (size--) {
+    ITERATE;
     WriteSample(Random::GetSample());
   }
 }

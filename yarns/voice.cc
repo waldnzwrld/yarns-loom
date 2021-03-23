@@ -184,7 +184,6 @@ void Voice::Refresh(uint8_t voice_index) {
     lfo * timbre_mod_lfo_;
   CONSTRAIN(parameter_21, 0, (1 << 21) - 1);
   oscillator_.set_parameter(parameter_21 >> (21 - 15));
-  oscillator_.set_aux_parameter(32767 - (parameter_21 >> (21 - 15)));
 
   if (retrigger_delay_) {
     --retrigger_delay_;
