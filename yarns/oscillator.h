@@ -64,7 +64,8 @@ class Oscillator {
     audio_buffer_.Init();
     scale_ = scale;
     offset_ = offset;
-    amplitude_current_ = amplitude_target_ = 0;
+    timbre_current_ = timbre_target_ = 0;
+    gain_current_ = gain_target_ = 0;
     pitch_ = 60 << 7;
     OnShapeChange();
   }
@@ -73,63 +74,24 @@ class Oscillator {
     phase_ = 0;
     phase_increment_ = 1;
     high_ = false;
-    parameter_current_ = parameter_target_ = 0;
     discontinuity_depth_ = -16383;
     next_sample_ = 0;
   }
 
   inline void WriteSample(int16_t sample) {
-    audio_buffer_.Overwrite(offset_ - ((amplitude_current_ * sample) >> 16));
+    audio_buffer_.Overwrite(offset_ - ((gain_current_ * sample) >> 16));
   }
 
   inline uint16_t ReadSample() {
     return audio_buffer_.ImmediateRead();
   }
 
-  inline void set_gain(uint16_t gain) {
-    amplitude_target_ = (scale_ * gain) >> 16;
-  }
+  void Refresh(int16_t pitch, int16_t timbre, uint16_t gain);
   
   inline void set_shape(OscillatorShape shape) {
     shape_ = shape;
   }
   
-  inline void set_pitch(int16_t pitch) {
-    pitch_ = pitch;
-  }
-
-  inline void set_parameter(int16_t parameter) {
-    int32_t strength = 32767;
-    switch (shape_) {
-      case OSC_SHAPE_SQUARE:
-        CONSTRAIN(parameter, 0, 30000);
-        break;
-      case OSC_SHAPE_SINE_FOLD:
-        strength -= 6 * (pitch_ - (92 << 7));
-        CONSTRAIN(strength, 0, 32767);
-        parameter = parameter * strength >> 15;
-        break;
-      /*
-      case OSC_SHAPE_TRIANGLE_FOLD:
-        strength -= 7 * (pitch_ - (80 << 7));
-        CONSTRAIN(strength, 0, 32767);
-        parameter = parameter * strength >> 15;
-        break;
-      */
-      default:
-        break;
-    }
-    parameter_target_ = parameter;
-  }
-  
-  inline uint32_t phase_increment() const {
-    return phase_increment_;
-  }
-  
-  inline void Reset() {
-    phase_ = -phase_increment_;
-  }
-
   void Render();
   
  private:
@@ -166,11 +128,12 @@ class Oscillator {
   uint32_t previous_phase_increment_;
   bool high_;
 
-  int16_t parameter_current_; // 15-bit
-  int16_t parameter_target_;
+  // 15-bit
+  int16_t timbre_current_;
+  int16_t timbre_target_;
 
-  int32_t amplitude_current_;
-  int32_t amplitude_target_;
+  int32_t gain_current_;
+  int32_t gain_target_;
 
   int16_t discontinuity_depth_;
   int16_t pitch_;

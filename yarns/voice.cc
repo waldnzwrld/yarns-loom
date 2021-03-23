@@ -148,7 +148,8 @@ void Voice::Refresh(uint8_t voice_index) {
   // Add transposition/fine tuning.
   note += tuning_;
   
-  // Add vibrato.
+  // Render modulation sources
+  uint16_t envelope_value = envelope_.Refresh();
   if (modulation_increment_) {
     synced_lfo_.Increment(modulation_increment_);
   } else {
@@ -156,34 +157,41 @@ void Voice::Refresh(uint8_t voice_index) {
   }
   // Use voice index to put voice LFOs in quadrature
   uint32_t lfo_phase = synced_lfo_.GetPhase() + (voice_index << 30);
-  int32_t lfo = synced_lfo_.Triangle(lfo_phase);
+
+  // Add vibrato.
+  int32_t vibrato_lfo = synced_lfo_.Triangle(lfo_phase);
   uint16_t vibrato_level = mod_wheel_ + (vibrato_initial_ << 1);
   CONSTRAIN(vibrato_level, 0, 127);
-  int32_t attenuated_lfo = lfo * vibrato_level;
-  note += attenuated_lfo * vibrato_range_ >> 15;
-  mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
-  mod_aux_[MOD_AUX_MODULATION] = mod_wheel_ << 9;
-  mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[MOD_AUX_VIBRATO_LFO] = (attenuated_lfo >> 7) + 32768;
-  mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
+  int32_t attenuated_vibrato_lfo = vibrato_lfo * vibrato_level;
+  note += attenuated_vibrato_lfo * vibrato_range_ >> 15;
 
+  // Slew coarse timbre inputs to avoid clicks
   timbre_init_current_21_ = stmlib::slew(
     timbre_init_current_21_, timbre_init_target_21_
   );
   timbre_mod_envelope_current_ = stmlib::slew(
     timbre_mod_envelope_current_, timbre_mod_envelope_target_
   );
-  uint16_t envelope_value = envelope_.Render();
-  int32_t timbre_envelope = envelope_value * timbre_mod_envelope_current_;
   
+  // Refresh oscillator
+  int32_t timbre_envelope = envelope_value * timbre_mod_envelope_current_;
   // Use quadrature phase for timbre modulation
-  lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
-  int32_t parameter_21 = \
+  int32_t timbre_lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
+  int32_t timbre_21 = \
     timbre_init_current_21_ +
     (timbre_envelope >> (31 - 21)) +
-    lfo * timbre_mod_lfo_;
-  CONSTRAIN(parameter_21, 0, (1 << 21) - 1);
-  oscillator_.set_parameter(parameter_21 >> (21 - 15));
+    timbre_lfo * timbre_mod_lfo_;
+  CONSTRAIN(timbre_21, 0, (1 << 21) - 1);
+  uint16_t gain = oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
+    envelope_value : UINT16_MAX;
+  oscillator_.Refresh(note, timbre_21 >> (21 - 15), gain);
+
+  mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
+  mod_aux_[MOD_AUX_MODULATION] = mod_wheel_ << 9;
+  mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
+  mod_aux_[MOD_AUX_VIBRATO_LFO] = (attenuated_vibrato_lfo >> 7) + 32768;
+  mod_aux_[MOD_AUX_FULL_LFO] = vibrato_lfo + 32768;
+  mod_aux_[MOD_AUX_ENVELOPE] = envelope_value;
 
   if (retrigger_delay_) {
     --retrigger_delay_;
@@ -201,14 +209,7 @@ void Voice::Refresh(uint8_t voice_index) {
     }
   }
 
-  mod_aux_[MOD_AUX_ENVELOPE] = envelope_value;
-  oscillator_.set_gain(
-    oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
-    envelope_value : UINT16_MAX
-  );
-
   note_ = note;
-  oscillator_.set_pitch(note);
 }
 
 void CVOutput::Refresh() {

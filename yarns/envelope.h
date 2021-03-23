@@ -101,7 +101,7 @@ class Envelope {
     phase_ = 0;
   }
 
-  inline uint16_t Render() {
+  inline uint16_t Refresh() {
     uint32_t increment = increment_[segment_];
     phase_ += increment;
     if (phase_ < increment) {
