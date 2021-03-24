@@ -242,12 +242,16 @@ class CVOutput {
 
   void Calibrate(uint16_t* calibrated_dac_code);
 
+  // NB: a voice can supply DC to many CV outputs, but audio to only one output
   inline void assign(Voice* dc, uint8_t num_audio) {
     dc_voice_ = dc;
     num_audio_voices_ = num_audio;
+    int32_t offset = volts_dac_code(0);
+    // Combined audio amplitude 4Vpp
+    int32_t scale = (offset - volts_dac_code(4)) / num_audio_voices_;
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
       Voice* audio_voice = audio_voices_[i] = dc_voice_ + i;
-      audio_voice->oscillator()->Init(scale() / num_audio_voices_, offset());
+      audio_voice->oscillator()->Init(scale, offset);
     }
   }
 
@@ -260,14 +264,6 @@ class CVOutput {
     } else {
       return dc_voice_->gate();
     }
-  }
-
-  inline int32_t scale() const {
-    return offset() - volts_dac_code(4);
-  }
-
-  inline int32_t offset() const {
-    return volts_dac_code(0);
   }
 
   inline bool has_audio() const {
