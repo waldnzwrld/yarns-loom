@@ -72,6 +72,15 @@ void Voice::Init() {
   trigger_duration_ = 2;
 }
 
+/* static */
+CVOutput::DCFn CVOutput::dc_fn_table_[] = {
+  &CVOutput::note_dac_code,
+  &CVOutput::velocity_dac_code,
+  &CVOutput::aux_cv_dac_code,
+  &CVOutput::aux_cv_dac_code_2,
+  &CVOutput::trigger_dac_code,
+};
+
 void CVOutput::Init(bool reset_calibration) {
   if (reset_calibration) {
     for (uint8_t i = 0; i < kNumOctaves; ++i) {
@@ -282,7 +291,7 @@ void Voice::ControlChange(uint8_t controller, uint8_t value) {
   }
 }
 
-int32_t Voice::trigger_value() const {
+uint16_t Voice::trigger_value() const {
   if (trigger_phase_ <= trigger_phase_increment_) {
     return 0;
   } else {

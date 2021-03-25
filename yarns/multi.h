@@ -457,6 +457,11 @@ class Multi {
     return true;
   }
   
+  void AssignOutputVoice(
+    uint8_t cv_i, uint8_t voice_i, DCRole r, uint8_t num_audio_voices
+  ) {
+    cv_outputs_[cv_i].assign(&voice_[voice_i], r, num_audio_voices);
+  }
   void AssignVoicesToCVOutputs();
   void GetCvGate(uint16_t* cv, bool* gate);
   void GetLedsBrightness(uint8_t* brightness);

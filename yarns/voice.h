@@ -74,6 +74,14 @@ enum ModAux {
   MOD_AUX_LAST
 };
 
+enum DCRole {
+  DC_PITCH,
+  DC_VELOCITY,
+  DC_AUX_1,
+  DC_AUX_2,
+  DC_TRIGGER,
+};
+
 class Voice {
  public:
   Voice() { }
@@ -138,7 +146,7 @@ class Voice {
     return gate_ && trigger_pulse_;
   }
   
-  int32_t trigger_value() const;
+  uint16_t trigger_value() const;
   
   inline void set_oscillator_mode(uint8_t m) {
     oscillator_mode_ = m;
@@ -237,13 +245,17 @@ class CVOutput {
   CVOutput() { }
   ~CVOutput() { }
 
+  typedef uint16_t (CVOutput::*DCFn)() const;
+  static DCFn dc_fn_table_[];
+
   void Init(bool reset_calibration);
 
   void Calibrate(uint16_t* calibrated_dac_code);
 
   // NB: a voice can supply DC to many CV outputs, but audio to only one output
-  inline void assign(Voice* dc, uint8_t num_audio) {
+  inline void assign(Voice* dc, DCRole dc_role, uint8_t num_audio) {
     dc_voice_ = dc;
+    dc_role_ = dc_role;
     num_audio_voices_ = num_audio;
     int32_t offset = volts_dac_code(0);
     // Combined audio amplitude 4Vpp
@@ -285,6 +297,13 @@ class CVOutput {
 
   void Refresh();
 
+  inline uint16_t GetDC() const {
+    if (has_audio()) return 0;
+    DCFn fn = dc_fn_table_[dc_role_];
+    return (this->*fn)();
+  }
+
+  // Use a cache/dirty approach for these? or render envelopes via GetAudio?
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
     if (has_audio()) { return 0; }
     uint32_t v = static_cast<uint32_t>(value);
@@ -330,6 +349,7 @@ class CVOutput {
   Voice* dc_voice_;
   Voice* audio_voices_[kNumMaxVoicesPerPart];
   uint8_t num_audio_voices_;
+  DCRole dc_role_;
 
   int32_t note_;
   uint16_t note_dac_code_;
