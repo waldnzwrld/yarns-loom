@@ -222,7 +222,7 @@ void Voice::Refresh(uint8_t voice_index) {
 }
 
 void CVOutput::Refresh() {
-  if (has_audio()) { return; }
+  if (is_AC()) { return; }
   int32_t note = dc_voice_->note();
   bool changed = note_ != note;
   note_ = note;

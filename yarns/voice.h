@@ -267,7 +267,7 @@ class CVOutput {
   }
 
   inline bool gate() const {
-    if (has_audio()) {
+    if (is_AC()) {
       for (uint8_t i = 0; i < num_audio_voices_; ++i) {
         if (audio_voices_[i]->gate()) { return true; }
       }
@@ -277,7 +277,7 @@ class CVOutput {
     }
   }
 
-  inline bool has_audio() const {
+  inline bool is_AC() const {
     return num_audio_voices_ > 0 && audio_voices_[0]->has_audio();
   }
 
@@ -298,14 +298,14 @@ class CVOutput {
   void Refresh();
 
   inline uint16_t GetDC() const {
-    if (has_audio()) return 0;
+    if (is_AC()) return 0;
     DCFn fn = dc_fn_table_[dc_role_];
     return (this->*fn)();
   }
 
   // Use a cache/dirty approach for these? or render envelopes via GetAudio?
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
-    if (has_audio()) { return 0; }
+    if (is_AC()) { return 0; }
     uint32_t v = static_cast<uint32_t>(value);
     uint32_t scale = volts_dac_code(0) - volts_dac_code(7);
     return static_cast<uint16_t>(volts_dac_code(0) - (scale * v >> 16));
