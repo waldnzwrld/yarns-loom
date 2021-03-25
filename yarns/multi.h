@@ -396,9 +396,9 @@ class Multi {
     }
   }
 
-  inline void RenderAudio() {
+  inline void RenderSamples() {
     for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-      cv_outputs_[i].RenderAudio();
+      cv_outputs_[i].RenderSamples();
     }
   }
   

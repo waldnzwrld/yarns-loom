@@ -65,7 +65,6 @@ extern "C" {
 
 uint16_t cv[4];
 bool gate[4];
-bool has_audio_sources;
 bool audio_source[4];
 uint16_t factory_testing_counter;
 uint8_t refresh_counter;
@@ -78,10 +77,7 @@ void SysTick_Handler() {
     ui.Poll();
     system_clock.Tick();
   }
-  // When there is audio sources, lower the display refresh rate to 8kHz.
-  if (has_audio_sources) {
-    ui.PollFast();
-  }
+  ui.PollFast(); // Display refresh at 8kHz
   
   // Try to read some MIDI input if available.
   if (midi_io.readable()) {
@@ -119,7 +115,6 @@ void SysTick_Handler() {
   audio_source[1] = multi.cv_output(1).has_audio();
   audio_source[2] = multi.cv_output(2).has_audio();
   audio_source[3] = multi.cv_output(3).has_audio();
-  has_audio_sources = audio_source[0] || audio_source[1] || audio_source[2] || audio_source[3];
   
   // In calibration mode, overrides the DAC outputs with the raw calibration
   // table values.
@@ -164,10 +159,6 @@ void TIM1_UP_IRQHandler(void) {
   if (dac.channel() == 0) {
     // Internal clock refresh at 48kHz
     multi.RefreshInternalClock();
-  } else if (dac.channel() == 1) {
-    if (!has_audio_sources) {
-      ui.PollFast();
-    }
   }
 }
 
@@ -201,7 +192,7 @@ int main(void) {
     midi_handler.ProcessInput();
     multi.ProcessInternalClockEvents();
     multi.AdvanceLoopers();
-    multi.RenderAudio();
+    multi.RenderSamples();
     if (midi_handler.factory_testing_requested()) {
       midi_handler.AcknowledgeFactoryTestingRequest();
       ui.StartFactoryTesting();

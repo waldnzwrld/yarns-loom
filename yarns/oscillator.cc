@@ -131,7 +131,7 @@ void Oscillator::Render() {
     previous_shape_ = shape_;
   }
 
-  if (audio_buffer_.writable() < kAudioBlockSize) return;
+  if (samples_.writable() < kAudioBlockSize) return;
   phase_increment_ = ComputePhaseIncrement(pitch_);
   
   if (pitch_ > kHighestNote) {

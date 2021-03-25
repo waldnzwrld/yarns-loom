@@ -171,9 +171,8 @@ class Voice {
     timbre_mod_envelope_target_ = n;
   }
 
-  inline void RenderAudio() {
-    if (!has_audio()) return;
-    oscillator_.Render();
+  inline void RenderSamples() {
+    if (has_audio()) { oscillator_.Render(); }
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -270,9 +269,9 @@ class CVOutput {
     return num_audio_voices_ > 0 && audio_voices_[0]->has_audio();
   }
 
-  inline void RenderAudio() {
+  inline void RenderSamples() {
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-      audio_voices_[i]->RenderAudio();
+      audio_voices_[i]->RenderSamples();
     }
   }
 
@@ -299,9 +298,6 @@ class CVOutput {
 
   inline uint16_t velocity_dac_code() const {
     return DacCodeFrom16BitValue(dc_voice_->velocity() << 9);
-  }
-  inline uint16_t modulation_dac_code() const {
-    return DacCodeFrom16BitValue(dc_voice_->modulation() << 9);
   }
   inline uint16_t aux_cv_dac_code() const {
     return DacCodeFrom16BitValue(dc_voice_->aux_cv_16bit());
