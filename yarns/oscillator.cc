@@ -34,11 +34,14 @@
 
 #include "yarns/resources.h"
 
-// Divide by kAudioBlockSize = 64
-#define INTERPOLATE(target, current) (target - current) / 64
-
 #define PHASE_ACCELERATION(target, current) \
   current < target ? (target - current) / 64 : ~((current - target) / 64)
+
+// 2kHz refresh / 48kHz audio = 1/24 Since samples are generated in blocks of
+// 64, theoretically a Refresh should happen 2-3 times in that period, making
+// this interpolated increment stale.  But that requires the envelope to render
+// several samples in advance
+#define INTERPOLATE(target, current) (target - current) / 24
 
 #define INIT \
   size_t size = kAudioBlockSize; \
@@ -53,7 +56,7 @@
 #define INIT_FOLD \
   INIT; \
   int16_t fold_gain = FOLD_GAIN(timbre_current_); \
-  int16_t fold_gain_increment = (FOLD_GAIN(timbre_target_) - fold_gain) / 64;
+  int16_t fold_gain_increment = (FOLD_GAIN(timbre_target_) - fold_gain) / 24;
 
 #define ITERATE \
   timbre_current_ += timbre_increment; \

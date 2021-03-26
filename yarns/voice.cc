@@ -88,6 +88,8 @@ void CVOutput::Init(bool reset_calibration) {
     }
   }
   dirty_ = false;
+
+  env_dac_current_ = env_dac_target_ = env_dac_increment_ = 0;
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
@@ -158,7 +160,7 @@ void Voice::Refresh(uint8_t voice_index) {
   note += tuning_;
   
   // Render modulation sources
-  uint16_t envelope_value = envelope_.Refresh();
+  uint16_t envelope_value = envelope_.value();
   if (modulation_increment_) {
     synced_lfo_.Increment(modulation_increment_);
   } else {

@@ -124,12 +124,10 @@ class Voice {
   inline void set_trigger_shape(uint8_t trigger_shape) {
     trigger_shape_ = trigger_shape;
   }
-  inline void set_aux_cv(uint8_t aux_cv_source) {
-    aux_cv_source_ = aux_cv_source;
-  }
-  inline void set_aux_cv_2(uint8_t aux_cv_source_2) {
-    aux_cv_source_2_ = aux_cv_source_2;
-  }
+  inline void set_aux_cv(uint8_t i) { aux_cv_source_ = i; }
+  inline void set_aux_cv_2(uint8_t i) { aux_cv_source_2_ = i; }
+  inline uint8_t get_aux_cv() { return aux_cv_source_; }
+  inline uint8_t get_aux_cv_2() { return aux_cv_source_2_; }
   
   inline int32_t note() const { return note_; }
   inline uint8_t velocity() const { return mod_velocity_; }
@@ -267,7 +265,7 @@ class CVOutput {
   }
 
   inline bool gate() const {
-    if (is_AC()) {
+    if (is_audio()) {
       for (uint8_t i = 0; i < num_audio_voices_; ++i) {
         if (audio_voices_[i]->gate()) { return true; }
       }
@@ -278,6 +276,13 @@ class CVOutput {
   }
 
   inline bool is_AC() const {
+    return is_audio() || (
+      (dc_role_ == DC_AUX_1 && dc_voice_->get_aux_cv() == MOD_AUX_ENVELOPE) ||
+      (dc_role_ == DC_AUX_2 && dc_voice_->get_aux_cv_2() == MOD_AUX_ENVELOPE)
+    );
+  }
+
+  inline bool is_audio() const {
     return num_audio_voices_ > 0 && audio_voices_[0]->has_audio();
   }
 
@@ -287,12 +292,23 @@ class CVOutput {
     }
   }
 
-  inline uint16_t ReadSample() {
-    uint16_t mix = 0;
-    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-      mix += audio_voices_[i]->ReadSample();
+  inline uint16_t GetAC() {
+    if (is_audio()) {
+      uint16_t mix = 0;
+      for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+        audio_voices_[i]->envelope()->RenderSample();
+        mix += audio_voices_[i]->ReadSample();
+      }
+      return mix;
+    } else {
+      if (dc_voice_->envelope()->RenderSample()) {
+        env_dac_current_ = env_dac_target_;
+        env_dac_target_ = DacCodeFrom16BitValue(dc_voice_->envelope()->value());
+        env_dac_increment_ = (env_dac_target_ - env_dac_current_) / 24;
+      }
+      env_dac_current_ += env_dac_increment_;
+      return env_dac_current_;
     }
-    return mix;
   }
 
   void Refresh();
@@ -305,7 +321,6 @@ class CVOutput {
 
   // Use a cache/dirty approach for these? or render envelopes via GetAudio?
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
-    if (is_AC()) { return 0; }
     uint32_t v = static_cast<uint32_t>(value);
     uint32_t scale = volts_dac_code(0) - volts_dac_code(7);
     return static_cast<uint16_t>(volts_dac_code(0) - (scale * v >> 16));
@@ -355,6 +370,10 @@ class CVOutput {
   uint16_t note_dac_code_;
   bool dirty_;  // Set to true when the calibration settings have changed.
   uint16_t calibrated_dac_code_[kNumOctaves];
+
+  uint16_t env_dac_current_;
+  uint16_t env_dac_target_;
+  int32_t env_dac_increment_;
 
   DISALLOW_COPY_AND_ASSIGN(CVOutput);
 };

@@ -25,6 +25,8 @@
 
 namespace yarns {
 
+const uint8_t kUpdatePeriod = 24;
+
 using namespace stmlib;
 
 enum EnvelopeSegment {
@@ -99,19 +101,28 @@ class Envelope {
     b_ = target_[segment];
     segment_ = segment;
     phase_ = 0;
+    refresh_counter_ = 0;
   }
 
-  inline uint16_t Refresh() {
-    uint32_t increment = increment_[segment_];
-    phase_ += increment;
-    if (phase_ < increment) {
-      value_ = Mix(a_, b_, 65535);
-      Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
+  inline bool RenderSample() {
+    bool changed = false;
+    if (!refresh_counter_) {
+      changed = true;
+      uint32_t increment = increment_[segment_];
+      phase_ += increment;
+      if (phase_ < increment) {
+        value_ = b_;
+        Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
+      }
+      if (increment_[segment_]) {
+        value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
+      }
     }
-    if (increment_[segment_]) {
-      value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
+    refresh_counter_++;
+    if (refresh_counter_ >= kUpdatePeriod) {
+      refresh_counter_ = 0;
     }
-    return value_;
+    return changed;
   }
   
   inline uint16_t value() const { return value_; }
@@ -133,6 +144,7 @@ class Envelope {
   uint16_t b_;
   uint16_t value_;
   uint32_t phase_;
+  uint8_t refresh_counter_;
 
   DISALLOW_COPY_AND_ASSIGN(Envelope);
 };

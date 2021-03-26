@@ -149,7 +149,7 @@ void TIM1_UP_IRQHandler(void) {
 
   dac.Cycle();
   if (is_AC[dac.channel()]) {
-    uint16_t sample = multi.mutable_cv_output(dac.channel())->ReadSample();
+    uint16_t sample = multi.mutable_cv_output(dac.channel())->GetAC();
     dac.Write(sample);
   } else {
     // Use value written there during previous CV refresh.
