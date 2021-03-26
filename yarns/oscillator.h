@@ -61,7 +61,7 @@ class Oscillator {
   ~Oscillator() { }
 
   inline void Init(int32_t scale, int32_t offset) {
-    samples_.Init();
+    audio_buffer_.Init();
     scale_ = scale;
     offset_ = offset;
     timbre_current_ = timbre_target_ = 0;
@@ -79,11 +79,11 @@ class Oscillator {
   }
 
   inline void WriteSample(int16_t sample) {
-    samples_.Overwrite(offset_ - ((gain_current_ * sample) >> 16));
+    audio_buffer_.Overwrite(offset_ - ((gain_current_ * sample) >> 16));
   }
 
   inline uint16_t ReadSample() {
-    return samples_.ImmediateRead();
+    return audio_buffer_.ImmediateRead();
   }
 
   void Refresh(int16_t pitch, int16_t timbre, uint16_t gain);
@@ -147,7 +147,7 @@ class Oscillator {
 
   int32_t scale_;
   int32_t offset_;
-  stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> samples_;
+  stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;
   
   static RenderFn fn_table_[];
   

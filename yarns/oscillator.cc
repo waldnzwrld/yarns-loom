@@ -39,8 +39,8 @@
 
 // 2kHz refresh / 48kHz audio = 1/24 Since samples are generated in blocks of
 // 64, theoretically a Refresh should happen 2-3 times in that period, making
-// this interpolated increment stale.  But that requires the envelope to render
-// several samples in advance
+// this interpolated increment stale.  But that would require the envelope to
+// render several samples in advance
 #define INTERPOLATE(target, current) (target - current) / 24
 
 #define INIT \
@@ -134,7 +134,7 @@ void Oscillator::Render() {
     previous_shape_ = shape_;
   }
 
-  if (samples_.writable() < kAudioBlockSize) return;
+  if (audio_buffer_.writable() < kAudioBlockSize) return;
   phase_increment_ = ComputePhaseIncrement(pitch_);
   
   if (pitch_ > kHighestNote) {
