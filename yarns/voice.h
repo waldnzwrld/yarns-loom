@@ -80,6 +80,7 @@ enum DCRole {
   DC_AUX_1,
   DC_AUX_2,
   DC_TRIGGER,
+  DC_LAST
 };
 
 class Voice {
@@ -126,8 +127,6 @@ class Voice {
   }
   inline void set_aux_cv(uint8_t i) { aux_cv_source_ = i; }
   inline void set_aux_cv_2(uint8_t i) { aux_cv_source_2_ = i; }
-  inline uint8_t get_aux_cv() { return aux_cv_source_; }
-  inline uint8_t get_aux_cv_2() { return aux_cv_source_2_; }
   
   inline int32_t note() const { return note_; }
   inline uint8_t velocity() const { return mod_velocity_; }
@@ -161,8 +160,35 @@ class Voice {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
   }
   
-  inline bool has_audio() const {
-    return oscillator_mode_ != OSCILLATOR_MODE_OFF;
+  inline void set_has_audio_listener(bool b) {
+    has_audio_listener_ = b;
+  }
+  inline void unset_DC_roles() {
+    for (uint8_t i = 0; i < DC_LAST; ++i) { dc_roles_[i] = false; }
+  }
+  inline void add_DC_role(DCRole r) {
+    dc_roles_[r] = true;
+  }
+  inline bool uses_audio() const {
+    return has_audio_listener_ && oscillator_mode_ != OSCILLATOR_MODE_OFF;
+  }
+  inline DCRole envelope_dc_role() const {
+    if (dc_roles_[DC_AUX_1] && aux_cv_source_ == MOD_AUX_ENVELOPE) {
+      return DC_AUX_1;
+    } else if (dc_roles_[DC_AUX_2] && aux_cv_source_2_ == MOD_AUX_ENVELOPE) {
+      return DC_AUX_2;
+    } else return DC_LAST;
+  }
+  inline void set_envelope_dirty() {
+    envelope_dirty_ = true;
+  }
+  inline void RenderEnvelope() {
+    if (!envelope_dirty_) return;
+    envelope_dirty_ = false;
+    envelope_has_new_slope_ = envelope_.RenderSample();
+  }
+  inline bool envelope_has_new_slope() const {
+    return envelope_has_new_slope_;
   }
 
   inline Oscillator* oscillator() {
@@ -178,7 +204,8 @@ class Voice {
   }
 
   inline void RenderSamples() {
-    if (has_audio()) { oscillator_.Render(); }
+    if (!uses_audio()) return;
+    oscillator_.Render();
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -235,6 +262,11 @@ class Voice {
   int16_t timbre_mod_envelope_target_;
   int16_t timbre_mod_envelope_current_;
 
+  bool has_audio_listener_;
+  bool dc_roles_[DC_LAST];
+  bool envelope_dirty_;
+  bool envelope_has_new_slope_;
+
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };
 
@@ -254,6 +286,8 @@ class CVOutput {
   inline void assign(Voice* dc, DCRole dc_role, uint8_t num_audio) {
     dc_voice_ = dc;
     dc_role_ = dc_role;
+    dc_voice_->add_DC_role(dc_role_);
+
     num_audio_voices_ = num_audio;
     int32_t offset = volts_dac_code(0);
     // Combined audio amplitude 4Vpp
@@ -261,6 +295,7 @@ class CVOutput {
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
       Voice* audio_voice = audio_voices_[i] = dc_voice_ + i;
       audio_voice->oscillator()->Init(scale, offset);
+      audio_voice->set_has_audio_listener(true);
     }
   }
 
@@ -275,15 +310,11 @@ class CVOutput {
     }
   }
 
-  inline bool is_AC() const {
-    return is_audio() || (
-      (dc_role_ == DC_AUX_1 && dc_voice_->get_aux_cv() == MOD_AUX_ENVELOPE) ||
-      (dc_role_ == DC_AUX_2 && dc_voice_->get_aux_cv_2() == MOD_AUX_ENVELOPE)
-    );
-  }
-
   inline bool is_audio() const {
-    return num_audio_voices_ > 0 && audio_voices_[0]->has_audio();
+    return num_audio_voices_ > 0 && audio_voices_[0]->uses_audio();
+  }
+  inline bool is_AC() const {
+    return is_audio() || dc_role_ == dc_voice_->envelope_dc_role();
   }
 
   inline void RenderSamples() {
@@ -296,12 +327,13 @@ class CVOutput {
     if (is_audio()) {
       uint16_t mix = 0;
       for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-        audio_voices_[i]->envelope()->RenderSample();
+        audio_voices_[i]->RenderEnvelope();
         mix += audio_voices_[i]->ReadSample();
       }
       return mix;
     } else {
-      if (dc_voice_->envelope()->RenderSample()) {
+      dc_voice_->RenderEnvelope();
+      if (dc_voice_->envelope_has_new_slope()) {
         env_dac_current_ = env_dac_target_;
         env_dac_target_ = DacCodeFrom16BitValue(dc_voice_->envelope()->value());
         env_dac_increment_ = (env_dac_target_ - env_dac_current_) / 24;
@@ -319,7 +351,6 @@ class CVOutput {
     return (this->*fn)();
   }
 
-  // Use a cache/dirty approach for these? or render envelopes via GetAudio?
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
     uint32_t v = static_cast<uint32_t>(value);
     uint32_t scale = volts_dac_code(0) - volts_dac_code(7);

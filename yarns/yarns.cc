@@ -159,6 +159,12 @@ void TIM1_UP_IRQHandler(void) {
   if (dac.channel() == 0) {
     // Internal clock refresh at 48kHz
     multi.RefreshInternalClock();
+
+    uint8_t v = 0;
+    UNROLL6( multi.mutable_voice(v)->set_envelope_dirty(); v++ )
+    // for (uint8_t v = 0; v < kNumSystemVoices; ++v) {
+    //   multi.mutable_voice(v)->set_envelope_dirty();
+    // }
   }
 }
 

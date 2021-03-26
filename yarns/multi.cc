@@ -288,6 +288,10 @@ bool Multi::Set(uint8_t address, uint8_t value) {
 }
 
 void Multi::AssignVoicesToCVOutputs() {
+  for (uint8_t v = 0; v < kNumSystemVoices; ++v) {
+    voice_[v].set_has_audio_listener(false);
+    voice_[v].unset_DC_roles();
+  }
   switch (settings_.layout) {
     case LAYOUT_MONO:
     case LAYOUT_DUAL_POLYCHAINED:
