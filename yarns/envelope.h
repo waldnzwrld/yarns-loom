@@ -38,6 +38,12 @@ enum EnvelopeSegment {
   ENV_NUM_SEGMENTS,
 };
 
+enum EnvelopeValueState {
+  ENV_VALUE_DIRTY,
+  ENV_VALUE_STABLE,
+  ENV_VALUE_FRESH,
+};
+
 class Envelope {
  public:
   Envelope() { }
@@ -45,6 +51,7 @@ class Envelope {
 
   void Init() {
     gate_ = false;
+    clock_ = 0;
 
     target_[ENV_SEGMENT_ATTACK] = 65535;
     target_[ENV_SEGMENT_RELEASE] = 0;
@@ -101,31 +108,40 @@ class Envelope {
     b_ = target_[segment];
     segment_ = segment;
     phase_ = 0;
-    refresh_counter_ = 0;
+    // clock_ = 0;
   }
 
-  inline bool RenderSample() {
-    bool changed = false;
-    if (!refresh_counter_) {
-      changed = true;
+  inline void NeedsClock() {
+    clock_dirty_ = true;
+  }
+
+  inline void Clock() { // 48kHz
+    if (!clock_dirty_) return;
+    if (state_ == ENV_VALUE_FRESH) state_ = ENV_VALUE_STABLE;
+    if (!clock_) {
+      state_ = ENV_VALUE_DIRTY;
       uint32_t increment = increment_[segment_];
       phase_ += increment;
       if (phase_ < increment) {
         value_ = b_;
         Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
       }
-      if (increment_[segment_]) {
-        value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
-      }
     }
-    refresh_counter_++;
-    if (refresh_counter_ >= kUpdatePeriod) {
-      refresh_counter_ = 0;
+    clock_++;
+    if (clock_ >= kUpdatePeriod) {
+      clock_ = 0;
     }
-    return changed;
   }
-  
-  inline uint16_t value() const { return value_; }
+
+  inline EnvelopeValueState Render() {
+    Clock();
+    if (state_ != ENV_VALUE_DIRTY) return state_;
+    value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
+    state_ = ENV_VALUE_FRESH;
+    return state_;
+  }
+
+  inline uint16_t value() { return value_; }
 
  private:
   bool gate_;
@@ -144,7 +160,9 @@ class Envelope {
   uint16_t b_;
   uint16_t value_;
   uint32_t phase_;
-  uint8_t refresh_counter_;
+  EnvelopeValueState state_;
+  uint8_t clock_;
+  bool clock_dirty_;
 
   DISALLOW_COPY_AND_ASSIGN(Envelope);
 };

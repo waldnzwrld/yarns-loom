@@ -160,6 +160,7 @@ void Voice::Refresh(uint8_t voice_index) {
   note += tuning_;
   
   // Render modulation sources
+  envelope_.Render();
   uint16_t envelope_value = envelope_.value();
   if (modulation_increment_) {
     synced_lfo_.Increment(modulation_increment_);

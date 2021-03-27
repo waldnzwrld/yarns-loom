@@ -179,17 +179,6 @@ class Voice {
       return DC_AUX_2;
     } else return DC_LAST;
   }
-  inline void set_envelope_dirty() {
-    envelope_dirty_ = true;
-  }
-  inline void RenderEnvelope() {
-    if (!envelope_dirty_) return;
-    envelope_dirty_ = false;
-    envelope_has_new_slope_ = envelope_.RenderSample();
-  }
-  inline bool envelope_has_new_slope() const {
-    return envelope_has_new_slope_;
-  }
 
   inline Oscillator* oscillator() {
     return &oscillator_;
@@ -264,8 +253,6 @@ class Voice {
 
   bool has_audio_listener_;
   bool dc_roles_[DC_LAST];
-  bool envelope_dirty_;
-  bool envelope_has_new_slope_;
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };
@@ -327,13 +314,12 @@ class CVOutput {
     if (is_audio()) {
       uint16_t mix = 0;
       for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-        audio_voices_[i]->RenderEnvelope();
+        audio_voices_[i]->envelope()->Clock();
         mix += audio_voices_[i]->ReadSample();
       }
       return mix;
     } else {
-      dc_voice_->RenderEnvelope();
-      if (dc_voice_->envelope_has_new_slope()) {
+      if (dc_voice_->envelope()->Render() == ENV_VALUE_FRESH) {
         env_dac_current_ = env_dac_target_;
         env_dac_target_ = DacCodeFrom16BitValue(dc_voice_->envelope()->value());
         env_dac_increment_ = (env_dac_target_ - env_dac_current_) / 24;

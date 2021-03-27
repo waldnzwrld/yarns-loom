@@ -161,10 +161,7 @@ void TIM1_UP_IRQHandler(void) {
     multi.RefreshInternalClock();
 
     uint8_t v = 0;
-    UNROLL6( multi.mutable_voice(v)->set_envelope_dirty(); v++ )
-    // for (uint8_t v = 0; v < kNumSystemVoices; ++v) {
-    //   multi.mutable_voice(v)->set_envelope_dirty();
-    // }
+    UNROLL6( multi.mutable_voice(v)->envelope()->NeedsClock(); v++ )
   }
 }
 
