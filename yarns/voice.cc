@@ -225,7 +225,7 @@ void Voice::Refresh(uint8_t voice_index) {
 }
 
 void CVOutput::Refresh() {
-  if (is_AC()) { return; }
+  if (is_high_freq()) { return; }
   int32_t note = dc_voice_->note();
   bool changed = note_ != note;
   note_ = note;

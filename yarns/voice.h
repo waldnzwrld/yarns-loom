@@ -300,8 +300,11 @@ class CVOutput {
   inline bool is_audio() const {
     return num_audio_voices_ > 0 && audio_voices_[0]->uses_audio();
   }
-  inline bool is_AC() const {
-    return is_audio() || dc_role_ == dc_voice_->envelope_dc_role();
+  inline bool is_envelope() const {
+    return dc_role_ == dc_voice_->envelope_dc_role();
+  }
+  inline bool is_high_freq() const {
+    return is_audio() || is_envelope();
   }
 
   inline void RenderSamples() {
@@ -310,29 +313,29 @@ class CVOutput {
     }
   }
 
-  inline uint16_t GetAC() {
-    if (is_audio()) {
-      uint16_t mix = 0;
-      for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-        audio_voices_[i]->envelope()->Clock();
-        mix += audio_voices_[i]->ReadSample();
-      }
-      return mix;
-    } else {
-      if (dc_voice_->envelope()->Render() == ENV_VALUE_FRESH) {
-        env_dac_current_ = env_dac_target_;
-        env_dac_target_ = DacCodeFrom16BitValue(dc_voice_->envelope()->value());
-        env_dac_increment_ = (env_dac_target_ - env_dac_current_) / 24;
-      }
-      env_dac_current_ += env_dac_increment_;
-      return env_dac_current_;
+  inline uint16_t GetAudioSample() {
+    uint16_t mix = 0;
+    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+      audio_voices_[i]->envelope()->Clock();
+      mix += audio_voices_[i]->ReadSample();
     }
+    return mix;
+  }
+
+  inline uint16_t GetEnvelopeSample() {
+    if (dc_voice_->envelope()->Render()) {
+      env_dac_current_ = env_dac_target_;
+      env_dac_target_ = DacCodeFrom16BitValue(dc_voice_->envelope()->value());
+      env_dac_increment_ = (env_dac_target_ - env_dac_current_) / 24;
+    }
+    env_dac_current_ += env_dac_increment_;
+    return env_dac_current_;
   }
 
   void Refresh();
 
   inline uint16_t GetDC() const {
-    if (is_AC()) return 0;
+    if (is_high_freq()) return 0;
     DCFn fn = dc_fn_table_[dc_role_];
     return (this->*fn)();
   }

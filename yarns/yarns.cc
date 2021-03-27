@@ -65,7 +65,8 @@ extern "C" {
 
 uint16_t cv[4];
 bool gate[4];
-bool is_AC[4];
+bool has_audio_source[4];
+bool has_envelope[4];
 uint16_t factory_testing_counter;
 uint8_t refresh_counter;
 
@@ -111,10 +112,14 @@ void SysTick_Handler() {
     multi.Refresh();
     multi.GetCvGate(cv, gate);
   }
-  is_AC[0] = multi.cv_output(0).is_AC();
-  is_AC[1] = multi.cv_output(1).is_AC();
-  is_AC[2] = multi.cv_output(2).is_AC();
-  is_AC[3] = multi.cv_output(3).is_AC();
+  has_audio_source[0] = multi.cv_output(0).is_audio();
+  has_audio_source[1] = multi.cv_output(1).is_audio();
+  has_audio_source[2] = multi.cv_output(2).is_audio();
+  has_audio_source[3] = multi.cv_output(3).is_audio();
+  has_envelope[0] = multi.cv_output(0).is_envelope();
+  has_envelope[1] = multi.cv_output(1).is_envelope();
+  has_envelope[2] = multi.cv_output(2).is_envelope();
+  has_envelope[3] = multi.cv_output(3).is_envelope();
   
   // In calibration mode, overrides the DAC outputs with the raw calibration
   // table values.
@@ -148,9 +153,10 @@ void TIM1_UP_IRQHandler(void) {
   TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
 
   dac.Cycle();
-  if (is_AC[dac.channel()]) {
-    uint16_t sample = multi.mutable_cv_output(dac.channel())->GetAC();
-    dac.Write(sample);
+  if (has_audio_source[dac.channel()]) {
+    dac.Write(multi.mutable_cv_output(dac.channel())->GetAudioSample());
+  } else if (has_envelope[dac.channel()]) {
+    dac.Write(multi.mutable_cv_output(dac.channel())->GetEnvelopeSample());
   } else {
     // Use value written there during previous CV refresh.
     dac.Write();

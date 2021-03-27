@@ -38,12 +38,6 @@ enum EnvelopeSegment {
   ENV_NUM_SEGMENTS,
 };
 
-enum EnvelopeValueState {
-  ENV_VALUE_DIRTY,
-  ENV_VALUE_STABLE,
-  ENV_VALUE_FRESH,
-};
-
 class Envelope {
  public:
   Envelope() { }
@@ -117,28 +111,27 @@ class Envelope {
 
   inline void Clock() { // 48kHz
     if (!clock_dirty_) return;
-    if (state_ == ENV_VALUE_FRESH) state_ = ENV_VALUE_STABLE;
-    if (!clock_) {
-      state_ = ENV_VALUE_DIRTY;
-      uint32_t increment = increment_[segment_];
-      phase_ += increment;
-      if (phase_ < increment) {
-        value_ = b_;
-        Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
-      }
-    }
     clock_++;
-    if (clock_ >= kUpdatePeriod) {
-      clock_ = 0;
+    // clock_dirty_ = false; // Makes performance worse for some reason?
+    value_fresh_ = false;
+    if (clock_ < kUpdatePeriod) return;
+    clock_ = 0;
+    value_dirty_ = true;
+    uint32_t increment = increment_[segment_];
+    phase_ += increment;
+    if (phase_ < increment) {
+      value_ = b_;
+      Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
     }
   }
 
-  inline EnvelopeValueState Render() {
+  inline bool Render() {
     Clock();
-    if (state_ != ENV_VALUE_DIRTY) return state_;
+    if (!value_dirty_) return value_fresh_;
     value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
-    state_ = ENV_VALUE_FRESH;
-    return state_;
+    value_dirty_ = false;
+    value_fresh_ = true;
+    return value_fresh_;
   }
 
   inline uint16_t value() { return value_; }
@@ -160,9 +153,10 @@ class Envelope {
   uint16_t b_;
   uint16_t value_;
   uint32_t phase_;
-  EnvelopeValueState state_;
   uint8_t clock_;
   bool clock_dirty_;
+  bool value_fresh_; // Newly rendered
+  bool value_dirty_; // Needs render
 
   DISALLOW_COPY_AND_ASSIGN(Envelope);
 };
