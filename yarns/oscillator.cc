@@ -56,7 +56,7 @@
 #define INIT_FOLD \
   INIT; \
   int16_t fold_gain = FOLD_GAIN(timbre_current_); \
-  int16_t fold_gain_increment = (FOLD_GAIN(timbre_target_) - fold_gain) / 64;
+  int16_t fold_gain_increment = INTERPOLATE(FOLD_GAIN(timbre_target_), fold_gain);
 
 #define ITERATE \
   timbre_current_ += timbre_increment; \
