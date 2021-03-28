@@ -994,7 +994,7 @@ void Part::InternalNoteOff(uint8_t note) {
         had_extra_notes &&
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE
       ) {
-        const NoteEntry& nice = priority_note(NOTE_STACK_PRIORITY_LAST);
+        const NoteEntry& nice = priority_note(NOTE_STACK_PRIORITY_FIRST, num_voices_ - 1);
         poly_allocator_.NoteOn(nice.note, VOICE_STEALING_MODE_NONE);
         VoiceNoteOn(voice_[voice_index], nice.note, nice.velocity, true);
         active_note_[voice_index] = nice.note;
