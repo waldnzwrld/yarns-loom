@@ -160,7 +160,7 @@ void Voice::Refresh(uint8_t voice_index) {
   note += tuning_;
   
   // Render modulation sources
-  envelope_.Render();
+  envelope_.ReadSample();
   uint16_t envelope_value = envelope_.value();
   if (modulation_increment_) {
     synced_lfo_.Increment(modulation_increment_);
@@ -225,13 +225,19 @@ void Voice::Refresh(uint8_t voice_index) {
 }
 
 void CVOutput::Refresh() {
-  if (is_high_freq()) { return; }
-  int32_t note = dc_voice_->note();
-  bool changed = note_ != note;
-  note_ = note;
-  if (changed || dirty_) {
-    NoteToDacCode();
-    dirty_ = false;
+  if (is_audio()) return;
+  if (dc_role_ == DC_PITCH) {
+    int32_t note = dc_voice_->note();
+    bool changed = note_ != note;
+    note_ = note;
+    if (changed || dirty_) {
+      NoteToDacCode();
+      dirty_ = false;
+    }
+  } else if (is_envelope()) {
+    env_dac_current_ = env_dac_target_;
+    env_dac_target_ = DacCodeFrom16BitValue(dc_voice_->envelope()->value());
+    env_dac_increment_ = (env_dac_target_ - env_dac_current_) / 24;
   }
 }
 

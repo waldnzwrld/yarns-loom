@@ -165,9 +165,6 @@ void TIM1_UP_IRQHandler(void) {
   if (dac.channel() == 0) {
     // Internal clock refresh at 48kHz
     multi.RefreshInternalClock();
-
-    uint8_t v = 0;
-    UNROLL6( multi.mutable_voice(v)->envelope()->NeedsClock(); v++ )
   }
 }
 
@@ -199,9 +196,7 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     midi_handler.ProcessInput();
-    multi.ProcessInternalClockEvents();
-    multi.AdvanceLoopers();
-    multi.RenderSamples();
+    multi.LowPriority();
     if (midi_handler.factory_testing_requested()) {
       midi_handler.AcknowledgeFactoryTestingRequest();
       ui.StartFactoryTesting();

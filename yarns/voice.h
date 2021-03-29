@@ -160,6 +160,12 @@ class Voice {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
   }
   
+  inline bool aux_1_envelope() const {
+    return aux_cv_source_ == MOD_AUX_ENVELOPE;
+  }
+  inline bool aux_2_envelope() const {
+    return aux_cv_source_2_ == MOD_AUX_ENVELOPE;
+  }
   inline void set_has_audio_listener(bool b) {
     has_audio_listener_ = b;
   }
@@ -193,8 +199,8 @@ class Voice {
   }
 
   inline void RenderSamples() {
-    if (!uses_audio()) return;
-    oscillator_.Render();
+    envelope_.RenderSamples();
+    if (uses_audio()) oscillator_.Render();
   }
   inline uint16_t ReadSample() {
     return oscillator_.ReadSample();
@@ -301,33 +307,23 @@ class CVOutput {
     return num_audio_voices_ > 0 && audio_voices_[0]->uses_audio();
   }
   inline bool is_envelope() const {
-    return dc_role_ == dc_voice_->envelope_dc_role();
+    return
+      (dc_role_ == DC_AUX_1 && dc_voice_->aux_1_envelope()) ||
+      (dc_role_ == DC_AUX_2 && dc_voice_->aux_2_envelope());
   }
   inline bool is_high_freq() const {
     return is_audio() || is_envelope();
   }
 
-  inline void RenderSamples() {
-    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-      audio_voices_[i]->RenderSamples();
-    }
-  }
-
   inline uint16_t GetAudioSample() {
     uint16_t mix = 0;
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-      audio_voices_[i]->envelope()->Clock();
       mix += audio_voices_[i]->ReadSample();
     }
     return mix;
   }
 
   inline uint16_t GetEnvelopeSample() {
-    if (dc_voice_->envelope()->Render()) {
-      env_dac_current_ = env_dac_target_;
-      env_dac_target_ = DacCodeFrom16BitValue(dc_voice_->envelope()->value());
-      env_dac_increment_ = (env_dac_target_ - env_dac_current_) / 24;
-    }
     env_dac_current_ += env_dac_increment_;
     return env_dac_current_;
   }

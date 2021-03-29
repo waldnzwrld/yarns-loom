@@ -18,14 +18,14 @@
 #define YARNS_ENVELOPE_H_
 
 #include "stmlib/stmlib.h"
-
+#include "stmlib/utils/ring_buffer.h"
 #include "stmlib/utils/dsp.h"
 
 #include "yarns/resources.h"
 
 namespace yarns {
 
-const uint8_t kUpdatePeriod = 24;
+const size_t kEnvBlockSize = 4;
 
 using namespace stmlib;
 
@@ -45,7 +45,6 @@ class Envelope {
 
   void Init() {
     gate_ = false;
-    clock_ = 0;
 
     target_[ENV_SEGMENT_ATTACK] = 65535;
     target_[ENV_SEGMENT_RELEASE] = 0;
@@ -100,41 +99,33 @@ class Envelope {
     }
     a_ = value_;
     b_ = target_[segment];
+    phase_increment_ = increment_[segment];
     segment_ = segment;
     phase_ = 0;
-    // clock_ = 0;
   }
 
-  inline void NeedsClock() {
-    clock_dirty_ = true;
-  }
+  inline void RenderSamples() {
+    if (samples_.writable() < kEnvBlockSize) return;
 
-  inline void Clock() { // 48kHz
-    if (!clock_dirty_) return;
-    clock_++;
-    // clock_dirty_ = false; // Makes performance worse for some reason?
-    value_fresh_ = false;
-    if (clock_ < kUpdatePeriod) return;
-    clock_ = 0;
-    value_dirty_ = true;
-    uint32_t increment = increment_[segment_];
-    phase_ += increment;
-    if (phase_ < increment) {
-      value_ = b_;
-      Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
+    size_t size = kEnvBlockSize;
+    while (size--) {
+      phase_ += phase_increment_;
+      if (phase_ < phase_increment_) {
+        value_ = b_;
+        Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
+      }
+      if (phase_increment_) {
+        value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
+      }
+      samples_.Overwrite(value_);
     }
   }
 
-  inline bool Render() {
-    Clock();
-    if (!value_dirty_) return value_fresh_;
-    value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
-    value_dirty_ = false;
-    value_fresh_ = true;
-    return value_fresh_;
+  inline void ReadSample() {
+    value_read_ = samples_.ImmediateRead();
   }
 
-  inline uint16_t value() { return value_; }
+  inline uint16_t value() const { return value_read_; }
 
  private:
   bool gate_;
@@ -152,11 +143,11 @@ class Envelope {
   uint16_t a_;
   uint16_t b_;
   uint16_t value_;
+  uint16_t value_read_;
   uint32_t phase_;
-  uint8_t clock_;
-  bool clock_dirty_;
-  bool value_fresh_; // Newly rendered
-  bool value_dirty_; // Needs render
+  uint32_t phase_increment_;
+
+  stmlib::RingBuffer<uint16_t, kEnvBlockSize * 2> samples_;
 
   DISALLOW_COPY_AND_ASSIGN(Envelope);
 };

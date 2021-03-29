@@ -379,26 +379,20 @@ class Multi {
       ++internal_clock_ticks_;
     }
   }
-  void ProcessInternalClockEvents() {
+
+  void LowPriority() {
     while (internal_clock_ticks_) {
       Clock();
       --internal_clock_ticks_;
     }
-  }
 
-  void AdvanceLoopers() {
-    if (!running()) {
-      return;
-    }
-    for (uint8_t j = 0; j < num_active_parts_; ++j) {
-      if (!part_[j].looper_in_use()) { continue; }
-      part_[j].mutable_looper().AdvanceToPresent();
-    }
-  }
-
-  inline void RenderSamples() {
-    for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-      cv_outputs_[i].RenderSamples();
+    for (uint8_t p = 0; p < num_active_parts_; ++p) {
+      if (running() && part_[p].looper_in_use()) {
+        part_[p].mutable_looper().AdvanceToPresent();
+      }
+      for (uint8_t v = 0; v < part_[p].num_voices(); ++v) {
+        part_[p].voice(v)->RenderSamples();
+      }
     }
   }
   
