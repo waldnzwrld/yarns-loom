@@ -169,21 +169,8 @@ class Voice {
   inline void set_has_audio_listener(bool b) {
     has_audio_listener_ = b;
   }
-  inline void unset_DC_roles() {
-    for (uint8_t i = 0; i < DC_LAST; ++i) { dc_roles_[i] = false; }
-  }
-  inline void add_DC_role(DCRole r) {
-    dc_roles_[r] = true;
-  }
   inline bool uses_audio() const {
     return has_audio_listener_ && oscillator_mode_ != OSCILLATOR_MODE_OFF;
-  }
-  inline DCRole envelope_dc_role() const {
-    if (dc_roles_[DC_AUX_1] && aux_cv_source_ == MOD_AUX_ENVELOPE) {
-      return DC_AUX_1;
-    } else if (dc_roles_[DC_AUX_2] && aux_cv_source_2_ == MOD_AUX_ENVELOPE) {
-      return DC_AUX_2;
-    } else return DC_LAST;
   }
 
   inline Oscillator* oscillator() {
@@ -258,7 +245,6 @@ class Voice {
   int16_t timbre_mod_envelope_current_;
 
   bool has_audio_listener_;
-  bool dc_roles_[DC_LAST];
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };
@@ -279,7 +265,6 @@ class CVOutput {
   inline void assign(Voice* dc, DCRole dc_role, uint8_t num_audio) {
     dc_voice_ = dc;
     dc_role_ = dc_role;
-    dc_voice_->add_DC_role(dc_role_);
 
     num_audio_voices_ = num_audio;
     int32_t offset = volts_dac_code(0);
@@ -311,9 +296,6 @@ class CVOutput {
       (dc_role_ == DC_AUX_1 && dc_voice_->aux_1_envelope()) ||
       (dc_role_ == DC_AUX_2 && dc_voice_->aux_2_envelope());
   }
-  inline bool is_high_freq() const {
-    return is_audio() || is_envelope();
-  }
 
   inline uint16_t GetAudioSample() {
     uint16_t mix = 0;
@@ -331,7 +313,7 @@ class CVOutput {
   void Refresh();
 
   inline uint16_t GetDC() const {
-    if (is_high_freq()) return 0;
+    if (is_audio() || is_envelope()) return 0;
     DCFn fn = dc_fn_table_[dc_role_];
     return (this->*fn)();
   }
