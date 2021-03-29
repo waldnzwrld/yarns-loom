@@ -25,7 +25,7 @@
 
 namespace yarns {
 
-const size_t kEnvBlockSize = 4;
+const size_t kEnvBlockSize = 2;
 
 using namespace stmlib;
 
