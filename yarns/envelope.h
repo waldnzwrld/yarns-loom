@@ -58,6 +58,8 @@ class Envelope {
     if (!gate_) {
       gate_ = true;
       Trigger(ENV_SEGMENT_ATTACK);
+      samples_.Flush();
+      RenderSamples(1);
     }
   }
 
@@ -69,6 +71,8 @@ class Envelope {
         break;
       case ENV_SEGMENT_SUSTAIN:
         Trigger(ENV_SEGMENT_RELEASE);
+        samples_.Flush();
+        RenderSamples(1);
         break;
       default:
         break;
@@ -104,10 +108,9 @@ class Envelope {
     phase_ = 0;
   }
 
-  inline void RenderSamples() {
-    if (samples_.writable() < kEnvBlockSize) return;
+  inline void RenderSamples(size_t size = kEnvBlockSize) {
+    if (samples_.writable() < size) return;
 
-    size_t size = kEnvBlockSize;
     while (size--) {
       phase_ += phase_increment_;
       if (phase_ < phase_increment_) {
