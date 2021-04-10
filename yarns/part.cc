@@ -80,13 +80,11 @@ void Part::Init() {
   voicing_.portamento = 0;
   voicing_.pitch_bend_range = 2;
   voicing_.vibrato_range = 1;
-  voicing_.vibrato_initial = 5;
+  voicing_.vibrato_mod = 0;
   voicing_.modulation_rate = 50;
   voicing_.trigger_duration = 2;
-  voicing_.aux_cv = MOD_AUX_MODULATION;
-  voicing_.aux_cv_2 = MOD_AUX_VIBRATO_LFO;
-  voicing_.timbre_initial = 40;
-  voicing_.timbre_mod_lfo = 10;
+  voicing_.aux_cv = MOD_AUX_ENVELOPE;
+  voicing_.aux_cv_2 = MOD_AUX_ENVELOPE;
   voicing_.tuning_transpose = 0;
   voicing_.tuning_fine = 0;
   voicing_.tuning_root = 0;
@@ -95,16 +93,19 @@ void Part::Init() {
   voicing_.oscillator_mode = OSCILLATOR_MODE_OFF;
   voicing_.oscillator_shape = OSC_SHAPE_FM;
 
-  voicing_.timbre_mod_envelope = 16;
-  voicing_.timbre_mod_velocity = 24;
-  voicing_.env_init_attack = 30;
-  voicing_.env_init_decay = 20;
-  voicing_.env_init_sustain = 40;
-  voicing_.env_init_release = 40;
-  voicing_.env_mod_attack = -16;
-  voicing_.env_mod_decay = -8;
-  voicing_.env_mod_sustain = 8;
-  voicing_.env_mod_release = 16;
+  voicing_.timbre_initial = 64;
+  voicing_.timbre_mod_velocity = 32;
+  voicing_.timbre_mod_envelope = -16;
+  voicing_.timbre_mod_lfo = 16;
+
+  voicing_.env_init_attack = 64;
+  voicing_.env_init_decay = 64;
+  voicing_.env_init_sustain = 64;
+  voicing_.env_init_release = 32;
+  voicing_.env_mod_attack = -32;
+  voicing_.env_mod_decay = -32;
+  voicing_.env_mod_sustain = 32;
+  voicing_.env_mod_release = 32;
 
   seq_.clock_division = clock_division::unity;
   seq_.gate_length = 3;
@@ -253,7 +254,6 @@ void Part::PressedKeysSustainOff(PressedKeys &keys) {
 
 bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   switch (controller) {
-    case kCCModulationWheelMsb:
     case kCCBreathController:
     case kCCFootPedalMsb:
       for (uint8_t i = 0; i < num_voices_; ++i) {
@@ -848,15 +848,15 @@ void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato) {
       break;
   }
 
-  int32_t timbre_13 = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
-  CONSTRAIN(timbre_13, -1 << 12, (1 << 12) - 1)
-  voice->set_timbre_mod_envelope(timbre_13 << 3);
+  int32_t timbre_14 = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
+  CONSTRAIN(timbre_14, -1 << 13, (1 << 13) - 1)
+  voice->set_timbre_mod_envelope(timbre_14 << 2);
 
   voice->envelope()->SetADSR(
-    modulate_7bit(voicing_.env_init_attack << 1, voicing_.env_mod_attack << 1, vel),
-    modulate_7bit(voicing_.env_init_decay << 1, voicing_.env_mod_decay << 1, vel),
-    modulate_7bit(voicing_.env_init_sustain << 1, voicing_.env_mod_sustain << 1, vel),
-    modulate_7bit(voicing_.env_init_release << 1, voicing_.env_mod_release << 1, vel)
+    modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack, vel),
+    modulate_7bit(voicing_.env_init_decay, voicing_.env_mod_decay, vel),
+    modulate_7bit(voicing_.env_init_sustain, voicing_.env_mod_sustain, vel),
+    modulate_7bit(voicing_.env_init_release, voicing_.env_mod_release, vel)
   );
 
   voice->NoteOn(Tune(pitch), vel, portamento, trigger);
@@ -1017,7 +1017,8 @@ void Part::TouchVoices() {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
     voice_[i]->set_modulation_rate(voicing_.modulation_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
-    voice_[i]->set_vibrato_initial(voicing_.vibrato_initial);
+    voice_[i]->set_vibrato_mod(voicing_.vibrato_mod);
+    voice_[i]->set_tremolo_mod(voicing_.tremolo_mod);
     voice_[i]->set_trigger_duration(voicing_.trigger_duration);
     voice_[i]->set_trigger_scale(voicing_.trigger_scale);
     voice_[i]->set_trigger_shape(voicing_.trigger_shape);
@@ -1058,7 +1059,8 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_PITCH_BEND_RANGE:
     case PART_VOICING_MODULATION_RATE:
     case PART_VOICING_VIBRATO_RANGE:
-    case PART_VOICING_VIBRATO_INITIAL:
+    case PART_VOICING_VIBRATO_MOD:
+    case PART_VOICING_TREMOLO_MOD:
     case PART_VOICING_TRIGGER_DURATION:
     case PART_VOICING_TRIGGER_SHAPE:
     case PART_VOICING_TRIGGER_SCALE:

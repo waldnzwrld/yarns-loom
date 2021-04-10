@@ -65,8 +65,8 @@
   - Hold `TAP` to toggle overwrite mode, which will clear the loop as soon as a new note is recorded
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
-- Holds 31 notes max -- past this limit, overwrites oldest note
-- Step sequencer also reduced from 64 to 31 notes, to free up space in the preset storage
+- Holds 30 notes max -- past this limit, overwrites oldest note
+- Step sequencer also reduced from 64 to 30 notes, to free up space in the preset storage
 
 ### Sequencer-driven arpeggiator
 - Activated by setting the `ARP PATTERN` to `SEQUENCER`

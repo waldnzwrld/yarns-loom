@@ -45,7 +45,7 @@ const uint8_t kBitsNoteIndex = 5;
 STATIC_ASSERT(kBitsNoteIndex <= 7, bits); // Leave room for kNullIndex
 const uint8_t kNullIndex = UINT8_MAX;
 
-const uint8_t kMaxNotes = 31;
+const uint8_t kMaxNotes = 30;
 STATIC_ASSERT(kMaxNotes < (1 << kBitsNoteIndex), bits);
 
 struct Link {

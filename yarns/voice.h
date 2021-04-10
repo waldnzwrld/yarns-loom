@@ -113,9 +113,9 @@ class Voice {
   inline void set_vibrato_range(uint8_t vibrato_range) {
     vibrato_range_ = vibrato_range;
   }
-  inline void set_vibrato_initial(uint8_t n) {
-    vibrato_initial_ = n;
-  }
+  inline void set_vibrato_mod(uint8_t n) { vibrato_mod_ = n; }
+  inline void set_tremolo_mod(uint8_t n) {
+    tremolo_mod_target_ = n << (16 - 7); }
   inline void set_trigger_duration(uint8_t trigger_duration) {
     trigger_duration_ = trigger_duration;
   }
@@ -130,7 +130,6 @@ class Voice {
   
   inline int32_t note() const { return note_; }
   inline uint8_t velocity() const { return mod_velocity_; }
-  inline uint8_t modulation() const { return mod_wheel_; }
   inline uint16_t aux_cv_16bit() const { return mod_aux_[aux_cv_source_]; }
   inline uint16_t aux_cv_2_16bit() const { return mod_aux_[aux_cv_source_2_]; }
   inline uint8_t aux_cv() const { return aux_cv_16bit() >> 8; }
@@ -152,9 +151,9 @@ class Voice {
     oscillator_.set_shape(static_cast<OscillatorShape>(s));
   }
   inline void set_timbre_init(uint8_t n) {
-    timbre_init_target_21_ = n << (21 - 6);
-  }
-  inline void set_timbre_mod_lfo(uint8_t n) { timbre_mod_lfo_ = n; }
+    timbre_init_target_ = n << (16 - 7); }
+  inline void set_timbre_mod_lfo(uint8_t n) {
+    timbre_mod_lfo_target_ = n << (16 - 7); }
   
   inline void set_tuning(int8_t coarse, int8_t fine) {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
@@ -194,8 +193,9 @@ class Voice {
   }
   
  private:
-  // Clock-synced LFO.
   SyncedLFO synced_lfo_;
+  Envelope envelope_;
+  Oscillator oscillator_;
 
   int32_t note_source_;
   int32_t note_target_;
@@ -205,7 +205,6 @@ class Voice {
   bool gate_;
   
   int16_t mod_pitch_bend_;
-  uint8_t mod_wheel_;
   uint16_t mod_aux_[MOD_AUX_LAST];
   uint8_t mod_velocity_;
   
@@ -213,11 +212,13 @@ class Voice {
   uint32_t modulation_increment_;
   uint16_t modulation_sync_ticks_;
   uint8_t vibrato_range_;
-  uint8_t vibrato_initial_;
+  uint8_t vibrato_mod_;
   
   uint8_t trigger_duration_;
   uint8_t trigger_shape_;
   bool trigger_scale_;
+
+  uint8_t oscillator_mode_;
   uint8_t aux_cv_source_;
   uint8_t aux_cv_source_2_;
   
@@ -234,13 +235,14 @@ class Voice {
   uint16_t trigger_pulse_;
   uint32_t trigger_phase_increment_;
   uint32_t trigger_phase_;
-  
-  uint8_t oscillator_mode_;
-  int32_t timbre_init_target_21_;
-  int32_t timbre_init_current_21_;
-  int8_t timbre_mod_lfo_;
-  Oscillator oscillator_;
-  Envelope envelope_;
+
+  uint16_t tremolo_mod_target_;
+  uint16_t tremolo_mod_current_;
+
+  uint16_t timbre_mod_lfo_target_;
+  uint16_t timbre_mod_lfo_current_;
+  uint16_t timbre_init_target_;
+  uint16_t timbre_init_current_;
   int16_t timbre_mod_envelope_target_;
   int16_t timbre_mod_envelope_current_;
 
@@ -306,16 +308,14 @@ class CVOutput {
   }
 
   inline uint16_t GetEnvelopeSample() {
-    env_dac_current_ += env_dac_increment_;
-    return env_dac_current_;
+    dac_current_ += dac_increment_;
+    return dac_current_;
   }
 
   void Refresh();
 
-  inline uint16_t GetDC() const {
-    if (is_audio() || is_envelope()) return 0;
-    DCFn fn = dc_fn_table_[dc_role_];
-    return (this->*fn)();
+  inline uint16_t dc_dac_code() const {
+    return dac_current_;
   }
 
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
@@ -369,9 +369,9 @@ class CVOutput {
   bool dirty_;  // Set to true when the calibration settings have changed.
   uint16_t calibrated_dac_code_[kNumOctaves];
 
-  uint16_t env_dac_current_;
-  uint16_t env_dac_target_;
-  int32_t env_dac_increment_;
+  uint16_t dac_current_;
+  uint16_t dac_target_;
+  int32_t dac_increment_;
 
   DISALLOW_COPY_AND_ASSIGN(CVOutput);
 };

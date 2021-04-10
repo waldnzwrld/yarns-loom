@@ -42,7 +42,7 @@ namespace yarns {
 
 class Voice;
 
-const uint8_t kNumSteps = 31;
+const uint8_t kNumSteps = 30;
 const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
@@ -144,7 +144,7 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 struct PackedPart {
-  // Currently has 4 bits to spare
+  // Currently has 36 bits to spare
 
   struct PackedSequencerStep {
     unsigned int
@@ -158,16 +158,16 @@ struct PackedPart {
     looper_oldest_index : looper::kBitsNoteIndex,
     looper_size         : looper::kBitsNoteIndex;
 
-  static const uint8_t kTimbreBits = 6;
+  static const uint8_t kTimbreBits = 7;
 
   signed int
     // MidiSettings
     transpose_octaves : 3,
     // VoicingSettings
     tuning_transpose : 7,
-    tuning_fine : 7;
-  unsigned int timbre_mod_lfo : kTimbreBits;
-  signed int
+    tuning_fine : 7,
+    amplitude_mod_velocity : kTimbreBits, // TODO affects osc amp and CV, but not timbre?  is there a good use case for enveloping downward from max amplitude?
+    timbre_mod_envelope : kTimbreBits,
     timbre_mod_velocity : kTimbreBits,
     env_mod_attack : kTimbreBits,
     env_mod_decay : kTimbreBits,
@@ -194,8 +194,9 @@ struct PackedPart {
     portamento : 7,
     legato_mode : 2,
     pitch_bend_range : 5,
+    vibrato_shape: 3,
     vibrato_range : 4,
-    vibrato_initial : kTimbreBits,
+    vibrato_mod : 7,
     modulation_rate : 7,
     tuning_root : 4,
     tuning_system : 6,
@@ -206,10 +207,11 @@ struct PackedPart {
     aux_cv_2 : 4, // barely
     tuning_factor : 4,
     oscillator_mode : 2,
-    oscillator_shape : 3,
-    timbre_initial : kTimbreBits;
-  signed int timbre_mod_envelope : kTimbreBits;
-  unsigned int
+    oscillator_shape : 7,
+    tremolo_mod : kTimbreBits,
+    tremolo_shape : 3,
+    timbre_initial : kTimbreBits,
+    timbre_mod_lfo : kTimbreBits,
     env_init_attack : kTimbreBits,
     env_init_decay : kTimbreBits,
     env_init_sustain : kTimbreBits,
@@ -282,7 +284,8 @@ struct VoicingSettings {
   uint8_t legato_mode;
   uint8_t pitch_bend_range;
   uint8_t vibrato_range;
-  uint8_t vibrato_initial;
+  uint8_t vibrato_mod;
+  uint8_t tremolo_mod;
   uint8_t modulation_rate;
   int8_t tuning_transpose;
   int8_t tuning_fine;
@@ -308,7 +311,7 @@ struct VoicingSettings {
   int8_t env_mod_decay;
   int8_t env_mod_sustain;
   int8_t env_mod_release;
-  uint8_t padding[1];
+  // uint8_t padding[-1];
 
   void Pack(PackedPart& packed) const {
     packed.allocation_mode = allocation_mode;
@@ -317,7 +320,8 @@ struct VoicingSettings {
     packed.legato_mode = legato_mode;
     packed.pitch_bend_range = pitch_bend_range;
     packed.vibrato_range = vibrato_range;
-    packed.vibrato_initial = vibrato_initial;
+    packed.vibrato_mod = vibrato_mod;
+    packed.tremolo_mod = tremolo_mod;
     packed.modulation_rate = modulation_rate;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
@@ -352,7 +356,8 @@ struct VoicingSettings {
     legato_mode = packed.legato_mode;
     pitch_bend_range = packed.pitch_bend_range;
     vibrato_range = packed.vibrato_range;
-    vibrato_initial = packed.vibrato_initial;
+    vibrato_mod = packed.vibrato_mod;
+    tremolo_mod = packed.tremolo_mod;
     modulation_rate = packed.modulation_rate;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
@@ -402,7 +407,8 @@ enum PartSetting {
   PART_VOICING_LEGATO_MODE,
   PART_VOICING_PITCH_BEND_RANGE,
   PART_VOICING_VIBRATO_RANGE,
-  PART_VOICING_VIBRATO_INITIAL,
+  PART_VOICING_VIBRATO_MOD,
+  PART_VOICING_TREMOLO_MOD,
   PART_VOICING_MODULATION_RATE,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
