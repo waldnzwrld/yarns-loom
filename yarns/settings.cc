@@ -74,9 +74,9 @@ const char* const voicing_oscillator_mode_values[] = {
 
 const char* const voicing_oscillator_shape_values[] = {
   "\x8E\x8E",
+  "FM",
   "SF",
   "^F",
-  "FM",
   "ZL",
   "ZP",
   "SYNC",

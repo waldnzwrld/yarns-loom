@@ -90,13 +90,11 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
         CONSTRAIN(strength, 0, 32767);
         timbre = timbre * strength >> 15;
         break;
-      /*
       case OSC_SHAPE_TRIANGLE_FOLD:
         strength -= 7 * (pitch_ - (80 << 7));
         CONSTRAIN(strength, 0, 32767);
         timbre = timbre * strength >> 15;
         break;
-      */
       default:
         break;
     }
@@ -432,9 +430,9 @@ void Oscillator::RenderNoise() {
 /* static */
 Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderBuzz,
+  &Oscillator::RenderFM,
   &Oscillator::RenderSineFold,
   &Oscillator::RenderTriangleFold,
-  &Oscillator::RenderFM,
   &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderSineSync,

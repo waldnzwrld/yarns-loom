@@ -42,9 +42,9 @@ const size_t kAudioBlockSize = 64;
 
 enum OscillatorShape {
   OSC_SHAPE_BUZZ,
+  OSC_SHAPE_FM,
   OSC_SHAPE_SINE_FOLD,
   OSC_SHAPE_TRIANGLE_FOLD,
-  OSC_SHAPE_FM,
   OSC_SHAPE_CZ_LP,
   OSC_SHAPE_CZ_PK,
   OSC_SHAPE_SINE_SYNC,
