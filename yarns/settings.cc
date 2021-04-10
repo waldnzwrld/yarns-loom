@@ -73,14 +73,17 @@ const char* const voicing_oscillator_mode_values[] = {
 };
 
 const char* const voicing_oscillator_shape_values[] = {
-  "\x8A\x88",
-  "u\x89",
-  "_\x8C",
-  "SYNC",
+  "\x8E\x8E",
+  "SF",
+  "^F",
   "FM",
   "ZL",
   "ZP",
-  "WF",
+  "SYNC",
+  "_\x8C",
+  "u\x89",
+  "\x8A\x88",
+  "**",
 };
 
 const char* const voicing_allocation_priority_values[] = {

@@ -298,7 +298,7 @@ void Oscillator::RenderTriangleFold() {
     phase_16 = phase_ >> 16;
     sample = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     sample += 32768;
-    sample *= fold_gain >> 15;
+    sample = sample * fold_gain >> 15;
     sample = Interpolate88(ws_tri_fold, sample + 32768);
     WriteSample(sample);
   )
@@ -431,14 +431,17 @@ void Oscillator::RenderNoise() {
 
 /* static */
 Oscillator::RenderFn Oscillator::fn_table_[] = {
-  &Oscillator::RenderVariableSaw,
-  &Oscillator::RenderCSaw,
-  &Oscillator::RenderSquare,
-  &Oscillator::RenderSineSync,
+  &Oscillator::RenderBuzz,
+  &Oscillator::RenderSineFold,
+  &Oscillator::RenderTriangleFold,
   &Oscillator::RenderFM,
   &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderDigitalFilter,
-  &Oscillator::RenderSineFold,
+  &Oscillator::RenderSineSync,
+  &Oscillator::RenderSquare,
+  &Oscillator::RenderCSaw,
+  &Oscillator::RenderVariableSaw,
+  &Oscillator::RenderNoise,
 };
 
 }  // namespace yarns
