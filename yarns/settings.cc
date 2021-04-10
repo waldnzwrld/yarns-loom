@@ -200,7 +200,7 @@ const Setting Settings::settings_[] = {
     0xff, 0xff,
   },
   {
-    "\x82""\x8F", "ENVELOPE MENU",
+    "\x82""\x8F", "AMPLITUDE MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
     0xff, 0xff,
