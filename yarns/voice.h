@@ -130,6 +130,7 @@ class Voice {
   
   inline int32_t note() const { return note_; }
   inline uint8_t velocity() const { return mod_velocity_; }
+  inline uint16_t mod_aux(ModAux s) const { return mod_aux_[s]; }
   inline uint16_t aux_cv_16bit() const { return mod_aux_[aux_cv_source_]; }
   inline uint16_t aux_cv_2_16bit() const { return mod_aux_[aux_cv_source_2_]; }
   inline uint8_t aux_cv() const { return aux_cv_16bit() >> 8; }

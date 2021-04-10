@@ -497,7 +497,8 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
       {
         const NoteEntry& last_note = part_[0].priority_note(NOTE_STACK_PRIORITY_LAST);
         const uint8_t last_voice_index = part_[0].FindVoiceForNote(last_note.note);
-        brightness[0] = (cv_outputs_[0].gate() && last_voice_index != VOICE_ALLOCATION_NOT_FOUND) ? (part_[0].voice(last_voice_index)->velocity() << 1) : 0;
+        brightness[0] = (last_voice_index == VOICE_ALLOCATION_NOT_FOUND) ? 0 :
+          (part_[0].voice(last_voice_index)->mod_aux(MOD_AUX_ENVELOPE) >> 8);
         brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
         brightness[2] = voice_[kNumParaphonicVoices].aux_cv();
         brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;
