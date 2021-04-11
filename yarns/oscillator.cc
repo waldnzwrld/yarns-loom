@@ -141,10 +141,6 @@ void Oscillator::Render() {
   }
   
   (this->*fn)();
-
-  // Finish interpolation
-  timbre_current_ = timbre_target_;
-  gain_current_ = gain_target_;
 }
 
 void Oscillator::RenderCSaw() {

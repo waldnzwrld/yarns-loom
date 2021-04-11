@@ -237,7 +237,6 @@ void Voice::Refresh(uint8_t voice_index) {
 void CVOutput::Refresh() {
   if (is_audio()) return;
   if (dc_role_ == DC_PITCH) NoteToDacCode();
-  dac_current_ = dac_target_; // Close any gaps left by previous interpolation
   dac_target_ = (this->*dc_fn_table_[dc_role_])();
   if (is_envelope()) {
     dac_increment_ = (dac_target_ - dac_current_) / 24;

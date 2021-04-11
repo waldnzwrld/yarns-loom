@@ -59,7 +59,6 @@ class Envelope {
       gate_ = true;
       Trigger(ENV_SEGMENT_ATTACK);
       samples_.Flush();
-      RenderSamples(1);
     }
   }
 
@@ -72,7 +71,6 @@ class Envelope {
       case ENV_SEGMENT_SUSTAIN:
         Trigger(ENV_SEGMENT_RELEASE);
         samples_.Flush();
-        RenderSamples(1);
         break;
       default:
         break;
