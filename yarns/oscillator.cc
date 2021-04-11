@@ -54,17 +54,6 @@
     (target - current) / kAudioBlockSize : \
     ~((current - target) / kAudioBlockSize)
 
-#define FOLD_GAIN(p) (2048 + (p * 30720 >> 15))
-#define FOLD_RENDER_LOOP(body) \
-  INIT; \
-  int16_t sample; \
-  int16_t fold_gain = FOLD_GAIN(timbre_current_); \
-  int16_t fold_gain_increment = INTERPOLATE(FOLD_GAIN(timbre_target_), fold_gain); \
-  RENDER_LOOP( \
-    fold_gain += fold_gain_increment; \
-    body \
-  )
-
 namespace yarns {
 
 using namespace stmlib;
@@ -288,20 +277,22 @@ void Oscillator::RenderVariableSaw() {
 
 void Oscillator::RenderTriangleFold() {
   uint16_t phase_16;
-  FOLD_RENDER_LOOP(
+  int16_t sample;
+  INIT; RENDER_LOOP(
     phase_16 = phase_ >> 16;
     sample = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     sample += 32768;
-    sample = sample * fold_gain >> 15;
+    sample = sample * timbre_current_ >> 15;
     sample = Interpolate88(ws_tri_fold, sample + 32768);
     WriteSample(sample);
   )
 }
 
 void Oscillator::RenderSineFold() {
-  FOLD_RENDER_LOOP(
+  int16_t sample;
+  INIT; RENDER_LOOP(
     sample = Interpolate824(wav_sine, phase_);
-    sample = sample * fold_gain >> 15;
+    sample = sample * timbre_current_ >> 15;
     sample = Interpolate88(ws_sine_fold, sample + 32768);
     WriteSample(sample);
   )
