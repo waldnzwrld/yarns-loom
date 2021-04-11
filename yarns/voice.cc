@@ -136,6 +136,7 @@ void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
   if (modulation_rate < LUT_LFO_INCREMENTS_SIZE) {
     modulation_increment_ = lut_lfo_increments[modulation_rate];
     modulation_increment_ *= pow(1.123f, (int) index);
+    modulation_increment_ = lut_lfo_increments[modulation_rate];
     modulation_sync_ticks_ = 0;
   } else {
     modulation_increment_ = 0;
@@ -183,7 +184,7 @@ void Voice::Refresh(uint8_t voice_index) {
     synced_lfo_.Refresh();
   }
   // Use voice index to put voice LFOs in quadrature
-  uint32_t lfo_phase = synced_lfo_.GetPhase() + (voice_index << 30);
+  uint32_t lfo_phase = synced_lfo_.GetPhase();// + (voice_index << 30);
 
   // Add vibrato.
   int32_t vibrato_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
