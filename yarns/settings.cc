@@ -86,6 +86,13 @@ const char* const voicing_oscillator_shape_values[] = {
   "**",
 };
 
+const char* const tremolo_shape_values[] = {
+  "/\\",
+  "|\\",
+  "/|",
+  "\x8C_",
+};
+
 const char* const voicing_allocation_priority_values[] = {
   "LAST", "LOW", "HIGH", "FIRST"
 };
@@ -200,7 +207,7 @@ const Setting Settings::settings_[] = {
     0xff, 0xff,
   },
   {
-    "\x82""\x8F", "AMPLITUDE MENU",
+    "\x82""A", "AMPLITUDE MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
     0xff, 0xff,
@@ -357,9 +364,15 @@ const Setting Settings::settings_[] = {
     1, 0xff,
   },
   {
-    "TR", "TREMOLO AMOUNT",
+    "TR", "TREMOLO DEPTH",
     SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_MOD, 0 },
     SETTING_UNIT_UINT8, 0, 127, NULL,
+    0xff, 0xff, // TODO
+  },
+  {
+    "TS", "TREMOLO SHAPE",
+    SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, tremolo_shape_values,
     0xff, 0xff, // TODO
   },
   {
@@ -381,7 +394,7 @@ const Setting Settings::settings_[] = {
     26, 17,
   },
   {
-    "TS", "TUNING SYSTEM",
+    "TU", "TUNING SYSTEM",
     SETTING_DOMAIN_PART, { PART_VOICING_TUNING_SYSTEM, 0 },
     SETTING_UNIT_ENUMERATION, 0, TUNING_SYSTEM_LAST - 1,
     tuning_system_values,

@@ -125,6 +125,8 @@ static const SettingIndex menu_oscillator[] = {
 
 static const SettingIndex menu_envelope[] = {
   SETTING_VOICING_TREMOLO_MOD,
+  SETTING_VOICING_TREMOLO_SHAPE,
+
   SETTING_VOICING_ENV_INIT_ATTACK,
   SETTING_VOICING_ENV_MOD_ATTACK,
   SETTING_VOICING_ENV_INIT_DECAY,

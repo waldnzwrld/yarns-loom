@@ -286,6 +286,7 @@ struct VoicingSettings {
   uint8_t vibrato_range;
   uint8_t vibrato_mod;
   uint8_t tremolo_mod;
+  uint8_t tremolo_shape;
   uint8_t modulation_rate;
   int8_t tuning_transpose;
   int8_t tuning_fine;
@@ -311,7 +312,7 @@ struct VoicingSettings {
   int8_t env_mod_decay;
   int8_t env_mod_sustain;
   int8_t env_mod_release;
-  // uint8_t padding[-1];
+  // uint8_t padding[-2];
 
   void Pack(PackedPart& packed) const {
     packed.allocation_mode = allocation_mode;
@@ -322,6 +323,7 @@ struct VoicingSettings {
     packed.vibrato_range = vibrato_range;
     packed.vibrato_mod = vibrato_mod;
     packed.tremolo_mod = tremolo_mod;
+    packed.tremolo_shape = tremolo_shape;
     packed.modulation_rate = modulation_rate;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
@@ -358,6 +360,7 @@ struct VoicingSettings {
     vibrato_range = packed.vibrato_range;
     vibrato_mod = packed.vibrato_mod;
     tremolo_mod = packed.tremolo_mod;
+    tremolo_shape = packed.tremolo_shape;
     modulation_rate = packed.modulation_rate;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
@@ -409,6 +412,7 @@ enum PartSetting {
   PART_VOICING_VIBRATO_RANGE,
   PART_VOICING_VIBRATO_MOD,
   PART_VOICING_TREMOLO_MOD,
+  PART_VOICING_TREMOLO_SHAPE,
   PART_VOICING_MODULATION_RATE,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,

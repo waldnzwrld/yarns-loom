@@ -116,6 +116,9 @@ class Voice {
   inline void set_vibrato_mod(uint8_t n) { vibrato_mod_ = n; }
   inline void set_tremolo_mod(uint8_t n) {
     tremolo_mod_target_ = n << (16 - 7); }
+  inline void set_tremolo_shape(uint8_t n) {
+    tremolo_shape_ = static_cast<LFOShape>(n); }
+
   inline void set_trigger_duration(uint8_t trigger_duration) {
     trigger_duration_ = trigger_duration;
   }
@@ -220,6 +223,7 @@ class Voice {
   bool trigger_scale_;
 
   uint8_t oscillator_mode_;
+  LFOShape tremolo_shape_;
   uint8_t aux_cv_source_;
   uint8_t aux_cv_source_2_;
   

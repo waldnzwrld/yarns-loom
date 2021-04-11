@@ -186,13 +186,12 @@ void Voice::Refresh(uint8_t voice_index) {
   uint32_t lfo_phase = synced_lfo_.GetPhase() + (voice_index << 30);
 
   // Add vibrato.
-  int32_t vibrato_lfo = synced_lfo_.Triangle(lfo_phase);
-  // TODO fix this math to enable slew of vibrato mod
+  int32_t vibrato_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
   int32_t scaled_vibrato_lfo = vibrato_lfo * vibrato_mod_;
   note += scaled_vibrato_lfo * vibrato_range_ >> 15;
 
   // Use quadrature phase for timbre modulation
-  int32_t timbre_lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
+  int32_t timbre_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
   int32_t timbre_envelope_31 = envelope_.value() * timbre_mod_envelope_current_;
   int32_t timbre_15 =
     (timbre_init_current_ >> (16 - 15)) +
@@ -200,7 +199,7 @@ void Voice::Refresh(uint8_t voice_index) {
     (timbre_lfo * timbre_mod_lfo_current_ >> (31 - 15));
   CONSTRAIN(timbre_15, 0, (1 << 15) - 1);
 
-  uint16_t tremolo_lfo = synced_lfo_.Triangle(lfo_phase) + 32768;
+  uint16_t tremolo_lfo = 32767 - synced_lfo_.shape(tremolo_shape_, lfo_phase);
   uint16_t scaled_tremolo_lfo = tremolo_lfo * tremolo_mod_current_ >> 16;
   uint16_t tremolo_drone = UINT16_MAX - scaled_tremolo_lfo;
   uint16_t tremolo_envelope = envelope_.value() * tremolo_drone >> 16;
