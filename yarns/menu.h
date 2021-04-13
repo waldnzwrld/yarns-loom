@@ -123,10 +123,10 @@ static const SettingIndex menu_oscillator[] = {
   SETTING_LAST
 };
 
-static const SettingIndex menu_envelope[] = {
+static const SettingIndex menu_amplitude[] = {
+  SETTING_VOICING_AMPLITUDE_MOD_VELOCITY,
   SETTING_VOICING_TREMOLO_MOD,
   SETTING_VOICING_TREMOLO_SHAPE,
-
   SETTING_VOICING_ENV_INIT_ATTACK,
   SETTING_VOICING_ENV_MOD_ATTACK,
   SETTING_VOICING_ENV_INIT_DECAY,
@@ -322,7 +322,7 @@ class Menu {
         return menu_oscillator;
 
       case SETTING_MENU_ENVELOPE:
-        return menu_envelope;
+        return menu_amplitude;
 
       default:
         switch (multi.layout()) {

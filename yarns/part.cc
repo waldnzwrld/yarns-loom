@@ -98,13 +98,14 @@ void Part::Init() {
   voicing_.timbre_mod_envelope = -16;
   voicing_.timbre_mod_lfo = 16;
 
+  voicing_.amplitude_mod_velocity = 48;
   voicing_.env_init_attack = 64;
   voicing_.env_init_decay = 64;
-  voicing_.env_init_sustain = 64;
+  voicing_.env_init_sustain = 127;
   voicing_.env_init_release = 32;
   voicing_.env_mod_attack = -32;
   voicing_.env_mod_decay = -32;
-  voicing_.env_mod_sustain = 32;
+  voicing_.env_mod_sustain = -48;
   voicing_.env_mod_release = 32;
 
   seq_.clock_division = clock_division::unity;
@@ -851,6 +852,11 @@ void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato) {
   int32_t timbre_14 = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
   CONSTRAIN(timbre_14, -1 << 13, (1 << 13) - 1)
   voice->set_timbre_mod_envelope(timbre_14 << 2);
+
+  uint16_t damping_13 = voicing_.amplitude_mod_velocity >= 0
+    ? voicing_.amplitude_mod_velocity * (127 - vel)
+    : -voicing_.amplitude_mod_velocity * vel;
+  voice->set_amplitude(UINT16_MAX - (damping_13 << 3));
 
   voice->envelope()->SetADSR(
     modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack, vel),

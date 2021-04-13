@@ -166,7 +166,7 @@ struct PackedPart {
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
-    amplitude_mod_velocity : kTimbreBits, // TODO affects osc amp and CV, but not timbre?  is there a good use case for enveloping downward from max amplitude?
+    amplitude_mod_velocity : kTimbreBits,
     timbre_mod_envelope : kTimbreBits,
     timbre_mod_velocity : kTimbreBits,
     env_mod_attack : kTimbreBits,
@@ -304,6 +304,7 @@ struct VoicingSettings {
   uint8_t timbre_mod_lfo;
   int8_t timbre_mod_envelope;
   int8_t timbre_mod_velocity;
+  int8_t amplitude_mod_velocity;
   uint8_t env_init_attack;
   uint8_t env_init_decay;
   uint8_t env_init_sustain;
@@ -341,6 +342,7 @@ struct VoicingSettings {
     packed.timbre_mod_lfo = timbre_mod_lfo;
     packed.timbre_mod_envelope = timbre_mod_envelope;
     packed.timbre_mod_velocity = timbre_mod_velocity;
+    packed.amplitude_mod_velocity = amplitude_mod_velocity;
     packed.env_init_attack = env_init_attack;
     packed.env_init_decay = env_init_decay;
     packed.env_init_sustain = env_init_sustain;
@@ -378,6 +380,7 @@ struct VoicingSettings {
     timbre_mod_lfo = packed.timbre_mod_lfo;
     timbre_mod_envelope = packed.timbre_mod_envelope;
     timbre_mod_velocity = packed.timbre_mod_velocity;
+    amplitude_mod_velocity = packed.amplitude_mod_velocity;
     env_init_attack = packed.env_init_attack;
     env_init_decay = packed.env_init_decay;
     env_init_sustain = packed.env_init_sustain;
@@ -430,6 +433,7 @@ enum PartSetting {
   PART_VOICING_TIMBRE_MOD_LFO,
   PART_VOICING_TIMBRE_MOD_ENVELOPE,
   PART_VOICING_TIMBRE_MOD_VELOCITY,
+  PART_VOICING_AMPLITUDE_MOD_VELOCITY,
   PART_VOICING_ENV_INIT_ATTACK,
   PART_VOICING_ENV_INIT_DECAY,
   PART_VOICING_ENV_INIT_SUSTAIN,
