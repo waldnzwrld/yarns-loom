@@ -54,8 +54,8 @@ lookup_tables_32.append(
 
 # Create lookup table for portamento.
 num_values = 128
-max_time = 3.0  # seconds
-min_time = 3.0 / sample_rate
+max_time = 5.0  # seconds
+min_time = 1.9 / sample_rate
 gamma = 0.25
 min_increment = excursion / (max_time * sample_rate)
 max_increment = excursion / (min_time * sample_rate)
