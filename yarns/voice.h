@@ -161,7 +161,6 @@ class Voice {
   inline void set_timbre_mod_envelope(int16_t n) {
     timbre_mod_envelope_target_ = n;
   }
-  inline void set_amplitude(uint16_t n) { amplitude_ = n; }
   
   inline void set_tuning(int8_t coarse, int8_t fine) {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
@@ -241,7 +240,6 @@ class Voice {
   uint32_t trigger_phase_increment_;
   uint32_t trigger_phase_;
 
-  uint16_t amplitude_;
   uint16_t tremolo_mod_target_;
   uint16_t tremolo_mod_current_;
 

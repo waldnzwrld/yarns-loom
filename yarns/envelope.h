@@ -46,7 +46,6 @@ class Envelope {
   void Init() {
     gate_ = false;
 
-    target_[ENV_SEGMENT_ATTACK] = 65535;
     target_[ENV_SEGMENT_RELEASE] = 0;
     target_[ENV_SEGMENT_DEAD] = 0;
 
@@ -82,7 +81,9 @@ class Envelope {
   }
 
   // All params 7-bit
-  inline void SetADSR(uint8_t a, uint8_t d, uint8_t s, uint8_t r) {
+  inline void SetADSR(uint16_t peak, uint8_t a, uint8_t d, uint8_t s, uint8_t r) {
+    target_[ENV_SEGMENT_ATTACK] = peak;
+    // TODO could interpolate these from 16-bit parameters
     increment_[ENV_SEGMENT_ATTACK] = lut_portamento_increments[a];
     increment_[ENV_SEGMENT_DECAY] = lut_portamento_increments[d];
     target_[ENV_SEGMENT_DECAY] = target_[ENV_SEGMENT_SUSTAIN] = s << 9;

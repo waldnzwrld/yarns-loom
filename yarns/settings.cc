@@ -473,7 +473,7 @@ const Setting Settings::settings_[] = {
     91, 0xff,
   },
   {
-    "GM", "GAIN VEL MOD",
+    "PV", "PEAK MOD VEL",
     SETTING_DOMAIN_PART, { PART_VOICING_AMPLITUDE_MOD_VELOCITY, 0 },
     SETTING_UNIT_INT8, -64, 63, NULL,
     0xff, 0xff, // TODO

@@ -856,9 +856,9 @@ void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato) {
   uint16_t damping_13 = voicing_.amplitude_mod_velocity >= 0
     ? voicing_.amplitude_mod_velocity * (127 - vel)
     : -voicing_.amplitude_mod_velocity * vel;
-  voice->set_amplitude(UINT16_MAX - (damping_13 << 3));
 
   voice->envelope()->SetADSR(
+    UINT16_MAX - (damping_13 << 3),
     modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack, vel),
     modulate_7bit(voicing_.env_init_decay, voicing_.env_mod_decay, vel),
     modulate_7bit(voicing_.env_init_sustain, voicing_.env_mod_sustain, vel),

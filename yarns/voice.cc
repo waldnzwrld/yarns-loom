@@ -204,7 +204,6 @@ void Voice::Refresh(uint8_t voice_index) {
   uint16_t scaled_tremolo_lfo = tremolo_lfo * tremolo_mod_current_ >> 16;
   uint16_t tremolo_drone = UINT16_MAX - scaled_tremolo_lfo;
   uint16_t tremolo_envelope = envelope_.value() * tremolo_drone >> 16;
-  tremolo_envelope = tremolo_envelope * amplitude_ >> 16;
   uint16_t gain = oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
     tremolo_envelope : tremolo_drone;
 
