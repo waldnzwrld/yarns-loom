@@ -72,8 +72,9 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     int32_t strength = 32767;
     switch (shape_) {
       case OSC_SHAPE_SQUARE:
-        CONSTRAIN(timbre, 0, 30000);
+        CONSTRAIN(timbre, 0, 31767);
         break;
+      case OSC_SHAPE_FM:
       case OSC_SHAPE_SINE_FOLD:
         strength -= 6 * (pitch_ - (92 << 7));
         CONSTRAIN(strength, 0, 32767);
