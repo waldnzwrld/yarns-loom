@@ -101,11 +101,11 @@ void Part::Init() {
   voicing_.amplitude_mod_velocity = 48;
   voicing_.env_init_attack = 64;
   voicing_.env_init_decay = 64;
-  voicing_.env_init_sustain = 127;
+  voicing_.env_init_sustain = 64;
   voicing_.env_init_release = 32;
   voicing_.env_mod_attack = -32;
   voicing_.env_mod_decay = -32;
-  voicing_.env_mod_sustain = -48;
+  voicing_.env_mod_sustain = 0;
   voicing_.env_mod_release = 32;
 
   seq_.clock_division = clock_division::unity;
