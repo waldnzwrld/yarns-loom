@@ -26,26 +26,36 @@
 - Configured via the `▽O (OSCILLATOR MENU)`
 - `OM (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
 - `OS (OSCILLATOR SHAPE)` sets the waveform
-  - Sharktooth
-  - CS80 saw
-  - Pulse
-  - Folded triangle
-  - Folded sine
-  - FM sine
   - Murmuring buzz
+  - FM sine
+  - Folded sine
+  - Folded triangle
+  - CZ low-pass
+  - CZ peaking
+  - Hard-synced sine
+  - Pulse
+  - CS80 saw
+  - Sharktooth
   - White noise
-- Each wave shape has a timbral parameter modulated by an LFO
-  - The modulating LFO is the quadrature of the vibrato LFO
+- Each wave shape has a timbral parameter with extensive internal modulation
   - `TI (TIMBRE INITIAL)` sets initial timbre
-  - `TM (TIMBRE MOD)` sets the bipolar depth of timbre modulation by the LFO
+  - `TL (TIMBRE LFO MOD)` sets the depth of timbre modulation by the voice's bipolar LFO
+  - `TE (TIMBRE ENV MOD)` sets the initial bipolar depth of modulation of timbre by envelope
+  - `TV (TIMBRE VEL MOD)` sets the bipolar modulation by velocity of the envelope modulation of timbre (e.g. velocity can polarize the timbre envelope)
 
-### ADSR envelopes, modulated by velocity
-- Configured via the `▽📉 (ENVELOPE MENU)`
-- Controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
-- Available as an assignable CV output (`ENVELOPE`) in all layouts
-- The envelope's amplitude and its sensitivity to velocity are set by `GAIN INIT` and `GAIN MOD`
-- The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
-  - Segment times range from 0.375 ms (3 ticks) to 3 seconds
+### Amplitude dynamics: ADSR envelopes (with velocity modulation) and tremolo
+- Configured via the `▽A (AMPLITUDE MENU)`
+- ADSR envelope with velocity modulation
+  - Envelope controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
+  - Envelope is available as an assignable CV output (`ENVELOPE`) in all layouts
+  - Peak attack amplitude can be velocity-scaled via `PV (PEAK MOD VEL)`
+    - Positive values = damp on low velocity, negative values = damp on high velocity
+  - The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
+    - Segment times range from 1 ms (2 ticks) to 5 seconds
+- Tremolo can be applied to envelope and oscillator
+  - Tremolo uses the same LFO frequency as vibrato
+  - `TR (TREMOLO DEPTH)` sets the amount of tremolo
+  - `TS (TREMOLO SHAPE)` applies a waveshaper to the LFO (triangle, down saw, up saw, square)
   
 # Sequencer
 
@@ -133,12 +143,6 @@
 ### Clock ratios
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
 - [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./clock_division.h#L43)
-
-### Vibrato
-- New setting `VI(BRATO AMP INITIAL)` for setting a baseline vibrato amplitude when the vibrato controller is absent or at its minimum
-- Tweaks to per-voice vibrato LFO for parts in polyphonic layouts:
-  - When vibrato speed is synced to clock, each voice's LFO uses the quadrature of the previous voice
-  - When vibrato speed is free-running, each voice's LFO frequency is slighter higher than the previous voice
   
 ### Other tweaks
 - Fixed `UNISON` voice allocation methods to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
