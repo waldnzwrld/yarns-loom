@@ -367,13 +367,13 @@ const Setting Settings::settings_[] = {
     "TR", "TREMOLO DEPTH",
     SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_MOD, 0 },
     SETTING_UNIT_UINT8, 0, 127, NULL,
-    0xff, 0xff, // TODO
+    93, 0xff,
   },
   {
     "TS", "TREMOLO SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_SHAPE, 0 },
     SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, tremolo_shape_values,
-    0xff, 0xff, // TODO
+    94, 0xff,
   },
   {
     "TT", "TRANSPOSE",
@@ -476,7 +476,7 @@ const Setting Settings::settings_[] = {
     "PV", "PEAK MOD VEL",
     SETTING_DOMAIN_PART, { PART_VOICING_AMPLITUDE_MOD_VELOCITY, 0 },
     SETTING_UNIT_INT8, -64, 63, NULL,
-    0xff, 0xff, // TODO
+    92, 0xff,
   },
   {
     "AI", "ATTACK INIT",

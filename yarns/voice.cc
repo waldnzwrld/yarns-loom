@@ -128,7 +128,7 @@ void CVOutput::NoteToDacCode() {
 
 void Voice::ResetAllControllers() {
   mod_pitch_bend_ = 8192;
-  vibrato_mod_ = 0; // TODO
+  vibrato_mod_ = 0;
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
