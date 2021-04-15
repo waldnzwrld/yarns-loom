@@ -2,16 +2,16 @@
 An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](https://mutable-instruments.net/modules/yarns/), with an emphasis on dynamic voicing, open-ended musical composition, and flexible control.
 
 ### Features
+- [Looper-style sequencer with real-time recording and overdubbing](yarns/MANUAL.md#looper-style-sequencing-mode-with-real-time-recording)
+- [10 new Braids-derived oscillator waveforms with timbre modulation](yarns/MANUAL.md#oscillator-controls)
+- [ADSR envelope generator with velocity-sensitive segments and amplitude](yarns/MANUAL.md#adsr-envelopes-modulated-by-velocity)
 - [New layouts, including a layout that features a 3-voice paraphonic part](yarns/MANUAL.md#layouts)
 - [Global control and display of the active part and its play mode](yarns/MANUAL.md#global-control-and-display-of-the-active-part-and-its-play-mode)
-- [Looper with real-time recording and overdubbing](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#looper-style-sequencing-mode-with-real-time-recording)
-- [Sequencer-driven arpeggiator](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#sequencer-driven-arpeggiator)
-- [Internal envelopes, with velocity-modulated segments and amplitude](yarns/MANUAL.md#adsr-envelopes-modulated-by-velocity)
-- [New oscillator wave shapes with timbral parameters](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#oscillator-controls)
-- [Velocity filtering](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#event-routing-filtering-and-transformation)
-- [More control over vibrato, input octave, sustain behavior, and sequencer/keyboard interaction](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#event-routing-filtering-and-transformation)
-- [New ways to use the hold pedal, including latch and sostenuto](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#hold-pedal)
-- [Expanded CC support, including start/stop/delete recording](https://github.com/rcrogers/yarns-loom/blob/loom-testing/yarns/MANUAL.md#expanded-support-for-control-change-events)
+- [Sequencer-driven arpeggiator](yarns/MANUAL.md#sequencer-driven-arpeggiator)
+- [Velocity filtering](yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [More control over input octave, sustain behavior, and sequencer/keyboard interaction](yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [New ways to use the hold pedal, including latch, sostenuto, and note routing](yarns/MANUAL.md#hold-pedal)
+- [Expanded CC support, including start/stop/delete recording](yarns/MANUAL.md#expanded-support-for-control-change-events)
 - [Check the manual for more!](yarns/MANUAL.md)
 
 ### Caveats
