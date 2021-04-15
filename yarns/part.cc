@@ -251,6 +251,12 @@ void Part::PressedKeysSustainOff(PressedKeys &keys) {
   }
 }
 
+void Part::ResetLatch() {
+  PressedKeysResetLatch(manual_keys_);
+  PressedKeysResetLatch(arp_keys_);
+  ControlChange(0, kCCHoldPedal, hold_pedal_engaged_ ? 127 : 0);
+}
+
 bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   switch (controller) {
     case kCCModulationWheelMsb:
@@ -280,7 +286,8 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       break;
       
     case kCCHoldPedal:
-      (value >= 64) == (midi_.sustain_polarity == 0) ?
+      hold_pedal_engaged_ = value >= 64;
+      hold_pedal_engaged_ == (midi_.sustain_polarity == 0) ?
         SustainOn() : SustainOff();
       break;
 
@@ -760,8 +767,6 @@ void Part::AllNotesOff() {
   poly_allocator_.ClearNotes();
   mono_allocator_.Clear();
 
-  manual_keys_.Init();
-  arp_keys_.Init();
   ResetLatch();
 
   generated_notes_.Clear();
@@ -1079,7 +1084,6 @@ bool Part::Set(uint8_t address, uint8_t value) {
 
     case PART_MIDI_SUSTAIN_MODE:
     case PART_MIDI_SUSTAIN_POLARITY:
-      ResetLatch();
       AllNotesOff();
       break;
 

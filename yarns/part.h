@@ -574,10 +574,6 @@ struct PressedKeys {
 
   void Init() {
     stack.Init();
-    Reset();
-  }
-
-  void Reset() {
     ignore_note_off_messages = false;
     release_latched_keys_on_next_note_on = false;
     std::fill(
@@ -823,12 +819,9 @@ class Part {
   }
   inline void PressedKeysResetLatch(PressedKeys &keys) {
     ReleaseLatchedNotes(keys);
-    keys.Reset();
+    keys.Init();
   }
-  inline void ResetLatch() {
-    PressedKeysResetLatch(manual_keys_);
-    PressedKeysResetLatch(arp_keys_);
-  }
+  void ResetLatch();
 
   inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
@@ -970,6 +963,7 @@ class Part {
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();
     TouchVoiceAllocation();
+    ResetLatch();
   }
 
   void set_siblings(bool has_siblings) {
@@ -1002,6 +996,8 @@ class Part {
 
   PressedKeys manual_keys_;
   PressedKeys arp_keys_;
+  bool hold_pedal_engaged_;
+
   stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
   stmlib::NoteStack<kNoteStackSize> mono_allocator_;
   stmlib::VoiceAllocator<kNumMaxVoicesPerPart * 2> poly_allocator_;
