@@ -19,6 +19,7 @@
 - Moved configuration-type settings into a submenu, accessed by opening `▽S (SETUP MENU)`
 - Print flat notes as lowercase character (instead of denoting flatness with `b`) so that octave can always be displayed
 - Improved clock-sync of display fade for the `TE(MPO)` setting
+- Splash on save/load
 
 # Synth voice
 
@@ -85,14 +86,14 @@
 - The velocity of the arpeggiator output is the product of the velocities of the sequencer step and the held key
 - New arpeggiator directions that use the note pitch as movement instructions:
   - Notes are interpreted based on key color (black/white) and distance above/below middle C
-  - `ROTATE` treats white keys as relative movement through the chord, and black keys as absolute positions in the chord
+  - `ROTATE` treats white keys as relative movement through the chord, and black keys as offsets from the current position
   - `SUBROTATE` generates quasi-cartesian patterns
 
 # MIDI
 
 ### Layouts
-- `22` 3-part layout: one two-voice polyphonic part, two monophonic parts
-- `21` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
+- `2+2` 3-part layout: one two-voice polyphonic part, two monophonic parts
+- `2+1` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
 - `*2` 3-part layout: 3-voice paraphonic part, 1 monophonic part with modulation, 1 monophonic part without modulation
   - Paraphonic part can use the new [envelopes](#adsr-envelopes-modulated-by-velocity)
   - Audio mode is always on for the paraphonic part
@@ -112,9 +113,9 @@
   - `SOSTENUTO` sustains only the notes held at the time the pedal goes down
   - `LATCH` uses the semantics of the front-panel latching in stock Yarns
   - `MOMENTARY LATCH` resembles `LATCH`, but releases latched notes as soon as the pedal is released, instead of on the next note
-  - `CLUTCH UP` is a hybrid of `SOSTENUTO` and `LATCH` -- when the pedal goes down, sustains any held notes; while the pedal is up, pressing any note will release held notes
-  - `CLUTCH DOWN` is the same as `CLUTCH UP`, but with reversed up/down semantics
-- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)
+  - `CLUTCH` is a hybrid of `SOSTENUTO` and `LATCH` -- when the pedal goes down, sustains any held notes; while the pedal is up, pressing any note will release held notes
+  - `FILTER` causes the part to only receive notes while the pedal is in a given state, and latches any notes that are "silently" released
+- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse pedal semantics
 
 ### Event routing, filtering, and transformation
 - New `SI (SEQ INPUT RESPONSE)` setting changes how a playing sequence responds to manual input
@@ -132,6 +133,13 @@
 - Recording 
   - Any MIDI events ignored by the recording part can be received by other parts
   - Recording part now responds to MIDI start
+
+### `VOICING` allocation methods
+- New `NICE` option: voice-sticky like `POLY`, but without stealing
+- Allow `POLY`/etc voice allocation methods to be played legato
+- Fixed `UNISON` to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
+- Improve `UNISON`/`SORTED` to avoid unnecessary reassignment/retrigger of voices during a partial chord change
+- `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
   
 ### Expanded support for Control Change events
 - The result of a received CC is briefly displayed
@@ -145,7 +153,5 @@
 - [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./clock_division.h#L43)
   
 ### Other tweaks
-- Fixed `UNISON` voice allocation methods to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
-- Voicing algorithms `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
 - Broadened portamento setting range from 51 to 64 values per curve shape
 - Allow an explicit clock start (from panel switch or MIDI) to supersede an implicit clock start (from keyboard)
