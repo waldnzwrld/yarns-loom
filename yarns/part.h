@@ -84,6 +84,7 @@ enum VoiceAllocationMode {
   VOICE_ALLOCATION_MODE_POLY_UNISON_1,
   VOICE_ALLOCATION_MODE_POLY_UNISON_2,
   VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT,
+  VOICE_ALLOCATION_MODE_POLY_NICE,
   VOICE_ALLOCATION_MODE_LAST
 };
 
@@ -131,8 +132,8 @@ enum SustainMode {
   SUSTAIN_MODE_SOSTENUTO,
   SUSTAIN_MODE_LATCH,
   SUSTAIN_MODE_MOMENTARY_LATCH,
-  SUSTAIN_MODE_CLUTCH_UP,
-  SUSTAIN_MODE_CLUTCH_DOWN,
+  SUSTAIN_MODE_CLUTCH,
+  SUSTAIN_MODE_FILTER,
   SUSTAIN_MODE_LAST,
 };
 
@@ -573,10 +574,6 @@ struct PressedKeys {
 
   void Init() {
     stack.Init();
-    Reset();
-  }
-
-  void Reset() {
     ignore_note_off_messages = false;
     release_latched_keys_on_next_note_on = false;
     std::fill(
@@ -728,6 +725,20 @@ class Part {
     return seq_.arp_pattern == 0;
   }
 
+  inline bool uses_poly_allocator() const {
+    return
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT;
+  }
+
+  inline bool uses_sorted_dispatch() const {
+    return
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_SORTED ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
+      voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_2;
+  }
+
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
     if (!looper_in_use()) { return; }
     looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
@@ -800,17 +811,17 @@ class Part {
   }
   void PressedKeysSustainOn(PressedKeys &keys);
   void PressedKeysSustainOff(PressedKeys &keys);
-  inline PressedKeys& PressedKeysForLatchUI() {
+  inline const PressedKeys& PressedKeysForLatchUI() const {
+    return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
+  }
+  inline PressedKeys& MutablePressedKeysForLatchUI() {
     return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
   }
   inline void PressedKeysResetLatch(PressedKeys &keys) {
     ReleaseLatchedNotes(keys);
-    keys.Reset();
+    keys.Init();
   }
-  inline void ResetLatch() {
-    PressedKeysResetLatch(manual_keys_);
-    PressedKeysResetLatch(arp_keys_);
-  }
+  void ResetLatch();
 
   inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
@@ -952,6 +963,7 @@ class Part {
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
     TouchVoices();
     TouchVoiceAllocation();
+    ResetLatch();
   }
 
   void set_siblings(bool has_siblings) {
@@ -965,9 +977,8 @@ class Part {
   void TouchVoices();
   
   void ReleaseLatchedNotes(PressedKeys &keys);
-  void DispatchSortedNotes(bool unison, bool force_legato);
-  void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t velocity, bool legato);
-  void VoiceNoteOnWithADSR(Voice* voice, int16_t pitch, uint8_t velocity, uint8_t portamento, bool trigger);
+  void DispatchSortedNotes(bool legato);
+  void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
@@ -985,6 +996,8 @@ class Part {
 
   PressedKeys manual_keys_;
   PressedKeys arp_keys_;
+  bool hold_pedal_engaged_;
+
   stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
   stmlib::NoteStack<kNoteStackSize> mono_allocator_;
   stmlib::VoiceAllocator<kNumMaxVoicesPerPart * 2> poly_allocator_;

@@ -477,6 +477,18 @@ void Ui::SplashOn(Splash s) {
       display_.Print(buffer_);
       break;
 
+    case SPLASH_PROGRAM_LOAD:
+      strcpy(buffer_, "L1");
+      buffer_[1] += program_index_;
+      display_.Print(buffer_);
+      break;
+
+    case SPLASH_PROGRAM_SAVE:
+      strcpy(buffer_, "S1");
+      buffer_[1] += program_index_;
+      display_.Print(buffer_);
+      break;
+
     default:
       break;
   }
@@ -539,8 +551,10 @@ void Ui::OnClickLoadSave(const Event& e) {
     active_program_ = program_index_;
     if (mode_ == UI_MODE_SAVE_SELECT_PROGRAM) {
       storage_manager.SaveMulti(program_index_);
+      SplashOn(SPLASH_PROGRAM_SAVE);
     } else {
       storage_manager.LoadMulti(program_index_);
+      SplashOn(SPLASH_PROGRAM_LOAD);
     }
   }
   mode_ = UI_MODE_PARAMETER_SELECT;
@@ -723,7 +737,7 @@ void Ui::OnSwitchPress(const Event& e) {
 }
 
 PressedKeys& Ui::LatchableKeys() {
-  return mutable_active_part()->PressedKeysForLatchUI();
+  return mutable_active_part()->MutablePressedKeysForLatchUI();
 }
 
 void Ui::OnSwitchHeld(const Event& e) {
