@@ -6,6 +6,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - [10 new Braids-derived oscillator waveforms with timbre modulation](yarns/MANUAL.md#oscillator-controls)
 - [ADSR envelope generator with velocity-sensitive segments and amplitude](yarns/MANUAL.md#adsr-envelopes-modulated-by-velocity)
 - [New layouts, including a layout that features a 3-voice paraphonic part](yarns/MANUAL.md#layouts)
+- [New and improved algorithms for polyphonic voicing](yarns/MANUAL.md#voicing-allocation-methods)
 - [Global control and display of the active part and its play mode](yarns/MANUAL.md#global-control-and-display-of-the-active-part-and-its-play-mode)
 - [Sequencer-driven arpeggiator](yarns/MANUAL.md#sequencer-driven-arpeggiator)
 - [Velocity filtering](yarns/MANUAL.md#event-routing-filtering-and-transformation)
@@ -18,7 +19,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - Installation of this firmware is at your own risk
 - Presets saved in this firmware cannot be loaded with the manufacturer's firmware, and vice versa.  Users are advised to run `INIT` from the main menu after switching firmware
 - Some changes are not documented in the changelog
-- Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 31 notes instead of the original 64)
+- Some of Yarns' stock capabilities have been downgraded to accomodate new features (e.g. the sequencer holds 30 notes instead of the original 64)
 
 ### Installation
 1. Download `yarns.syx` from the [latest release's assets](https://github.com/rcrogers/mutable-instruments-eurorack/releases/latest)
