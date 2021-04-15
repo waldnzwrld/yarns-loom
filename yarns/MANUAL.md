@@ -117,11 +117,11 @@
   - Recording part now responds to MIDI start
 
 ### `VOICING` allocation methods
-- New `NICE` voice algorithm: voice-sticky like `POLY`, but without stealing
+- New `NICE` option: voice-sticky like `POLY`, but without stealing
+- Allow `POLY`/etc voice allocation methods to be played legato
 - Fixed `UNISON` to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
 - Improve `UNISON`/`SORTED` to avoid unnecessary reassignment/retrigger of voices during a partial chord change
 - `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
-- Allow `POLY`/etc voice allocation methods to be played legato
   
 ### Expanded support for Control Change events
 - The result of a received CC is briefly displayed
