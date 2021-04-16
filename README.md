@@ -3,16 +3,18 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 
 ### Features
 - [Looper-style sequencer with real-time recording and overdubbing](yarns/MANUAL.md#looper-style-sequencing-mode-with-real-time-recording)
-- [10 new Braids-derived oscillator waveforms with timbre modulation](yarns/MANUAL.md#oscillator-controls)
-- [ADSR envelope generator with velocity-sensitive segments and amplitude](yarns/MANUAL.md#adsr-envelopes-modulated-by-velocity)
+- [10 new Braids-derived oscillator waveforms with internal timbre modulation](yarns/MANUAL.md#oscillator-controls)
+- [ADSR envelope generator with velocity-sensitive segments and amplitude](yarns/MANUAL.md#amplitude-dynamics-adsr-envelopes-with-velocity-modulation-and-tremolo)
+- [Tremolo generator with 4 LFO shapes](yarns/MANUAL.md#amplitude-dynamics-adsr-envelopes-with-velocity-modulation-and-tremolo)
 - [New layouts, including a layout that features a 3-voice paraphonic part](yarns/MANUAL.md#layouts)
-- [New and improved algorithms for polyphonic voicing](yarns/MANUAL.md#voicing-allocation-methods)
+- [New ways to use the hold pedal, including latch, sostenuto, and note routing](yarns/MANUAL.md#hold-pedal)
 - [Global control and display of the active part and its play mode](yarns/MANUAL.md#global-control-and-display-of-the-active-part-and-its-play-mode)
+- [New and improved algorithms for polyphonic voicing](yarns/MANUAL.md#voicing-allocation-methods)
 - [Sequencer-driven arpeggiator](yarns/MANUAL.md#sequencer-driven-arpeggiator)
 - [Velocity filtering](yarns/MANUAL.md#event-routing-filtering-and-transformation)
-- [More control over input octave, sustain behavior, and sequencer/keyboard interaction](yarns/MANUAL.md#event-routing-filtering-and-transformation)
-- [New ways to use the hold pedal, including latch, sostenuto, and note routing](yarns/MANUAL.md#hold-pedal)
-- [Expanded CC support, including start/stop/delete recording](yarns/MANUAL.md#expanded-support-for-control-change-events)
+- [Input octave switch](yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [More options for how a sequence responds to keyboard input](yarns/MANUAL.md#event-routing-filtering-and-transformation)
+- [Expanded CC support: recording control, display of received values](yarns/MANUAL.md#expanded-support-for-control-change-events)
 - [Check the manual for more!](yarns/MANUAL.md)
 
 ### Caveats
