@@ -31,8 +31,8 @@
   - FM sine
   - Folded sine
   - Folded triangle
-  - CZ low-pass
-  - CZ peaking
+  - Phase distortion, low-pass
+  - Phase distortion, peaking
   - Hard-synced sine
   - Pulse
   - CS80 saw
