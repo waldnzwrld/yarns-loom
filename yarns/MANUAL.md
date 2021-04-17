@@ -31,14 +31,14 @@
   - FM sine
   - Folded sine
   - Folded triangle
-  - CZ low-pass
-  - CZ peaking
+  - Phase distortion, low-pass
+  - Phase distortion, peaking
   - Hard-synced sine
   - Pulse
   - CS80 saw
   - Sharktooth
   - White noise
-- Each wave shape has a timbral parameter with extensive internal modulation
+- Each wave shape has a timbral parameter that can be modulated by several sources
   - `TI (TIMBRE INITIAL)` sets initial timbre
   - `TL (TIMBRE LFO MOD)` sets the depth of timbre modulation by the voice's bipolar LFO
   - `TE (TIMBRE ENV MOD)` sets the initial bipolar depth of modulation of timbre by envelope
