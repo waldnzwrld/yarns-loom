@@ -70,23 +70,23 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     gain_target_ = (scale_ * gain) >> 16;
 
     int32_t strength = 32767;
-    switch (shape_) {
-      case OSC_SHAPE_SQUARE:
-        CONSTRAIN(timbre, 0, 31767);
-        break;
-      case OSC_SHAPE_FM:
-      case OSC_SHAPE_SINE_FOLD:
-        strength -= 6 * (pitch_ - (92 << 7));
-        CONSTRAIN(strength, 0, 32767);
-        timbre = timbre * strength >> 15;
-        break;
-      case OSC_SHAPE_TRIANGLE_FOLD:
-        strength -= 7 * (pitch_ - (80 << 7));
-        CONSTRAIN(strength, 0, 32767);
-        timbre = timbre * strength >> 15;
-        break;
-      default:
-        break;
+    if (shape_ == OSC_SHAPE_SINE_FOLD || shape_ >= OSC_SHAPE_FM) {
+      strength -= 6 * (pitch_ - (92 << 7));
+      CONSTRAIN(strength, 0, 32767);
+      timbre = timbre * strength >> 15;
+    } else {
+      switch (shape_) {
+        case OSC_SHAPE_SQUARE:
+          CONSTRAIN(timbre, 0, 31767);
+          break;
+        case OSC_SHAPE_TRIANGLE_FOLD:
+          strength -= 7 * (pitch_ - (80 << 7));
+          CONSTRAIN(strength, 0, 32767);
+          timbre = timbre * strength >> 15;
+          break;
+        default:
+          break;
+      }
     }
     timbre_target_ = timbre;
   }
@@ -114,22 +114,18 @@ uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
 }
 
 void Oscillator::Render() {
-  RenderFn fn = fn_table_[shape_];
-  
-  if (shape_ != previous_shape_) {
-    OnShapeChange();
-    previous_shape_ = shape_;
-  }
-
   if (audio_buffer_.writable() < kAudioBlockSize) return;
-  phase_increment_ = ComputePhaseIncrement(pitch_);
   
   if (pitch_ > kHighestNote) {
     pitch_ = kHighestNote;
   } else if (pitch_ < 0) {
     pitch_ = 0;
   }
+  phase_increment_ = ComputePhaseIncrement(pitch_);
   
+  uint8_t fn_index = shape_;
+  CONSTRAIN(fn_index, 0, OSC_SHAPE_FM);
+  RenderFn fn = fn_table_[fn_index];
   (this->*fn)();
 }
 
@@ -300,9 +296,10 @@ void Oscillator::RenderSineFold() {
 }
 
 void Oscillator::RenderFM() {
+  uint16_t ratio = lut_fm_frequency_ratios[shape_ - OSC_SHAPE_FM];
   modulator_phase_increment_ = ComputePhaseIncrement(
-  //    (12 << 7) + pitch_ + ((aux_parameter_ - 16384) >> 1)) >> 1;
-    pitch_ + kOctave + kFifth);
+    (12 << 7) + pitch_ + ((ratio - 16384) >> 1)
+  ) >> 1;
   INIT; RENDER_LOOP(
     modulator_phase_ += modulator_phase_increment_;
     uint32_t pm = (
@@ -417,17 +414,17 @@ void Oscillator::RenderNoise() {
 
 /* static */
 Oscillator::RenderFn Oscillator::fn_table_[] = {
+  &Oscillator::RenderNoise,
+  &Oscillator::RenderVariableSaw,
+  &Oscillator::RenderCSaw,
+  &Oscillator::RenderSquare,
+  &Oscillator::RenderSineSync,
+  &Oscillator::RenderDigitalFilter,
+  &Oscillator::RenderDigitalFilter,
+  &Oscillator::RenderTriangleFold,
+  &Oscillator::RenderSineFold,
   &Oscillator::RenderBuzz,
   &Oscillator::RenderFM,
-  &Oscillator::RenderSineFold,
-  &Oscillator::RenderTriangleFold,
-  &Oscillator::RenderDigitalFilter,
-  &Oscillator::RenderDigitalFilter,
-  &Oscillator::RenderSineSync,
-  &Oscillator::RenderSquare,
-  &Oscillator::RenderCSaw,
-  &Oscillator::RenderVariableSaw,
-  &Oscillator::RenderNoise,
 };
 
 }  // namespace yarns

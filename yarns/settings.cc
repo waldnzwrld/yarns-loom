@@ -73,17 +73,17 @@ const char* const voicing_oscillator_mode_values[] = {
 };
 
 const char* const voicing_oscillator_shape_values[] = {
+  "**",
+  "\x8A\x88",
+  "u\x89",
+  "_\x8C",
+  "SYNC",
+  "ZP",
+  "ZL",
+  "^F",
+  "SF",
   "\x8E\x8E",
   "FM",
-  "SF",
-  "^F",
-  "ZL",
-  "ZP",
-  "SYNC",
-  "_\x8C",
-  "u\x89",
-  "\x8A\x88",
-  "**",
 };
 
 const char* const tremolo_shape_values[] = {
@@ -445,7 +445,7 @@ const Setting Settings::settings_[] = {
   {
     "OS", "OSC SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, OSC_SHAPE_LAST - 1, voicing_oscillator_shape_values,
+    SETTING_UNIT_OSCILLATOR_SHAPE, 0, OSC_SHAPE_FM + LUT_FM_FREQUENCY_RATIOS_SIZE - 1, voicing_oscillator_shape_values,
     71, 23,
   },
   {
@@ -735,6 +735,11 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
 
     case SETTING_UNIT_LOOP_LENGTH:
       PrintInteger(buffer, 1 << value);
+      break;
+
+    case SETTING_UNIT_OSCILLATOR_SHAPE:
+      if (value > OSC_SHAPE_FM) value = OSC_SHAPE_FM;
+      strcpy(buffer, setting.values[value]);
       break;
       
     default:

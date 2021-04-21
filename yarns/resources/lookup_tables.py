@@ -100,6 +100,57 @@ env_expo = 1.0 - numpy.exp(-4 * env_linear)
 lookup_tables.append(('env_expo', env_expo / env_expo.max() * 65535.0))
 
 
+"""----------------------------------------------------------------------------
+Quantizer for FM frequencies.
+----------------------------------------------------------------------------"""
+
+fm_frequency_ratios = [
+  0.125,
+  0.25,
+  0.5,
+  0.5 * 2 ** (16 / 1200.0),
+  numpy.sqrt(2) / 2,
+  numpy.pi / 4,
+  1.0,
+  1.0 * 2 ** (16 / 1200.0),
+  numpy.sqrt(2),
+  numpy.pi / 2,
+  7.0 / 4,
+  2,
+  2 * 2 ** (16 / 1200.0),
+  9.0 / 4,
+  11.0 / 4,
+  2 * numpy.sqrt(2),
+  3,
+  numpy.pi,
+  numpy.sqrt(3) * 2,
+  4,
+  numpy.sqrt(2) * 3,
+  numpy.pi * 3 / 2,
+  5,
+  numpy.sqrt(2) * 4,
+  8,
+]
+
+scale = []
+for ratio in fm_frequency_ratios:
+  ratio = 256 * 12 * numpy.log2(ratio) + 16384
+  scale.append(ratio)
+  # scale.extend([ratio, ratio, ratio])
+
+# target_size = int(2 ** numpy.ceil(numpy.log2(len(scale))))
+target_size = 118
+while len(scale) < target_size:
+  gap = numpy.argmax(numpy.diff(scale))
+  scale = scale[:gap + 1] + [(scale[gap] + scale[gap + 1]) / 2] + \
+      scale[gap + 1:]
+
+# scale.append(scale[-1])
+
+lookup_tables.append(
+    ('fm_frequency_ratios', scale)
+)
+
 
 """----------------------------------------------------------------------------
 Arpeggiator patterns

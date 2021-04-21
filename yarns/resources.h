@@ -57,6 +57,7 @@ extern const uint32_t* lookup_table_32_table[];
 extern const uint16_t* char_table[];
 
 extern const uint16_t lut_env_expo[];
+extern const uint16_t lut_fm_frequency_ratios[];
 extern const uint16_t lut_arpeggiator_patterns[];
 extern const uint16_t lut_consonance[];
 extern const int16_t lut_scale_pythagorean[];
@@ -118,9 +119,11 @@ extern const uint16_t chr_characters[];
 #define STR_DUMMY 0  // dummy
 #define LUT_ENV_EXPO 0
 #define LUT_ENV_EXPO_SIZE 257
-#define LUT_ARPEGGIATOR_PATTERNS 1
+#define LUT_FM_FREQUENCY_RATIOS 1
+#define LUT_FM_FREQUENCY_RATIOS_SIZE 118
+#define LUT_ARPEGGIATOR_PATTERNS 2
 #define LUT_ARPEGGIATOR_PATTERNS_SIZE 23
-#define LUT_CONSONANCE 2
+#define LUT_CONSONANCE 3
 #define LUT_CONSONANCE_SIZE 1536
 #define LUT_SCALE_PYTHAGOREAN 0
 #define LUT_SCALE_PYTHAGOREAN_SIZE 12
