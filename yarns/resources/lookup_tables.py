@@ -29,6 +29,8 @@
 # Lookup table definitions.
 
 import numpy
+from fractions import Fraction
+import itertools
 
 """----------------------------------------------------------------------------
 LFO and portamento increments.
@@ -98,58 +100,6 @@ env_linear = numpy.arange(0, 257.0) / 256.0
 env_linear[-1] = env_linear[-2]
 env_expo = 1.0 - numpy.exp(-4 * env_linear)
 lookup_tables.append(('env_expo', env_expo / env_expo.max() * 65535.0))
-
-
-"""----------------------------------------------------------------------------
-Quantizer for FM frequencies.
-----------------------------------------------------------------------------"""
-
-fm_frequency_ratios = [
-  0.125,
-  0.25,
-  0.5,
-  0.5 * 2 ** (16 / 1200.0),
-  numpy.sqrt(2) / 2,
-  numpy.pi / 4,
-  1.0,
-  1.0 * 2 ** (16 / 1200.0),
-  numpy.sqrt(2),
-  numpy.pi / 2,
-  7.0 / 4,
-  2,
-  2 * 2 ** (16 / 1200.0),
-  9.0 / 4,
-  11.0 / 4,
-  2 * numpy.sqrt(2),
-  3,
-  numpy.pi,
-  numpy.sqrt(3) * 2,
-  4,
-  numpy.sqrt(2) * 3,
-  numpy.pi * 3 / 2,
-  5,
-  numpy.sqrt(2) * 4,
-  8,
-]
-
-scale = []
-for ratio in fm_frequency_ratios:
-  ratio = 256 * 12 * numpy.log2(ratio) + 16384
-  scale.append(ratio)
-  # scale.extend([ratio, ratio, ratio])
-
-# target_size = int(2 ** numpy.ceil(numpy.log2(len(scale))))
-target_size = 118
-while len(scale) < target_size:
-  gap = numpy.argmax(numpy.diff(scale))
-  scale = scale[:gap + 1] + [(scale[gap] + scale[gap + 1]) / 2] + \
-      scale[gap + 1:]
-
-# scale.append(scale[-1])
-
-lookup_tables.append(
-    ('fm_frequency_ratios', scale)
-)
 
 
 """----------------------------------------------------------------------------
@@ -516,3 +466,54 @@ scales = [
 
 for scale, values in scales:
   lookup_tables_signed.append(('scale_%s' % scale, values))
+
+
+"""----------------------------------------------------------------------------
+Quantizer for FM frequencies.
+----------------------------------------------------------------------------"""
+
+pairs = itertools.product(range(1, 10), range(1, 10))
+rationals = numpy.unique([Fraction(*x) for x in pairs])
+clock_ratios = [{ "fraction": x, "ticks": 24.0 / x } for x in rationals if (24.0 / x) % 1 == 0]
+
+irrationals = [
+  0.5 * 2 ** (16 / 1200.0),
+  1.0 * 2 ** (16 / 1200.0),
+  2 * 2 ** (16 / 1200.0),
+  numpy.pi / 4,
+  numpy.pi / 2,
+  numpy.pi,
+  numpy.pi * 3 / 2,
+  numpy.sqrt(2) / 2,
+  numpy.sqrt(2),
+  numpy.sqrt(2) * 2,
+  numpy.sqrt(2) * 3,
+  numpy.sqrt(2) * 4,
+  numpy.sqrt(3) * 2,
+]
+
+fm_ratios = sorted(rationals, key=lambda x: (-x.denominator, x.numerator)) # + irrationals
+scale = []
+for ratio in fm_ratios:
+  ratio = 128 * 12 * numpy.log2(float(ratio))
+  scale.append(ratio)
+  # scale.extend([ratio, ratio, ratio])
+
+# # target_size = int(2 ** numpy.ceil(numpy.log2(len(scale))))
+# target_size = 118
+# while len(scale) < target_size:
+#   gap = numpy.argmax(numpy.diff(scale))
+#   scale = scale[:gap + 1] + [(scale[gap] + scale[gap + 1]) / 2] + \
+#       scale[gap + 1:]
+
+lookup_tables_signed.append(
+    ('fm_ratio_intervals', scale)
+)
+
+lookup_tables_string = []
+lookup_tables_string.append(
+    ('fm_ratio_names', [
+      str(x.numerator) + str(x.denominator) + ' FM ' + str(x.numerator) + '/' + str(x.denominator)
+      for x in fm_ratios
+    ])
+)

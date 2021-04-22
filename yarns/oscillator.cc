@@ -63,7 +63,6 @@ static const size_t kNumZones = 15;
 static const uint16_t kHighestNote = 128 * 128;
 static const uint16_t kPitchTableStart = 116 * 128;
 static const uint16_t kOctave = 12 * 128;
-static const uint16_t kFifth = 7 * 128;
 
 void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     pitch_ = pitch;
@@ -296,15 +295,13 @@ void Oscillator::RenderSineFold() {
 }
 
 void Oscillator::RenderFM() {
-  uint16_t ratio = lut_fm_frequency_ratios[shape_ - OSC_SHAPE_FM];
-  modulator_phase_increment_ = ComputePhaseIncrement(
-    (12 << 7) + pitch_ + ((ratio - 16384) >> 1)
-  ) >> 1;
+  int16_t interval = lut_fm_ratio_intervals[shape_ - OSC_SHAPE_FM];
+  modulator_phase_increment_ = ComputePhaseIncrement(pitch_ + interval);
   INIT; RENDER_LOOP(
     modulator_phase_ += modulator_phase_increment_;
-    uint32_t pm = (
-        Interpolate824(wav_sine, modulator_phase_) * timbre_current_) << 2;
-    WriteSample(Interpolate824(wav_sine, phase_ + pm));
+    int16_t modulator = Interpolate824(wav_sine, modulator_phase_);
+    uint32_t phase_mod = (modulator * timbre_current_) << 2;
+    WriteSample(Interpolate824(wav_sine, phase_ + phase_mod));
   )
 }
 

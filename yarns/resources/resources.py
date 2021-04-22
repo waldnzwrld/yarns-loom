@@ -80,6 +80,8 @@ resources = [
    'lookup_table', 'LUT', 'uint16_t', int, False),
   (lookup_tables.lookup_tables_signed,
    'lookup_table_signed', 'LUT', 'int16_t', int, False),
+  (lookup_tables.lookup_tables_string,
+   'lookup_table_string', 'LUT', 'char* const', str, False),
   (waveforms.waveforms,
    'waveform', 'WAV', 'int16_t', int, False),
   (waveshapers.waveshapers,
