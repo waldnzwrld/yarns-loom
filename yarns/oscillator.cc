@@ -415,6 +415,8 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderSineSync,
   &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderDigitalFilter,
+  &Oscillator::RenderDigitalFilter,
+  &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderTriangleFold,
   &Oscillator::RenderSineFold,
   &Oscillator::RenderBuzz,

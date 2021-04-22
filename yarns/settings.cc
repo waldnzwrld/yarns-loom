@@ -78,12 +78,13 @@ const char* const voicing_oscillator_shape_values[] = {
   "u\x89",
   "_\x8C",
   "SYNC",
-  "ZP",
-  "ZL",
-  "^F",
-  "SF",
+  "ZL LOW PASS PHASE DISTORTION",
+  "ZP PEAKING PHASE DISTORTION",
+  "ZB BAND PASS PHASE DISTORTION",
+  "ZH HIGH PASS PHASE DISTORTION",
+  "^F TRIANGLE FOLD",
+  "SF SINE FOLD",
   "\x8E\x8E",
-  "FM",
 };
 
 const char* const tremolo_shape_values[] = {
