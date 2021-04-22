@@ -33,41 +33,12 @@
 #include "stmlib/stmlib.h"
 #include "stmlib/utils/ring_buffer.h"
 
+#include "yarns/interpolator.h"
+
 #include <cstring>
 #include <cstdio>
 
 namespace yarns {
-
-// https://hbfs.wordpress.com/2009/07/28/faster-than-bresenhams-algorithm/
-class Interpolator {
- public:
-  typedef union {
-    int32_t i;
-    struct { // endian-specific!
-      int16_t lo;
-      int16_t hi;
-    };
-  } fixed_point;
-
-  void Init(uint8_t dx) {
-    x_delta_ = dx;
-    y_.i = 0;
-    m_ = 0;
-  }
-  void SetTarget(int16_t y) { y_target_ = y; }
-  void ComputeSlope() {
-    m_ = static_cast<int32_t>((y_target_ - y_.hi) << 16) / x_delta_;
-  }
-  void Tick() { y_.i += m_; }
-  int16_t value() const { return y_.hi; }
-  int16_t target() const { return y_target_; }
-
-private:
-  uint8_t x_delta_;
-  fixed_point y_;
-  int16_t y_target_;
-  int32_t m_;
-};
 
 const size_t kAudioBlockSize = 64;
 

@@ -35,6 +35,7 @@
 
 #include "yarns/envelope.h"
 #include "yarns/oscillator.h"
+#include "yarns/interpolator.h"
 #include "yarns/synced_lfo.h"
 #include "yarns/part.h"
 #include "yarns/clock_division.h"
@@ -312,14 +313,14 @@ class CVOutput {
   }
 
   inline uint16_t GetEnvelopeSample() {
-    dac_current_ += dac_increment_;
-    return dac_current_;
+    dac_interpolator_.Tick();
+    return dac_interpolator_.value() << 1;
   }
 
   void Refresh();
 
   inline uint16_t dc_dac_code() const {
-    return dac_current_;
+    return dac_interpolator_.target() << 1;
   }
 
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
@@ -372,10 +373,7 @@ class CVOutput {
   uint16_t note_dac_code_;
   bool dirty_;  // Set to true when the calibration settings have changed.
   uint16_t calibrated_dac_code_[kNumOctaves];
-
-  uint16_t dac_current_;
-  uint16_t dac_target_;
-  int32_t dac_increment_;
+  Interpolator dac_interpolator_;
 
   DISALLOW_COPY_AND_ASSIGN(CVOutput);
 };

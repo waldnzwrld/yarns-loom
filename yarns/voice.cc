@@ -91,7 +91,7 @@ void CVOutput::Init(bool reset_calibration) {
   }
   dirty_ = false;
 
-  dac_current_ = dac_target_ = dac_increment_ = 0;
+  dac_interpolator_.Init(24);
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
@@ -238,12 +238,8 @@ void Voice::Refresh(uint8_t voice_index) {
 void CVOutput::Refresh() {
   if (is_audio()) return;
   if (dc_role_ == DC_PITCH) NoteToDacCode();
-  dac_target_ = (this->*dc_fn_table_[dc_role_])();
-  if (is_envelope()) {
-    dac_increment_ = (dac_target_ - dac_current_) / 24;
-  } else { // Skip interpolation for non-envelope outputs
-    dac_current_ = dac_target_;
-  }
+  dac_interpolator_.SetTarget((this->*dc_fn_table_[dc_role_])() >> 1);
+  dac_interpolator_.ComputeSlope();
 }
 
 void Voice::NoteOn(
