@@ -469,57 +469,61 @@ for scale, values in scales:
 
 
 """----------------------------------------------------------------------------
-Quantizer for FM frequencies.
+Integer ratios for clock sync and FM
 ----------------------------------------------------------------------------"""
 
-pairs = itertools.product(range(1, 10), range(1, 10))
+lookup_tables_string = []
+
+factors = range(1, 10)
+
+# irrationals = [
+#   0.5 * 2 ** (16 / 1200.0),
+#   1.0 * 2 ** (16 / 1200.0),
+#   2 * 2 ** (16 / 1200.0),
+#   numpy.pi / 4,
+#   numpy.pi / 2,
+#   numpy.pi,
+#   numpy.pi * 3 / 2,
+#   numpy.sqrt(2) / 2,
+#   numpy.sqrt(2),
+#   numpy.sqrt(2) * 2,
+#   numpy.sqrt(2) * 3,
+#   numpy.sqrt(2) * 4,
+#   numpy.sqrt(3) * 2,
+# ]
+
+pairs = itertools.product(factors, factors)
 rationals = numpy.unique([Fraction(*x) for x in pairs])
 
-irrationals = [
-  0.5 * 2 ** (16 / 1200.0),
-  1.0 * 2 ** (16 / 1200.0),
-  2 * 2 ** (16 / 1200.0),
-  numpy.pi / 4,
-  numpy.pi / 2,
-  numpy.pi,
-  numpy.pi * 3 / 2,
-  numpy.sqrt(2) / 2,
-  numpy.sqrt(2),
-  numpy.sqrt(2) * 2,
-  numpy.sqrt(2) * 3,
-  numpy.sqrt(2) * 4,
-  numpy.sqrt(3) * 2,
-]
+# for carrier, modulator in pairs:
+#   print(carrier, modulator)
 
-fm_ratios = sorted(rationals, key=lambda x: (-x.denominator, x.numerator)) # + irrationals
-fm_intervals = []
-for ratio in fm_ratios:
-  interval = 128 * 12 * numpy.log2(float(ratio))
-  fm_intervals.append(interval)
-  # scale.extend([ratio, ratio, ratio])
+fm_ratios = rationals # sorted(fm_ratios, key=lambda x: (-x.denominator, x.numerator)) # + irrationals
+fm_ratio_names = []
+fm_carrier_factors = []
+fm_modulator_factors = []
+for r in fm_ratios:
+  fm_ratio_names.append(str(r.numerator) + str(r.denominator) + ' FM ' + str(r.numerator) + '/' + str(r.denominator))
+  fm_carrier_factors.append(r.denominator)
+  fm_modulator_factors.append(r.numerator)
+lookup_tables_string.append(('fm_ratio_names', fm_ratio_names))
+lookup_tables.append(('fm_carrier_factors', fm_carrier_factors))
+lookup_tables.append(('fm_modulator_factors', fm_modulator_factors))
 
+fm_factor_intervals = [128 * 12 * numpy.log2(float(m)) for m in factors]
 # # target_size = int(2 ** numpy.ceil(numpy.log2(len(scale))))
 # target_size = 118
 # while len(scale) < target_size:
 #   gap = numpy.argmax(numpy.diff(scale))
 #   scale = scale[:gap + 1] + [(scale[gap] + scale[gap + 1]) / 2] + \
 #       scale[gap + 1:]
-
-lookup_tables_signed.append(('fm_ratio_intervals', fm_intervals))
-
-lookup_tables_string = []
-lookup_tables_string.append(
-  ('fm_ratio_names', [
-    str(x.numerator) + str(x.denominator) + ' FM ' + str(x.numerator) + '/' + str(x.denominator)
-    for x in fm_ratios
-  ])
-)
+fm_factor_intervals.insert(0, 0) # dummy, to allow indexing by factor
+lookup_tables.append(('fm_factor_intervals', fm_factor_intervals))
 
 clock_ratio_ticks = []
 clock_ratio_names = []
 for ratio in rationals:
   ticks = (24.0 / ratio)
-  print(ratio)
   if ticks % 1 != 0 or ratio < 1.0 / 8:
     continue
   clock_ratio_ticks.append(float(ticks))
