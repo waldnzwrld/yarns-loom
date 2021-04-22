@@ -38,14 +38,12 @@
 
 #define INIT \
   size_t size = kAudioBlockSize; \
-  int16_t timbre_increment = INTERPOLATE(timbre_target_, timbre_current_); \
-  int32_t gain_increment = INTERPOLATE(gain_target_, gain_current_);
+  timbre_.ComputeSlope(); gain_.ComputeSlope();
 
 #define RENDER_LOOP(body) \
   while (size--) { \
     phase_ += phase_increment_; \
-    timbre_current_ += timbre_increment; \
-    gain_current_ += gain_increment; \
+    timbre_.Tick(); gain_.Tick(); \
     body \
   }
 
@@ -66,7 +64,7 @@ static const uint16_t kOctave = 12 * 128;
 
 void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     pitch_ = pitch;
-    gain_target_ = (scale_ * gain) >> 16;
+    gain_.SetTarget((scale_ * gain) >> 17);
 
     int32_t strength = 32767;
     if (shape_ == OSC_SHAPE_SINE_FOLD || shape_ >= OSC_SHAPE_FM) {
@@ -87,7 +85,7 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
           break;
       }
     }
-    timbre_target_ = timbre;
+    timbre_.SetTarget(timbre);
   }
 
 uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
@@ -130,11 +128,10 @@ void Oscillator::Render() {
 
 void Oscillator::RenderCSaw() {
   INIT;
-  uint32_t pw = static_cast<uint32_t>(timbre_current_) * 49152;
-  int32_t pw_increment = static_cast<uint32_t>(timbre_increment) * 49152;
+  uint32_t pw;
   int32_t next_sample = next_sample_;
   RENDER_LOOP(
-    pw += pw_increment;
+    pw = ((timbre_.value() >> 1) + (timbre_.value() >> 2)) << 16; // 3/4
 
     bool self_reset = false;
     if (pw < (phase_increment_ << 3)) {
@@ -148,7 +145,7 @@ void Oscillator::RenderCSaw() {
       self_reset = true;
     }
     
-    int16_t shift = -(timbre_current_ - 32767) >> 4;
+    int16_t shift = -(timbre_.value() - 32767) >> 4;
     while (true) {
       if (!high_) {
         if (phase_ < pw) {
@@ -167,7 +164,7 @@ void Oscillator::RenderCSaw() {
           break;
         }
         self_reset = false;
-        discontinuity_depth_ = -2048 + (timbre_current_ >> 2);
+        discontinuity_depth_ = -2048 + (timbre_.value() >> 2);
         uint32_t t = phase_ / (phase_increment_ >> 16);
         int16_t before = 16383;
         int16_t after = discontinuity_depth_;
@@ -191,7 +188,7 @@ void Oscillator::RenderSquare() {
   INIT; RENDER_LOOP(
     bool self_reset = false;
 
-    uint32_t pw = static_cast<uint32_t>(32768 - timbre_current_) << 16;
+    uint32_t pw = static_cast<uint32_t>(32768 - timbre_.value()) << 16;
     
     int32_t this_sample = next_sample;
     next_sample = 0;
@@ -233,7 +230,7 @@ void Oscillator::RenderVariableSaw() {
   INIT; RENDER_LOOP(
     bool self_reset = false;
 
-    uint32_t pw = static_cast<uint32_t>(timbre_current_) << 16;
+    uint32_t pw = static_cast<uint32_t>(timbre_.value()) << 16;
 
     int32_t this_sample = next_sample;
     next_sample = 0;
@@ -278,7 +275,7 @@ void Oscillator::RenderTriangleFold() {
     phase_16 = phase_ >> 16;
     sample = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
     sample += 32768;
-    sample = sample * timbre_current_ >> 15;
+    sample = sample * timbre_.value() >> 15;
     sample = Interpolate88(ws_tri_fold, sample + 32768);
     WriteSample(sample);
   )
@@ -288,7 +285,7 @@ void Oscillator::RenderSineFold() {
   int16_t sample;
   INIT; RENDER_LOOP(
     sample = Interpolate824(wav_sine, phase_);
-    sample = sample * timbre_current_ >> 15;
+    sample = sample * timbre_.value() >> 15;
     sample = Interpolate88(ws_sine_fold, sample + 32768);
     WriteSample(sample);
   )
@@ -300,7 +297,7 @@ void Oscillator::RenderFM() {
   INIT; RENDER_LOOP(
     modulator_phase_ += modulator_phase_increment_;
     int16_t modulator = Interpolate824(wav_sine, modulator_phase_);
-    uint32_t phase_mod = (modulator * timbre_current_) << 2;
+    uint32_t phase_mod = (modulator * timbre_.value()) << 2;
     WriteSample(Interpolate824(wav_sine, phase_ + phase_mod));
   )
 }
@@ -311,7 +308,7 @@ void Oscillator::RenderSineSync() {
   uint32_t slave_phase_increment = modulator_phase_increment_;
   uint32_t slave_phase_increment_increment = INIT_PHASE_ACCELERATION(
     ComputePhaseIncrement(
-      pitch_ + (timbre_current_ >> 4)
+      pitch_ + (timbre_.value() >> 4)
     ), slave_phase_increment
   );
   int32_t next_sample = next_sample_;
@@ -348,7 +345,7 @@ const uint32_t kPhaseReset[] = {
 };
 
 void Oscillator::RenderDigitalFilter() {
-  int16_t shifted_pitch = pitch_ + ((timbre_target_ - 2048) >> 2);
+  int16_t shifted_pitch = pitch_ + ((timbre_.target() - 2048) >> 2);
   if (shifted_pitch > 16383) {
     shifted_pitch = 16383;
   }
@@ -387,7 +384,7 @@ void Oscillator::RenderDigitalFilter() {
 
 void Oscillator::RenderBuzz() {
   INIT; RENDER_LOOP(
-    int32_t shifted_pitch = pitch_ + ((32767 - timbre_current_) >> 1);
+    int32_t shifted_pitch = pitch_ + ((32767 - timbre_.value()) >> 1);
     uint16_t crossfade = shifted_pitch << 6;
     size_t index = (shifted_pitch >> 10);
     if (index >= kNumZones) {

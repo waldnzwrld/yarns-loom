@@ -38,6 +38,37 @@
 
 namespace yarns {
 
+// https://hbfs.wordpress.com/2009/07/28/faster-than-bresenhams-algorithm/
+class Interpolator {
+ public:
+  typedef union {
+    int32_t i;
+    struct { // endian-specific!
+      int16_t lo;
+      int16_t hi;
+    };
+  } fixed_point;
+
+  void Init(uint8_t dx) {
+    x_delta_ = dx;
+    y_.i = 0;
+    m_ = 0;
+  }
+  void SetTarget(int16_t y) { y_target_ = y; }
+  void ComputeSlope() {
+    m_ = static_cast<int32_t>((y_target_ - y_.hi) << 16) / x_delta_;
+  }
+  void Tick() { y_.i += m_; }
+  int16_t value() const { return y_.hi; }
+  int16_t target() const { return y_target_; }
+
+private:
+  uint8_t x_delta_;
+  fixed_point y_;
+  int16_t y_target_;
+  int32_t m_;
+};
+
 const size_t kAudioBlockSize = 64;
 
 enum OscillatorShape {
@@ -65,8 +96,8 @@ class Oscillator {
     audio_buffer_.Init();
     scale_ = scale;
     offset_ = offset;
-    timbre_current_ = timbre_target_ = 0;
-    gain_current_ = gain_target_ = 0;
+    timbre_.Init(64);
+    gain_.Init(64);
     pitch_ = 60 << 7;
     OnShapeChange();
   }
@@ -80,7 +111,7 @@ class Oscillator {
   }
 
   inline void WriteSample(int16_t sample) {
-    audio_buffer_.Overwrite(offset_ - ((gain_current_ * sample) >> 16));
+    audio_buffer_.Overwrite(offset_ - ((gain_.value() * sample) >> 15));
   }
 
   inline uint16_t ReadSample() {
@@ -130,11 +161,8 @@ class Oscillator {
   bool high_;
 
   // 15-bit
-  int16_t timbre_current_;
-  int16_t timbre_target_;
-
-  int32_t gain_current_;
-  int32_t gain_target_;
+  Interpolator timbre_;
+  Interpolator gain_;
 
   int16_t discontinuity_depth_;
   int16_t pitch_;
