@@ -36,7 +36,6 @@
 #include "yarns/just_intonation_processor.h"
 #include "yarns/midi_handler.h"
 #include "yarns/settings.h"
-#include "yarns/clock_division.h"
 #include "yarns/ui.h"
 
 namespace yarns {
@@ -72,7 +71,7 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_tempo = 120;
   settings_.clock_swing = 0;
   settings_.clock_input_division = 1;
-  settings_.clock_output_division = clock_division::unity;
+  settings_.clock_output_division = 20;
   settings_.clock_bar_duration = 4;
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
@@ -101,7 +100,7 @@ void Multi::Clock() {
     return;
   }
   
-  uint16_t output_division = clock_division::list[settings_.clock_output_division].num_ticks;
+  uint16_t output_division = lut_clock_ratio_ticks[settings_.clock_output_division];
   uint16_t input_division = settings_.clock_input_division;
   
   if (previous_output_division_ &&

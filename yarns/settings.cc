@@ -29,7 +29,6 @@
 
 #include "yarns/settings.h"
 #include "yarns/resources.h"
-#include "yarns/clock_division.h"
 #include "yarns/oscillator.h"
 
 #include "yarns/multi.h"
@@ -190,7 +189,7 @@ const char* const tuning_factor_values[] = {
   "ALPHA"
 };
 
-const uint8_t kVibratoSpeedMax = LUT_LFO_INCREMENTS_SIZE + clock_division::count - 1;
+const uint8_t kVibratoSpeedMax = LUT_LFO_INCREMENTS_SIZE + LUT_CLOCK_RATIO_NAMES_SIZE - 1;
 STATIC_ASSERT(kVibratoSpeedMax <= 127, overflow);
 
 /* static */
@@ -240,7 +239,7 @@ const Setting Settings::settings_[] = {
   {
     "O/", "OUTPUT CLK RATIO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
-    SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
+    SETTING_UNIT_CLOCK_DIV, 0, LUT_CLOCK_RATIO_NAMES_SIZE - 1, NULL,
     0xff, 0,
   },
   {
@@ -530,7 +529,7 @@ const Setting Settings::settings_[] = {
   {
     "C/", "CLK RATIO OUT-IN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_DIVISION, 0 },
-    SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
+    SETTING_UNIT_CLOCK_DIV, 0, LUT_CLOCK_RATIO_NAMES_SIZE - 1, NULL,
     102, 24,
   },
   {
@@ -700,7 +699,7 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       break;
 
     case SETTING_UNIT_CLOCK_DIV:
-      strcpy(buffer, clock_division::list[value].display);
+      strcpy(buffer, lut_clock_ratio_names[value]);
       break;
     
     case SETTING_UNIT_VIBRATO_SPEED:

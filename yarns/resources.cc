@@ -502,12 +502,23 @@ const uint16_t lut_consonance[] = {
       64,     49,     36,     25,
       16,      9,      4,      1,
 };
+const uint16_t lut_clock_ratio_ticks[] = {
+     192,    168,    144,    120,
+     108,     96,     84,     72,
+      64,     60,     56,     54,
+      48,     42,     40,     36,
+      32,     30,     28,     27,
+      24,     21,     20,     18,
+      16,     15,     12,      9,
+       8,      6,      4,      3,
+};
 
 
 const uint16_t* lookup_table_table[] = {
   lut_env_expo,
   lut_arpeggiator_patterns,
   lut_consonance,
+  lut_clock_ratio_ticks,
 };
 
 const int16_t lut_scale_pythagorean[] = {
@@ -724,10 +735,21 @@ const char* const lut_fm_ratio_names[] = {
   "31 FM 3/1", "41 FM 4/1", "51 FM 5/1", "61 FM 6/1",
   "71 FM 7/1", "81 FM 8/1", "91 FM 9/1",
 };
+const char* const lut_clock_ratio_names[] = {
+  "18 1/8", "17 1/7", "16 1/6", "15 1/5",
+  "29 2/9", "14 1/4", "27 2/7", "13 1/3",
+  "38 3/8", "25 2/5", "37 3/7", "49 4/9",
+  "12 1/2", "47 4/7", "35 3/5", "23 2/3",
+  "34 3/4", "45 4/5", "67 6/7", "89 8/9",
+  "11 1/1", "87 8/7", "65 6/5", "43 4/3",
+  "32 3/2", "85 8/5", "21 2/1", "83 8/3",
+  "31 3/1", "41 4/1", "61 6/1", "81 8/1",
+};
 
 
 const char* const* lookup_table_string_table[] = {
   lut_fm_ratio_names,
+  lut_clock_ratio_names,
 };
 
 const int16_t wav_exponential[] = {

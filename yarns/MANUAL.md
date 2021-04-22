@@ -150,7 +150,7 @@
 
 ### Clock ratios
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
-- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./clock_division.h#L43)
+- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./resources.cc#L738)
   
 ### Other tweaks
 - Broadened portamento setting range from 51 to 64 values per curve shape

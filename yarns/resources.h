@@ -62,6 +62,7 @@ extern const char str_dummy[];
 extern const uint16_t lut_env_expo[];
 extern const uint16_t lut_arpeggiator_patterns[];
 extern const uint16_t lut_consonance[];
+extern const uint16_t lut_clock_ratio_ticks[];
 extern const int16_t lut_scale_pythagorean[];
 extern const int16_t lut_scale_1_4_eb[];
 extern const int16_t lut_scale_1_4_e[];
@@ -93,6 +94,7 @@ extern const int16_t lut_scale_kaushik_todi[];
 extern const int16_t lut_scale_jogeshwari[];
 extern const int16_t lut_fm_ratio_intervals[];
 extern const char* const lut_fm_ratio_names[];
+extern const char* const lut_clock_ratio_names[];
 extern const int16_t wav_exponential[];
 extern const int16_t wav_ring[];
 extern const int16_t wav_steps[];
@@ -127,6 +129,8 @@ extern const uint16_t chr_characters[];
 #define LUT_ARPEGGIATOR_PATTERNS_SIZE 23
 #define LUT_CONSONANCE 2
 #define LUT_CONSONANCE_SIZE 1536
+#define LUT_CLOCK_RATIO_TICKS 3
+#define LUT_CLOCK_RATIO_TICKS_SIZE 32
 #define LUT_SCALE_PYTHAGOREAN 0
 #define LUT_SCALE_PYTHAGOREAN_SIZE 12
 #define LUT_SCALE_1_4_EB 1
@@ -193,6 +197,8 @@ extern const uint16_t chr_characters[];
 #define LUT_FM_RATIO_INTERVALS_SIZE 55
 #define LUT_FM_RATIO_NAMES 0
 #define LUT_FM_RATIO_NAMES_SIZE 55
+#define LUT_CLOCK_RATIO_NAMES 1
+#define LUT_CLOCK_RATIO_NAMES_SIZE 32
 #define WAV_EXPONENTIAL 0
 #define WAV_EXPONENTIAL_SIZE 257
 #define WAV_RING 1

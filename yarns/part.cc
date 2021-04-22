@@ -38,7 +38,6 @@
 #include "yarns/midi_handler.h"
 #include "yarns/resources.h"
 #include "yarns/voice.h"
-#include "yarns/clock_division.h"
 #include "yarns/multi.h"
 #include "yarns/ui.h"
 
@@ -108,7 +107,7 @@ void Part::Init() {
   voicing_.env_mod_sustain = 0;
   voicing_.env_mod_release = 32;
 
-  seq_.clock_division = clock_division::unity;
+  seq_.clock_division = 20;
   seq_.gate_length = 3;
   seq_.arp_range = 0;
   seq_.arp_direction = 0;
@@ -426,7 +425,7 @@ void Part::Clock() {
       if (step.is_continuation()) {
         // The next step contains a "sustain" message; or a slid note. Extends
         // the duration of the current note.
-        gate_length_counter_ += clock_division::list[seq_.clock_division].num_ticks;
+        gate_length_counter_ += lut_clock_ratio_ticks[seq_.clock_division];
       } else {
         StopSequencerArpeggiatorNotes();
       }
@@ -434,7 +433,7 @@ void Part::Clock() {
   }
   
   ++arp_seq_prescaler_;
-  if (arp_seq_prescaler_ >= clock_division::list[seq_.clock_division].num_ticks) {
+  if (arp_seq_prescaler_ >= lut_clock_ratio_ticks[seq_.clock_division]) {
     arp_seq_prescaler_ = 0;
   }
   

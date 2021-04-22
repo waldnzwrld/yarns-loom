@@ -474,7 +474,6 @@ Quantizer for FM frequencies.
 
 pairs = itertools.product(range(1, 10), range(1, 10))
 rationals = numpy.unique([Fraction(*x) for x in pairs])
-clock_ratios = [{ "fraction": x, "ticks": 24.0 / x } for x in rationals if (24.0 / x) % 1 == 0]
 
 irrationals = [
   0.5 * 2 ** (16 / 1200.0),
@@ -493,10 +492,10 @@ irrationals = [
 ]
 
 fm_ratios = sorted(rationals, key=lambda x: (-x.denominator, x.numerator)) # + irrationals
-scale = []
+fm_intervals = []
 for ratio in fm_ratios:
-  ratio = 128 * 12 * numpy.log2(float(ratio))
-  scale.append(ratio)
+  interval = 128 * 12 * numpy.log2(float(ratio))
+  fm_intervals.append(interval)
   # scale.extend([ratio, ratio, ratio])
 
 # # target_size = int(2 ** numpy.ceil(numpy.log2(len(scale))))
@@ -506,14 +505,26 @@ for ratio in fm_ratios:
 #   scale = scale[:gap + 1] + [(scale[gap] + scale[gap + 1]) / 2] + \
 #       scale[gap + 1:]
 
-lookup_tables_signed.append(
-    ('fm_ratio_intervals', scale)
-)
+lookup_tables_signed.append(('fm_ratio_intervals', fm_intervals))
 
 lookup_tables_string = []
 lookup_tables_string.append(
-    ('fm_ratio_names', [
-      str(x.numerator) + str(x.denominator) + ' FM ' + str(x.numerator) + '/' + str(x.denominator)
-      for x in fm_ratios
-    ])
+  ('fm_ratio_names', [
+    str(x.numerator) + str(x.denominator) + ' FM ' + str(x.numerator) + '/' + str(x.denominator)
+    for x in fm_ratios
+  ])
 )
+
+clock_ratio_ticks = []
+clock_ratio_names = []
+for ratio in rationals:
+  ticks = (24.0 / ratio)
+  print(ratio)
+  if ticks % 1 != 0 or ratio < 1.0 / 8:
+    continue
+  clock_ratio_ticks.append(float(ticks))
+  clock_ratio_names.append(
+    str(ratio.numerator) + str(ratio.denominator) + ' ' + str(ratio.numerator) + '/' + str(ratio.denominator)
+  )
+lookup_tables.append(('clock_ratio_ticks', clock_ratio_ticks))
+lookup_tables_string.append(('clock_ratio_names', clock_ratio_names))

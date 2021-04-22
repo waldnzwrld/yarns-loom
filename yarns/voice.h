@@ -38,7 +38,6 @@
 #include "yarns/interpolator.h"
 #include "yarns/synced_lfo.h"
 #include "yarns/part.h"
-#include "yarns/clock_division.h"
 
 namespace yarns {
 

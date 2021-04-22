@@ -140,7 +140,7 @@ void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
     modulation_sync_ticks_ = 0;
   } else {
     modulation_increment_ = 0;
-    modulation_sync_ticks_ = clock_division::list[modulation_rate - LUT_LFO_INCREMENTS_SIZE].num_ticks;
+    modulation_sync_ticks_ = lut_clock_ratio_ticks[modulation_rate - LUT_LFO_INCREMENTS_SIZE];
   }
 }
 
