@@ -495,30 +495,40 @@ factors = range(1, 10)
 pairs = itertools.product(factors, factors)
 rationals = numpy.unique([Fraction(*x) for x in pairs])
 
-# for carrier, modulator in pairs:
-#   print(carrier, modulator)
+# Build normal form of carrier/modulator ratio, then use it to categorize
+# ratios, and calculate a correction factor for the carrier to keep a consistent
+# fundamental frequency
+# Thanks to Barry Truax: https://www.sfu.ca/~truax/fmtut.html
+def make_fm(ratio):
+  nf_car = car = ratio.numerator
+  nf_mod = mod = ratio.denominator
+  while not (
+    (nf_car == 1 and nf_mod == 1) or
+    nf_mod >= 2.0 * nf_car
+  ):
+    nf_car = abs(nf_car - nf_mod)
+  family = Fraction(nf_car, nf_mod)
+  carrier_correction = car / float(nf_car)
+  # print(ratio, family, nf_car, carrier_correction)
+  return (family, ratio, carrier_correction)
 
-fm_ratios = rationals # sorted(fm_ratios, key=lambda x: (-x.denominator, x.numerator)) # + irrationals
 fm_ratio_names = []
-fm_carrier_factors = []
-fm_modulator_factors = []
-for r in fm_ratios:
-  fm_ratio_names.append(str(r.numerator) + str(r.denominator) + ' FM ' + str(r.numerator) + '/' + str(r.denominator))
-  fm_carrier_factors.append(r.denominator)
-  fm_modulator_factors.append(r.numerator)
-lookup_tables_string.append(('fm_ratio_names', fm_ratio_names))
-lookup_tables.append(('fm_carrier_factors', fm_carrier_factors))
-lookup_tables.append(('fm_modulator_factors', fm_modulator_factors))
+fm_carrier_corrections = []
+fm_modulator_intervals = []
 
-fm_factor_intervals = [128 * 12 * numpy.log2(float(m)) for m in factors]
-# # target_size = int(2 ** numpy.ceil(numpy.log2(len(scale))))
-# target_size = 118
-# while len(scale) < target_size:
-#   gap = numpy.argmax(numpy.diff(scale))
-#   scale = scale[:gap + 1] + [(scale[gap] + scale[gap + 1]) / 2] + \
-#       scale[gap + 1:]
-fm_factor_intervals.insert(0, 0) # dummy, to allow indexing by factor
-lookup_tables.append(('fm_factor_intervals', fm_factor_intervals))
+fms = map(make_fm, rationals)
+fms = sorted(fms, key=lambda (family, ratio, carrier_correction): (family.numerator, family.denominator, ratio))
+for (family, ratio, carrier_correction) in fms:
+  fm_ratio_names.append(
+    str(ratio.numerator) + str(ratio.denominator) + ' FM ' + str(ratio.numerator) + '/' + str(ratio.denominator)
+  )
+  fm_modulator_intervals.append(128 * 12 * numpy.log2(1.0 / ratio))
+  fm_carrier_corrections.append(128 * 12 * numpy.log2(carrier_correction))
+
+lookup_tables_string.append(('fm_ratio_names', fm_ratio_names))
+lookup_tables_signed.append(('fm_carrier_corrections', fm_carrier_corrections))
+lookup_tables_signed.append(('fm_modulator_intervals', fm_modulator_intervals))
+
 
 clock_ratio_ticks = []
 clock_ratio_names = []

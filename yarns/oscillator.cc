@@ -65,8 +65,7 @@ static const uint16_t kOctave = 12 * 128;
 void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     pitch_ = pitch;
     if (shape_ >= OSC_SHAPE_FM) {
-      uint8_t factor = lut_fm_carrier_factors[shape_ - OSC_SHAPE_FM];
-      pitch_ += lut_fm_factor_intervals[factor];
+      pitch_ += lut_fm_carrier_corrections[shape_ - OSC_SHAPE_FM];
     }
     gain_.SetTarget((scale_ * gain) >> 17);
 
@@ -296,8 +295,7 @@ void Oscillator::RenderSineFold() {
 }
 
 void Oscillator::RenderFM() {
-  uint8_t factor = lut_fm_modulator_factors[shape_ - OSC_SHAPE_FM];
-  uint16_t interval = lut_fm_factor_intervals[factor];
+  int16_t interval = lut_fm_modulator_intervals[shape_ - OSC_SHAPE_FM];
   modulator_phase_increment_ = ComputePhaseIncrement(pitch_ + interval);
   INIT; RENDER_LOOP(
     modulator_phase_ += modulator_phase_increment_;
