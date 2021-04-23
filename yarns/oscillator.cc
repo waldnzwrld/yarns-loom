@@ -404,20 +404,24 @@ void Oscillator::RenderBuzz() {
 }
 
 void Oscillator::RenderFilteredNoise() {
-  int32_t cutoff = Interpolate824(lut_svf_cutoff, timbre_.target() << 17);
-  int32_t damp = Interpolate824(lut_svf_damp, pitch_ << 18);
+  svf_.cutoff.SetTarget(Interpolate824(lut_svf_cutoff, timbre_.target() << 17) >> 1);
+  svf_.damp.SetTarget(Interpolate824(lut_svf_damp, pitch_ << 18) >> 1);
+  svf_.cutoff.ComputeSlope();
+  svf_.damp.ComputeSlope();
   // int32_t scale = Interpolate824(lut_svf_scale, pitch_ << 18);
   // int32_t gain_correction = cutoff > scale ? scale * 32767 / cutoff : 32767;
   int32_t bp = svf_.bp;
   int32_t lp = svf_.lp;
   int32_t notch, hp, in, result;
   INIT; RENDER_LOOP(
-    in = Random::GetSample();
-    notch = in - (bp * damp >> 16);
-    lp += cutoff * bp >> 16;
-    CLIP(lp)
+    svf_.cutoff.Tick();
+    svf_.damp.Tick();
+    in = Random::GetSample() >> 1;
+    notch = in - (bp * svf_.damp.value() >> 15);
+    lp += svf_.cutoff.value() * bp >> 15;
+    CONSTRAIN(lp, -16384, 16383)
     hp = notch - lp;
-    bp += cutoff * hp >> 16;
+    bp += svf_.cutoff.value() * hp >> 15;
     switch (shape_) {
       case OSC_SHAPE_NOISE_LP: result = lp; break;
       case OSC_SHAPE_NOISE_NOTCH: result = notch; break;
@@ -425,10 +429,10 @@ void Oscillator::RenderFilteredNoise() {
       case OSC_SHAPE_NOISE_HP: result = hp; break;
       default: result = 0; break;
     }
-    CLIP(result)
+    CONSTRAIN(result, -16384, 16383)
     // result = result * gain_correction >> 15;
     // result = Interpolate88(ws_moderate_overdrive, result + 32768);
-    WriteSample(result);
+    WriteSample(result << 1);
   )
   svf_.lp = lp;
   svf_.bp = bp;

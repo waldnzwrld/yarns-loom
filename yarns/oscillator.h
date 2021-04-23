@@ -43,6 +43,7 @@ namespace yarns {
 const size_t kAudioBlockSize = 64;
 
 struct SvfState {
+  Interpolator cutoff, damp;
   int32_t bp;
   int32_t lp;
 };
@@ -79,6 +80,8 @@ class Oscillator {
     offset_ = offset;
     timbre_.Init(64);
     gain_.Init(64);
+    svf_.cutoff.Init(64);
+    svf_.damp.Init(64);
     pitch_ = 60 << 7;
     OnShapeChange();
   }
