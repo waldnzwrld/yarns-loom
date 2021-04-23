@@ -27,17 +27,19 @@
 - Configured via the `▽O (OSCILLATOR MENU)`
 - `OM (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
 - `OS (OSCILLATOR SHAPE)` sets the waveform
-  - Murmuring buzz
-  - FM sine
-  - Folded sine
-  - Folded triangle
+  - White noise
+  - Sharktooth
+  - CS80 saw
+  - Pulse
+  - Hard-synced sine
   - Phase distortion, low-pass
   - Phase distortion, peaking
-  - Hard-synced sine
-  - Pulse
-  - CS80 saw
-  - Sharktooth
-  - White noise
+  - Phase distortion, band-pass
+  - Phase distortion, high-pass
+  - Folded triangle
+  - Folded sine
+  - Murmuring buzz
+  - 55 FM ratios with fundamental frequency compensation, grouped by harmonic properties
 - Each wave shape has a timbral parameter that can be modulated by several sources
   - `TI (TIMBRE INITIAL)` sets initial timbre
   - `TL (TIMBRE LFO MOD)` sets the depth of timbre modulation by the voice's bipolar LFO
@@ -150,7 +152,7 @@
 
 ### Clock ratios
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
-- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./resources.cc#L738)
+- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./resources.cc#L755)
   
 ### Other tweaks
 - Broadened portamento setting range from 51 to 64 values per curve shape
