@@ -403,15 +403,43 @@ void Oscillator::RenderBuzz() {
   )
 }
 
-void Oscillator::RenderNoise() {
+void Oscillator::RenderFilteredNoise() {
+  int32_t cutoff = Interpolate824(lut_svf_cutoff, timbre_.target() << 17);
+  int32_t damp = Interpolate824(lut_svf_damp, pitch_ << 18);
+  // int32_t scale = Interpolate824(lut_svf_scale, pitch_ << 18);
+  // int32_t gain_correction = cutoff > scale ? scale * 32767 / cutoff : 32767;
+  int32_t bp = svf_.bp;
+  int32_t lp = svf_.lp;
+  int32_t notch, hp, in, result;
   INIT; RENDER_LOOP(
-    WriteSample(Random::GetSample());
+    in = Random::GetSample();
+    notch = in - (bp * damp >> 16);
+    lp += cutoff * bp >> 16;
+    CLIP(lp)
+    hp = notch - lp;
+    bp += cutoff * hp >> 16;
+    switch (shape_) {
+      case OSC_SHAPE_NOISE_LP: result = lp; break;
+      case OSC_SHAPE_NOISE_NOTCH: result = notch; break;
+      case OSC_SHAPE_NOISE_BP: result = bp; break;
+      case OSC_SHAPE_NOISE_HP: result = hp; break;
+      default: result = 0; break;
+    }
+    CLIP(result)
+    // result = result * gain_correction >> 15;
+    // result = Interpolate88(ws_moderate_overdrive, result + 32768);
+    WriteSample(result);
   )
+  svf_.lp = lp;
+  svf_.bp = bp;
 }
 
 /* static */
 Oscillator::RenderFn Oscillator::fn_table_[] = {
-  &Oscillator::RenderNoise,
+  &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderFilteredNoise,
   &Oscillator::RenderVariableSaw,
   &Oscillator::RenderCSaw,
   &Oscillator::RenderSquare,

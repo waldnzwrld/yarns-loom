@@ -63,6 +63,9 @@ extern const uint16_t lut_env_expo[];
 extern const uint16_t lut_arpeggiator_patterns[];
 extern const uint16_t lut_consonance[];
 extern const uint16_t lut_clock_ratio_ticks[];
+extern const uint16_t lut_svf_cutoff[];
+extern const uint16_t lut_svf_damp[];
+extern const uint16_t lut_svf_scale[];
 extern const int16_t lut_scale_pythagorean[];
 extern const int16_t lut_scale_1_4_eb[];
 extern const int16_t lut_scale_1_4_e[];
@@ -132,6 +135,12 @@ extern const uint16_t chr_characters[];
 #define LUT_CONSONANCE_SIZE 1536
 #define LUT_CLOCK_RATIO_TICKS 3
 #define LUT_CLOCK_RATIO_TICKS_SIZE 32
+#define LUT_SVF_CUTOFF 4
+#define LUT_SVF_CUTOFF_SIZE 257
+#define LUT_SVF_DAMP 5
+#define LUT_SVF_DAMP_SIZE 257
+#define LUT_SVF_SCALE 6
+#define LUT_SVF_SCALE_SIZE 257
 #define LUT_SCALE_PYTHAGOREAN 0
 #define LUT_SCALE_PYTHAGOREAN_SIZE 12
 #define LUT_SCALE_1_4_EB 1

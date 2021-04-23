@@ -72,7 +72,10 @@ const char* const voicing_oscillator_mode_values[] = {
 };
 
 const char* const voicing_oscillator_shape_values[] = {
-  "**",
+  "*L",
+  "*N",
+  "*B",
+  "*H",
   "\x8A\x88",
   "u\x89",
   "_\x8C",

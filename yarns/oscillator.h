@@ -42,8 +42,16 @@ namespace yarns {
 
 const size_t kAudioBlockSize = 64;
 
+struct SvfState {
+  int32_t bp;
+  int32_t lp;
+};
+
 enum OscillatorShape {
-  OSC_SHAPE_NOISE,
+  OSC_SHAPE_NOISE_LP,
+  OSC_SHAPE_NOISE_NOTCH,
+  OSC_SHAPE_NOISE_BP,
+  OSC_SHAPE_NOISE_HP,
   OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_CSAW,
   OSC_SHAPE_SQUARE,
@@ -109,7 +117,7 @@ class Oscillator {
   void RenderSineSync();
   void RenderDigitalFilter();
   void RenderBuzz();
-  void RenderNoise();
+  void RenderFilteredNoise();
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch) const;
   
@@ -141,6 +149,7 @@ class Oscillator {
   int16_t pitch_;
   uint32_t modulator_phase_;
   uint32_t modulator_phase_increment_;
+  SvfState svf_;
   
   int32_t next_sample_;
   

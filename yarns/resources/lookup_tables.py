@@ -542,3 +542,27 @@ for ratio in rationals:
   )
 lookup_tables.append(('clock_ratio_ticks', clock_ratio_ticks))
 lookup_tables_string.append(('clock_ratio_names', clock_ratio_names))
+
+"""----------------------------------------------------------------------------
+SVF coefficients
+----------------------------------------------------------------------------"""
+
+cutoff = 440.0 * 2 ** ((numpy.arange(0, 257) - 69) / 12.0)
+f = cutoff / sample_rate
+f[f > 1 / 8.0] = 1 / 8.0
+f = 2 * numpy.sin(numpy.pi * f)
+resonance = numpy.arange(0, 257) / 260.0
+damp = numpy.minimum(2 * (1 - resonance ** 0.25),
+       numpy.minimum(2, 2 / f - f * 0.5))
+
+lookup_tables.append(
+    ('svf_cutoff', f * 32767.0)
+)
+
+lookup_tables.append(
+    ('svf_damp', damp * 32767.0)
+)
+
+lookup_tables.append(
+    ('svf_scale', ((damp / 2) ** 0.5) * 32767.0)
+)
