@@ -94,7 +94,7 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
   }
 
 uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
-  int32_t num_shifts = 0;
+  int16_t num_shifts = 0;
   while (midi_pitch >= kHighestNote) {
     midi_pitch -= kOctave;
     --num_shifts;
@@ -110,7 +110,13 @@ uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
   uint32_t b = lut_oscillator_increments[(ref_pitch >> 4) + 1];
   uint32_t phase_increment = a + \
       (static_cast<int32_t>(b - a) * (ref_pitch & 0xf) >> 4);
-  phase_increment >>= num_shifts;
+  if (num_shifts > 0) phase_increment >>= num_shifts;
+  else if (num_shifts < 0) {
+    int16_t shifts_available = __builtin_clz(phase_increment) - 1;
+    num_shifts = -num_shifts;
+    num_shifts = std::min(shifts_available, num_shifts);
+    phase_increment <<= num_shifts;
+  }
   return phase_increment;
 }
 
@@ -277,9 +283,6 @@ const uint32_t kPhaseReset[] = {
 
 void Oscillator::RenderDigitalFilter() {
   int16_t shifted_pitch = pitch_ + ((timbre_.target() - 2048) >> 2);
-  if (shifted_pitch > 16383) {
-    shifted_pitch = 16383;
-  }
   uint8_t filter_type = shape_ - OSC_SHAPE_CZ_LP;
   uint32_t modulator_phase_increment_ = ComputePhaseIncrement(shifted_pitch);
   RENDER_LOOP(
