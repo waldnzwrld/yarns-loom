@@ -49,7 +49,7 @@ class Interpolator {
     y_.i = 0;
     m_ = 0;
   }
-  void SetTarget(int16_t y) { y_target_ = y; }
+  void SetTarget(int16_t y) { y_target_ = y; } // 15-bit
   void ComputeSlope() {
     m_ = static_cast<int32_t>((y_target_ - y_.hi) << 16) / x_delta_;
   }

@@ -53,9 +53,8 @@ enum OscillatorShape {
   OSC_SHAPE_NOISE_NOTCH,
   OSC_SHAPE_NOISE_BP,
   OSC_SHAPE_NOISE_HP,
-  OSC_SHAPE_VARIABLE_SAW,
-  OSC_SHAPE_CSAW,
   OSC_SHAPE_SQUARE,
+  OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_SINE_SYNC,
   OSC_SHAPE_CZ_LP,
   OSC_SHAPE_CZ_PK,
@@ -83,14 +82,9 @@ class Oscillator {
     svf_.cutoff.Init(64);
     svf_.damp.Init(64);
     pitch_ = 60 << 7;
-    OnShapeChange();
-  }
-  
-  inline void OnShapeChange() {
     phase_ = 0;
     phase_increment_ = 1;
     high_ = false;
-    discontinuity_depth_ = -16383;
     next_sample_ = 0;
   }
 
@@ -138,27 +132,19 @@ class Oscillator {
     t = 65535 - t;
     return -static_cast<int32_t>(t * t >> 18);
   }
-   
+
+  OscillatorShape shape_;
+  Interpolator timbre_, gain_;
+  int16_t pitch_;
+
   uint32_t phase_;
   uint32_t phase_increment_;
-  uint32_t previous_phase_increment_;
-  bool high_;
-
-  // 15-bit
-  Interpolator timbre_;
-  Interpolator gain_;
-
-  int16_t discontinuity_depth_;
-  int16_t pitch_;
   uint32_t modulator_phase_;
   uint32_t modulator_phase_increment_;
+  bool high_;
   SvfState svf_;
   
   int32_t next_sample_;
-  
-  OscillatorShape shape_;
-  OscillatorShape previous_shape_;
-
   int32_t scale_;
   int32_t offset_;
   stmlib::RingBuffer<uint16_t, kAudioBlockSize * 2> audio_buffer_;

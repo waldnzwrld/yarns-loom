@@ -72,21 +72,20 @@ const char* const voicing_oscillator_mode_values[] = {
 };
 
 const char* const voicing_oscillator_shape_values[] = {
-  "*L",
-  "*N",
-  "*B",
-  "*H",
-  "\x8A\x88",
-  "u\x89",
-  "_\x8C",
-  "SYNC",
-  "ZL LOW PASS PHASE DISTORTION",
+  "*L LOW-PASS NOISE",
+  "*N NOTCH NOISE",
+  "*B BAND-PASS NOISE",
+  "*H HIGH-PASS NOISE",
+  "W\x8C PULSE WIDTH MOD",
+  "W\x88 SAW WIDTH MOD",
+  "SS SINE SYNC",
+  "ZL LOW-PASS PHASE DISTORTION",
   "ZP PEAKING PHASE DISTORTION",
-  "ZB BAND PASS PHASE DISTORTION",
-  "ZH HIGH PASS PHASE DISTORTION",
-  "^F TRIANGLE FOLD",
-  "SF SINE FOLD",
-  "\x8E\x8E",
+  "ZB BAND-PASS PHASE DISTORTION",
+  "ZH HIGH-PASS PHASE DISTORTION",
+  "F^ TRIANGLE FOLD",
+  "FS SINE FOLD",
+  "\x8E\x8E DIRAC COMB",
 };
 
 const char* const tremolo_shape_values[] = {
