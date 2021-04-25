@@ -139,13 +139,14 @@ void Oscillator::Render() {
 }
 
 void Oscillator::RenderVariablePulse() {
+  modulator_phase_increment_ = phase_increment_;
   RENDER_LOOP(
-    bool self_reset = phase < phase_increment;
+    bool self_reset = modulator_phase < modulator_phase_increment;
     uint32_t pw = static_cast<uint32_t>(32768 - timbre_.value()) << 16;
     while (true) {
       if (!high_) {
-        if (phase < pw) break;
-        uint32_t t = (phase - pw) / (phase_increment >> 16);
+        if (modulator_phase < pw) break;
+        uint32_t t = (modulator_phase - pw) / (modulator_phase_increment >> 16);
         this_sample += ThisBlepSample(t);
         next_sample += NextBlepSample(t);
         high_ = true;
@@ -153,25 +154,26 @@ void Oscillator::RenderVariablePulse() {
       if (high_) {
         if (!self_reset) break;
         self_reset = false;
-        uint32_t t = phase / (phase_increment >> 16);
+        uint32_t t = modulator_phase / (modulator_phase_increment >> 16);
         this_sample -= ThisBlepSample(t);
         next_sample -= NextBlepSample(t);
         high_ = false;
       }
     }
-    next_sample += phase < pw ? 0 : 32767;
+    next_sample += modulator_phase < pw ? 0 : 32767;
     WriteSample((this_sample - 16384) << 1);
   )
 }
 
 void Oscillator::RenderVariableSaw() {
+  modulator_phase_increment_ = phase_increment_;
   RENDER_LOOP(
-    bool self_reset = phase < phase_increment;
+    bool self_reset = modulator_phase < modulator_phase_increment;
     uint32_t pw = static_cast<uint32_t>(timbre_.value()) << 16;
     while (true) {
       if (!high_) {
-        if (phase < pw) break;
-        uint32_t t = (phase - pw) / (phase_increment >> 16);
+        if (modulator_phase < pw) break;
+        uint32_t t = (modulator_phase - pw) / (modulator_phase_increment >> 16);
         this_sample -= ThisBlepSample(t) >> 1;
         next_sample -= NextBlepSample(t) >> 1;
         high_ = true;
@@ -179,14 +181,14 @@ void Oscillator::RenderVariableSaw() {
       if (high_) {
         if (!self_reset) break;
         self_reset = false;
-        uint32_t t = phase / (phase_increment >> 16);
+        uint32_t t = modulator_phase / (modulator_phase_increment >> 16);
         this_sample -= ThisBlepSample(t) >> 1;
         next_sample -= NextBlepSample(t) >> 1;
         high_ = false;
       }
     }
-    next_sample += phase >> 18;
-    next_sample += (phase - pw) >> 18;
+    next_sample += modulator_phase >> 18;
+    next_sample += (modulator_phase - pw) >> 18;
     WriteSample((this_sample - 16384) << 1);
   )
 }
