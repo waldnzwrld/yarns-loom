@@ -83,8 +83,8 @@ const char* const voicing_oscillator_shape_values[] = {
   "ZP PEAKING PHASE DISTORTION",
   "ZB BAND-PASS PHASE DISTORTION",
   "ZH HIGH-PASS PHASE DISTORTION",
-  "F^ TRIANGLE FOLD",
   "FS SINE FOLD",
+  "F^ TRIANGLE FOLD",
   "\x8E\x8E DIRAC COMB",
 };
 

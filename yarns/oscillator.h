@@ -60,8 +60,8 @@ enum OscillatorShape {
   OSC_SHAPE_CZ_PK,
   OSC_SHAPE_CZ_BP,
   OSC_SHAPE_CZ_HP,
-  OSC_SHAPE_TRIANGLE_FOLD,
-  OSC_SHAPE_SINE_FOLD,
+  OSC_SHAPE_FOLD_SINE,
+  OSC_SHAPE_FOLD_TRIANGLE,
   OSC_SHAPE_BUZZ,
   OSC_SHAPE_FM,
 };
@@ -108,8 +108,8 @@ class Oscillator {
   void RenderVariablePulse();
   void RenderVariableSaw();
   void RenderCSaw();
-  void RenderTriangleFold();
-  void RenderSineFold();
+  void RenderFoldTriangle();
+  void RenderFoldSine();
   void RenderFM();
   void RenderSineSync();
   void RenderDigitalFilter();

@@ -74,7 +74,7 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     gain_.SetTarget((scale_ * gain) >> 17);
 
     int32_t strength = 32767;
-    if (shape_ == OSC_SHAPE_SINE_FOLD || shape_ >= OSC_SHAPE_FM) {
+    if (shape_ == OSC_SHAPE_FOLD_SINE || shape_ >= OSC_SHAPE_FM) {
       strength -= 6 * (pitch_ - (92 << 7));
       CONSTRAIN(strength, 0, 32767);
       timbre = timbre * strength >> 15;
@@ -83,7 +83,7 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
         case OSC_SHAPE_SQUARE:
           CONSTRAIN(timbre, 0, 31767);
           break;
-        case OSC_SHAPE_TRIANGLE_FOLD:
+        case OSC_SHAPE_FOLD_TRIANGLE:
           strength -= 7 * (pitch_ - (80 << 7));
           CONSTRAIN(strength, 0, 32767);
           timbre = timbre * strength >> 15;
@@ -191,7 +191,7 @@ void Oscillator::RenderVariableSaw() {
   )
 }
 
-void Oscillator::RenderTriangleFold() {
+void Oscillator::RenderFoldTriangle() {
   RENDER_LOOP(
     uint16_t phase_16 = phase >> 16;
     this_sample = (phase_16 << 1) ^ (phase_16 & 0x8000 ? 0xffff : 0x0000);
@@ -202,7 +202,7 @@ void Oscillator::RenderTriangleFold() {
   )
 }
 
-void Oscillator::RenderSineFold() {
+void Oscillator::RenderFoldSine() {
   RENDER_LOOP(
     this_sample = Interpolate824(wav_sine, phase);
     this_sample = this_sample * timbre_.value() >> 15;
@@ -354,8 +354,8 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderDigitalFilter,
   &Oscillator::RenderDigitalFilter,
-  &Oscillator::RenderTriangleFold,
-  &Oscillator::RenderSineFold,
+  &Oscillator::RenderFoldSine,
+  &Oscillator::RenderFoldTriangle,
   &Oscillator::RenderBuzz,
   &Oscillator::RenderFM,
 };
