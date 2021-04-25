@@ -253,7 +253,7 @@ void Oscillator::RenderSineSync() {
         break;
       default: break;
     }
-    WriteSample(next_sample);
+    WriteSample(this_sample);
   )
 }
 
