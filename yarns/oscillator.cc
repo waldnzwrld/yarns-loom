@@ -80,7 +80,7 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
       timbre = timbre * strength >> 15;
     } else {
       switch (shape_) {
-        case OSC_SHAPE_SQUARE:
+        case OSC_SHAPE_VARIABLE_PULSE:
           CONSTRAIN(timbre, 0, 31767);
           break;
         case OSC_SHAPE_FOLD_TRIANGLE:
@@ -236,7 +236,7 @@ void Oscillator::RenderSineSync() {
       int32_t before = 0;
       int32_t after = 0;
       switch (shape_) {
-        case OSC_SHAPE_SINE_SYNC:
+        case OSC_SHAPE_SYNC_SINE:
           before = Interpolate824(wav_sine, modulator_phase_at_reset);
           after = wav_sine[0];
           break;
@@ -248,7 +248,7 @@ void Oscillator::RenderSineSync() {
       modulator_phase = master_reset_time * (modulator_phase_increment >> 16);
     }
     switch (shape_) {
-      case OSC_SHAPE_SINE_SYNC:
+      case OSC_SHAPE_SYNC_SINE:
         next_sample += Interpolate824(wav_sine, modulator_phase);
         break;
       default: break;
