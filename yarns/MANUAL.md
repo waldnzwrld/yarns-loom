@@ -26,25 +26,47 @@
 ### Oscillator controls
 - Configured via the `▽O (OSCILLATOR MENU)`
 - `OM (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
-- `OS (OSCILLATOR SHAPE)` sets the waveform
-  - White noise
-  - Sharktooth
-  - CS80 saw
-  - Pulse
-  - Hard-synced sine
-  - Phase distortion, low-pass
-  - Phase distortion, peaking
-  - Phase distortion, band-pass
-  - Phase distortion, high-pass
-  - Folded triangle
-  - Folded sine
-  - Murmuring buzz
-  - 55 FM ratios with fundamental frequency compensation, grouped by harmonic properties
+- `OS (OSCILLATOR SHAPE)` sets the waveform (see below)
 - Each wave shape has a timbral parameter that can be modulated by several sources
   - `TI (TIMBRE INITIAL)` sets initial timbre
   - `TL (TIMBRE LFO MOD)` sets the depth of timbre modulation by the voice's bipolar LFO
   - `TE (TIMBRE ENV MOD)` sets the initial bipolar depth of modulation of timbre by envelope
   - `TV (TIMBRE VEL MOD)` sets the bipolar modulation by velocity of the envelope modulation of timbre (e.g. velocity can polarize the timbre envelope)
+
+### Oscillator synthesis models
+- Filtered noise
+  - `TIMBRE` sets filter cutoff
+  - Voice pitch sets filter resonance
+  - Sub-shapes:
+    - Low-pass
+    - Notch
+    - Band-pass
+    - High-pass
+- Pulse-width modulation
+  - `TIMBRE` sets pulse width
+  - Sub-shapes:
+    - Pulse
+    - Saw
+- Hard-synced sine
+  - `TIMBRE` sets detuning of the secondary oscillator
+- Phase distortion
+  - `TIMBRE` sets filter cutoff
+  - Sub-shapes:
+    - Low-pass
+    - Peaking
+    - Band-pass
+    - High-pass
+- Wavefolder
+  - `TIMBRE` sets fold gain
+  - Sub-shapes:
+    - Sine
+    - Triangle
+- Dirac comb
+  - `TIMBRE` sets harmonic content
+- Frequency modulation
+  - `TIMBRE` sets the modulation depth
+  - Includes carrier frequency correction to maintain a consistent fundamental pitch
+  - Sub-shapes: 55 integer ratios, ordered from harmonic to inharmonic
 
 ### Amplitude dynamics: ADSR envelopes (with velocity modulation) and tremolo
 - Configured via the `▽A (AMPLITUDE MENU)`
