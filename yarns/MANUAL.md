@@ -66,7 +66,7 @@
 - Frequency modulation
   - `TIMBRE` sets the modulation depth
   - Includes carrier frequency correction to maintain a consistent fundamental pitch
-  - Sub-shapes: 55 integer ratios, ordered from harmonic to inharmonic
+  - Sub-shapes: [55 integer ratios, ordered from harmonic to inharmonic](./resources.cc#L943)
 
 ### Amplitude dynamics: ADSR envelopes (with velocity modulation) and tremolo
 - Configured via the `▽A (AMPLITUDE MENU)`
@@ -174,7 +174,7 @@
 
 ### Clock ratios
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
-- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./resources.cc#L755)
+- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./resources.cc#L959)
   
 ### Other tweaks
 - Broadened portamento setting range from 51 to 64 values per curve shape
