@@ -47,7 +47,7 @@ tri_fold = numpy.sin(numpy.pi * (3 * x + (2 * x) ** 3))
 
 # In v1.4 RC
 window = numpy.exp(-x * x * 4) ** 1.5
-sine = numpy.sin(8 * numpy.pi * x)
+sine = numpy.sin(16 * numpy.pi * x)
 sine_fold = sine * window + numpy.arctan(3 * x) * (1 - window)
 sine_fold /= numpy.abs(sine_fold).max()
 
