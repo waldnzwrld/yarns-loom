@@ -68,9 +68,9 @@ static const uint16_t kOctave = 12 * 128;
 
 void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     pitch_ = pitch;
-    if (shape_ >= OSC_SHAPE_FM) {
-      pitch_ += lut_fm_carrier_corrections[shape_ - OSC_SHAPE_FM];
-    }
+    // if (shape_ >= OSC_SHAPE_FM) {
+    //   pitch_ += lut_fm_carrier_corrections[shape_ - OSC_SHAPE_FM];
+    // }
     gain_.SetTarget((scale_ * gain) >> 17);
 
     int32_t strength = 32767;

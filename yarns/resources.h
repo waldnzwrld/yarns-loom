@@ -95,7 +95,6 @@ extern const int16_t lut_scale_b_todi[];
 extern const int16_t lut_scale_chandradeep[];
 extern const int16_t lut_scale_kaushik_todi[];
 extern const int16_t lut_scale_jogeshwari[];
-extern const int16_t lut_fm_carrier_corrections[];
 extern const int16_t lut_fm_modulator_intervals[];
 extern const char* const lut_fm_ratio_names[];
 extern const char* const lut_clock_ratio_names[];
@@ -203,12 +202,10 @@ extern const uint16_t chr_characters[];
 #define LUT_SCALE_JOGESHWARI_SIZE 12
 #define LUT_SCALE_RASIA 30
 #define LUT_SCALE_RASIA_SIZE 12
-#define LUT_FM_CARRIER_CORRECTIONS 31
-#define LUT_FM_CARRIER_CORRECTIONS_SIZE 55
-#define LUT_FM_MODULATOR_INTERVALS 32
-#define LUT_FM_MODULATOR_INTERVALS_SIZE 55
+#define LUT_FM_MODULATOR_INTERVALS 31
+#define LUT_FM_MODULATOR_INTERVALS_SIZE 15
 #define LUT_FM_RATIO_NAMES 0
-#define LUT_FM_RATIO_NAMES_SIZE 55
+#define LUT_FM_RATIO_NAMES_SIZE 15
 #define LUT_CLOCK_RATIO_NAMES 1
 #define LUT_CLOCK_RATIO_NAMES_SIZE 32
 #define WAV_EXPONENTIAL 0
