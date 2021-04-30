@@ -2299,7 +2299,6 @@ const int16_t* waveform_table[] = {
   wav_bandlimited_comb_12,
   wav_bandlimited_comb_13,
   wav_bandlimited_comb_14,
-  wav_bandlimited_comb_14,
 };
 
 const int16_t ws_sine_fold[] = {

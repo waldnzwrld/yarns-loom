@@ -291,17 +291,13 @@ void Oscillator::RenderDigitalFilter() {
 
 void Oscillator::RenderBuzz() {
   RENDER_LOOP(
-    int32_t shifted_pitch = pitch_ + ((32767 - timbre_.value()) >> 1);
-    uint16_t crossfade = shifted_pitch << 6;
-    size_t index = (shifted_pitch >> 10);
-    if (index >= kNumZones) {
-      index = kNumZones - 1;
-    }
+    int32_t zone_14 = (pitch_ + ((32767 - timbre_.value()) >> 1));
+    uint16_t crossfade = zone_14 << 6; // Ignore highest 4 bits
+    size_t index = zone_14 >> 10; // Use highest 4 bits
+    CONSTRAIN(index, 0, kNumZones - 1);
     const int16_t* wave_1 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
     index += 1;
-    if (index >= kNumZones) {
-      index = kNumZones - 1;
-    }
+    CONSTRAIN(index, 0, kNumZones - 1);
     const int16_t* wave_2 = waveform_table[WAV_BANDLIMITED_COMB_0 + index];
     this_sample = Crossfade(wave_1, wave_2, phase, crossfade);
     WriteSample(this_sample);
