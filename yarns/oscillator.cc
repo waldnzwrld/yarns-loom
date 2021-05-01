@@ -330,11 +330,13 @@ void Oscillator::RenderPhaseDistortion() {
     uint16_t saw = ~(phase >> 16);
     // uint16_t triangle = (phase >> 15) ^ (phase & 0x80000000 ? 0xffff : 0x0000);
     uint16_t window = saw; // aux_parameter_ < 16384 ? saw : triangle;
+    int16_t saw_tri_signal;
     if (filter_type & 2) {
-      this_sample = (carrier * window) >> 16;
+      saw_tri_signal = (carrier * window) >> 16;
     } else {
-      this_sample = (window * (carrier + 32768) >> 16) - 32768;
+      saw_tri_signal = (window * (carrier + 32768) >> 16) - 32768;
     }
+    this_sample = saw_tri_signal;
     // uint16_t balance = (aux_parameter_ < 16384 ? 
     //                     aux_parameter_ : ~aux_parameter_) << 2;
   )
