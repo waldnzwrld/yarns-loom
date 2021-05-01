@@ -50,15 +50,16 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderFilteredNoise,
   &Oscillator::RenderFilteredNoise,
   &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
   &Oscillator::RenderPulse,
   &Oscillator::RenderSaw,
   &Oscillator::RenderPulse,
   &Oscillator::RenderSaw,
   &Oscillator::RenderSineSync,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderTanhSine,
   &Oscillator::RenderFoldSine,
   &Oscillator::RenderFoldTriangle,
   &Oscillator::RenderBuzz,
@@ -264,6 +265,14 @@ void Oscillator::RenderFoldSine() {
     this_sample = Interpolate824(wav_sine, phase);
     this_sample = this_sample * timbre_.value() >> 15;
     this_sample = Interpolate88(ws_sine_fold, this_sample + 32768);
+  )
+}
+
+void Oscillator::RenderTanhSine() {
+  RENDER_LOOP(
+    this_sample = (32768 + Interpolate824(wav_sine, phase)) >> 1;
+    this_sample += this_sample * timbre_.value() >> 15;
+    this_sample = Interpolate88(ws_violent_overdrive, this_sample);
   )
 }
 

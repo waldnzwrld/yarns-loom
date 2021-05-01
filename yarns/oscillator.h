@@ -57,15 +57,16 @@ enum OscillatorShape {
   OSC_SHAPE_NOISE_NOTCH,
   OSC_SHAPE_NOISE_BP,
   OSC_SHAPE_NOISE_HP,
+  OSC_SHAPE_CZ_LP,
+  OSC_SHAPE_CZ_PK,
+  OSC_SHAPE_CZ_BP,
+  OSC_SHAPE_CZ_HP,
   OSC_SHAPE_VARIABLE_PULSE,
   OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_FILTERED_PULSE,
   OSC_SHAPE_FILTERED_SAW,
   OSC_SHAPE_SYNC_SINE,
-  OSC_SHAPE_CZ_LP,
-  OSC_SHAPE_CZ_PK,
-  OSC_SHAPE_CZ_BP,
-  OSC_SHAPE_CZ_HP,
+  OSC_SHAPE_TANH_SINE,
   OSC_SHAPE_FOLD_SINE,
   OSC_SHAPE_FOLD_TRIANGLE,
   OSC_SHAPE_BUZZ,
@@ -112,6 +113,7 @@ class Oscillator {
   void RenderFoldSine();
   void RenderFM();
   void RenderSineSync();
+  void RenderTanhSine();
   void RenderPhaseDistortion();
   void RenderBuzz();
   void RenderFilteredNoise();
