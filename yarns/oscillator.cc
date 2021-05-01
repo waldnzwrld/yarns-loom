@@ -66,6 +66,27 @@ static const uint16_t kHighestNote = 128 * 128;
 static const uint16_t kPitchTableStart = 116 * 128;
 static const uint16_t kOctave = 12 * 128;
 
+/* static */
+Oscillator::RenderFn Oscillator::fn_table_[] = {
+  &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderFilteredNoise,
+  &Oscillator::RenderPulse,
+  &Oscillator::RenderSaw,
+  &Oscillator::RenderPulse,
+  &Oscillator::RenderSaw,
+  &Oscillator::RenderSineSync,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderFoldSine,
+  &Oscillator::RenderFoldTriangle,
+  &Oscillator::RenderBuzz,
+  &Oscillator::RenderFM,
+};
+
 void StateVariableFilter::Init(uint8_t interpolation_slope) {
   cutoff.Init(interpolation_slope);
   damp.Init(interpolation_slope);
@@ -355,26 +376,5 @@ void Oscillator::RenderFilteredNoise() {
     WriteSample(this_sample << 1);
   )
 }
-
-/* static */
-Oscillator::RenderFn Oscillator::fn_table_[] = {
-  &Oscillator::RenderFilteredNoise,
-  &Oscillator::RenderFilteredNoise,
-  &Oscillator::RenderFilteredNoise,
-  &Oscillator::RenderFilteredNoise,
-  &Oscillator::RenderPulse,
-  &Oscillator::RenderSaw,
-  &Oscillator::RenderPulse,
-  &Oscillator::RenderSaw,
-  &Oscillator::RenderSineSync,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderFoldSine,
-  &Oscillator::RenderFoldTriangle,
-  &Oscillator::RenderBuzz,
-  &Oscillator::RenderFM,
-};
 
 }  // namespace yarns
