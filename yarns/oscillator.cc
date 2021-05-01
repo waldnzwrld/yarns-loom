@@ -185,7 +185,7 @@ void Oscillator::Render() {
   modulator_phase_increment_ = modulator_phase_increment;
 
 void Oscillator::RenderPulse() {
-  svf_.RenderInit(timbre_.target(), 0x4000);
+  svf_.RenderInit(timbre_.target(), 0x7fff);
   modulator_phase_increment_ = phase_increment_;
   RENDER_LOOP(
     bool self_reset = modulator_phase < modulator_phase_increment;
@@ -217,7 +217,7 @@ void Oscillator::RenderPulse() {
 }
 
 void Oscillator::RenderSaw() {
-  svf_.RenderInit(timbre_.target(), 0x4000);
+  svf_.RenderInit(timbre_.target(), 0x7fff);
   modulator_phase_increment_ = phase_increment_;
   RENDER_LOOP(
     bool self_reset = modulator_phase < modulator_phase_increment;
