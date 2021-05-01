@@ -78,6 +78,8 @@ const char* const voicing_oscillator_shape_values[] = {
   "*H HIGH-PASS NOISE",
   "W\x8C PULSE WIDTH MOD",
   "W\x88 SAW WIDTH MOD",
+  "F\x8C PULSE LOW-PASS",
+  "F\x88 SAW LOW-PASS",
   "$S SINE SYNC",
   "ZL LOW-PASS PHASE DISTORTION",
   "ZP PEAKING PHASE DISTORTION",

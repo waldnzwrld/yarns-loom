@@ -66,6 +66,28 @@ static const uint16_t kHighestNote = 128 * 128;
 static const uint16_t kPitchTableStart = 116 * 128;
 static const uint16_t kOctave = 12 * 128;
 
+void StateVariableFilter::Init(uint8_t interpolation_slope) {
+  cutoff.Init(interpolation_slope);
+  damp.Init(interpolation_slope);
+}
+
+void StateVariableFilter::RenderInit(uint32_t frequency, uint32_t resonance) {
+  cutoff.SetTarget(Interpolate824(lut_svf_cutoff, frequency) >> 1);
+  damp.SetTarget(Interpolate824(lut_svf_damp, resonance) >> 1);
+  cutoff.ComputeSlope();
+  damp.ComputeSlope();
+}
+
+void StateVariableFilter::RenderTick(int16_t in) {
+  cutoff.Tick();
+  damp.Tick();
+  notch = in - (bp * damp.value() >> 15);
+  lp += cutoff.value() * bp >> 15;
+  CONSTRAIN(lp, -16384, 16383)
+  hp = notch - lp;
+  bp += cutoff.value() * hp >> 15;
+}
+
 void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     pitch_ = pitch;
     // if (shape_ >= OSC_SHAPE_FM) {
@@ -138,11 +160,14 @@ void Oscillator::Render() {
   (this->*fn)();
 }
 
-void Oscillator::RenderVariablePulse() {
+void Oscillator::RenderPulse() {
+  svf_.RenderInit(timbre_.target() << 17, 0x80000000);
   modulator_phase_increment_ = phase_increment_;
   RENDER_LOOP(
     bool self_reset = modulator_phase < modulator_phase_increment;
-    uint32_t pw = static_cast<uint32_t>(32768 - timbre_.value()) << 16;
+    uint32_t pw = shape_ == OSC_SHAPE_VARIABLE_PULSE
+      ? static_cast<uint32_t>(32768 - timbre_.value()) << 16
+      : 0x80000000;
     while (true) {
       if (!high_) {
         if (modulator_phase < pw) break;
@@ -161,15 +186,20 @@ void Oscillator::RenderVariablePulse() {
       }
     }
     next_sample += modulator_phase < pw ? 0 : 32767;
-    WriteSample((this_sample - 16384) << 1);
+    this_sample = (this_sample - 16384) << 1;
+    svf_.RenderTick(this_sample);
+    WriteSample(shape_ == OSC_SHAPE_FILTERED_PULSE ? svf_.lp : this_sample);
   )
 }
 
-void Oscillator::RenderVariableSaw() {
+void Oscillator::RenderSaw() {
+  svf_.RenderInit(timbre_.target() << 17, 0x80000000);
   modulator_phase_increment_ = phase_increment_;
   RENDER_LOOP(
     bool self_reset = modulator_phase < modulator_phase_increment;
-    uint32_t pw = static_cast<uint32_t>(timbre_.value()) << 16;
+    uint32_t pw = shape_ == OSC_SHAPE_VARIABLE_SAW
+      ? static_cast<uint32_t>(32768 - timbre_.value()) << 16
+      : 0x80000000;
     while (true) {
       if (!high_) {
         if (modulator_phase < pw) break;
@@ -189,7 +219,9 @@ void Oscillator::RenderVariableSaw() {
     }
     next_sample += modulator_phase >> 18;
     next_sample += (modulator_phase - pw) >> 18;
-    WriteSample((this_sample - 16384) << 1);
+    this_sample = (this_sample - 16384) << 1;
+    svf_.RenderTick(this_sample);
+    WriteSample(shape_ == OSC_SHAPE_FILTERED_SAW ? svf_.lp : this_sample);
   )
 }
 
@@ -266,7 +298,7 @@ const uint32_t kPhaseReset[] = {
   0x80000000
 };
 
-void Oscillator::RenderDigitalFilter() {
+void Oscillator::RenderPhaseDistortion() {
   int16_t shifted_pitch = pitch_ + ((timbre_.target() - 2048) >> 2);
   uint8_t filter_type = shape_ - OSC_SHAPE_CZ_LP;
   uint32_t modulator_phase_increment_ = ComputePhaseIncrement(shifted_pitch);
@@ -305,29 +337,16 @@ void Oscillator::RenderBuzz() {
 }
 
 void Oscillator::RenderFilteredNoise() {
-  svf_.cutoff.SetTarget(Interpolate824(lut_svf_cutoff, timbre_.target() << 17) >> 1);
-  svf_.damp.SetTarget(Interpolate824(lut_svf_damp, pitch_ << 18) >> 1);
-  svf_.cutoff.ComputeSlope();
-  svf_.damp.ComputeSlope();
+  svf_.RenderInit(timbre_.target() << 17, pitch_ << 18);
   // int32_t scale = Interpolate824(lut_svf_scale, pitch_ << 18);
   // int32_t gain_correction = cutoff > scale ? scale * 32767 / cutoff : 32767;
-  int32_t bp = svf_.bp;
-  int32_t lp = svf_.lp;
-  int32_t notch, hp, in;
   RENDER_LOOP(
-    svf_.cutoff.Tick();
-    svf_.damp.Tick();
-    in = Random::GetSample() >> 1;
-    notch = in - (bp * svf_.damp.value() >> 15);
-    lp += svf_.cutoff.value() * bp >> 15;
-    CONSTRAIN(lp, -16384, 16383)
-    hp = notch - lp;
-    bp += svf_.cutoff.value() * hp >> 15;
+    svf_.RenderTick(Random::GetSample() >> 1);
     switch (shape_) {
-      case OSC_SHAPE_NOISE_LP: this_sample = lp; break;
-      case OSC_SHAPE_NOISE_NOTCH: this_sample = notch; break;
-      case OSC_SHAPE_NOISE_BP: this_sample = bp; break;
-      case OSC_SHAPE_NOISE_HP: this_sample = hp; break;
+      case OSC_SHAPE_NOISE_LP: this_sample = svf_.lp; break;
+      case OSC_SHAPE_NOISE_NOTCH: this_sample = svf_.notch; break;
+      case OSC_SHAPE_NOISE_BP: this_sample = svf_.bp; break;
+      case OSC_SHAPE_NOISE_HP: this_sample = svf_.hp; break;
       default: break;
     }
     CONSTRAIN(this_sample, -16384, 16383)
@@ -335,8 +354,6 @@ void Oscillator::RenderFilteredNoise() {
     // result = Interpolate88(ws_moderate_overdrive, result + 32768);
     WriteSample(this_sample << 1);
   )
-  svf_.lp = lp;
-  svf_.bp = bp;
 }
 
 /* static */
@@ -345,13 +362,15 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderFilteredNoise,
   &Oscillator::RenderFilteredNoise,
   &Oscillator::RenderFilteredNoise,
-  &Oscillator::RenderVariablePulse,
-  &Oscillator::RenderVariableSaw,
+  &Oscillator::RenderPulse,
+  &Oscillator::RenderSaw,
+  &Oscillator::RenderPulse,
+  &Oscillator::RenderSaw,
   &Oscillator::RenderSineSync,
-  &Oscillator::RenderDigitalFilter,
-  &Oscillator::RenderDigitalFilter,
-  &Oscillator::RenderDigitalFilter,
-  &Oscillator::RenderDigitalFilter,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortion,
   &Oscillator::RenderFoldSine,
   &Oscillator::RenderFoldTriangle,
   &Oscillator::RenderBuzz,

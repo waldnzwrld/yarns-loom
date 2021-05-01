@@ -42,10 +42,14 @@ namespace yarns {
 
 const size_t kAudioBlockSize = 64;
 
-struct SvfState {
+class StateVariableFilter {
+ public:
+  void Init(uint8_t interpolation_slope);
+  void RenderInit(uint32_t frequency, uint32_t resonance);
+  void RenderTick(int16_t in);
+  int32_t bp, lp, notch, hp;
+ private:
   Interpolator cutoff, damp;
-  int32_t bp;
-  int32_t lp;
 };
 
 enum OscillatorShape {
@@ -55,6 +59,8 @@ enum OscillatorShape {
   OSC_SHAPE_NOISE_HP,
   OSC_SHAPE_VARIABLE_PULSE,
   OSC_SHAPE_VARIABLE_SAW,
+  OSC_SHAPE_FILTERED_PULSE,
+  OSC_SHAPE_FILTERED_SAW,
   OSC_SHAPE_SYNC_SINE,
   OSC_SHAPE_CZ_LP,
   OSC_SHAPE_CZ_PK,
@@ -79,8 +85,7 @@ class Oscillator {
     offset_ = offset;
     timbre_.Init(64);
     gain_.Init(64);
-    svf_.cutoff.Init(64);
-    svf_.damp.Init(64);
+    svf_.Init(64);
     pitch_ = 60 << 7;
     phase_ = 0;
     phase_increment_ = 1;
@@ -105,14 +110,14 @@ class Oscillator {
   void Render();
   
  private:
-  void RenderVariablePulse();
-  void RenderVariableSaw();
+  void RenderPulse();
+  void RenderSaw();
   void RenderCSaw();
   void RenderFoldTriangle();
   void RenderFoldSine();
   void RenderFM();
   void RenderSineSync();
-  void RenderDigitalFilter();
+  void RenderPhaseDistortion();
   void RenderBuzz();
   void RenderFilteredNoise();
   
@@ -142,7 +147,7 @@ class Oscillator {
   uint32_t modulator_phase_;
   uint32_t modulator_phase_increment_;
   bool high_;
-  SvfState svf_;
+  StateVariableFilter svf_;
   
   int32_t next_sample_;
   int32_t scale_;
