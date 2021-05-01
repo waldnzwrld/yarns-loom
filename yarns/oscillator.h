@@ -45,8 +45,8 @@ const size_t kAudioBlockSize = 64;
 class StateVariableFilter {
  public:
   void Init(uint8_t interpolation_slope);
-  void RenderInit(uint32_t frequency, uint32_t resonance);
-  void RenderTick(int16_t in);
+  void RenderInit(int16_t frequency, int16_t resonance);
+  void RenderSample(int16_t in);
   int32_t bp, lp, notch, hp;
  private:
   Interpolator cutoff, damp;
@@ -91,10 +91,6 @@ class Oscillator {
     phase_increment_ = 1;
     high_ = false;
     next_sample_ = 0;
-  }
-
-  inline void WriteSample(int16_t sample) {
-    audio_buffer_.Overwrite(offset_ - ((gain_.value() * sample) >> 15));
   }
 
   inline uint16_t ReadSample() {
