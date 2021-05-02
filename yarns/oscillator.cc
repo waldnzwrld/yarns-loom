@@ -213,7 +213,7 @@ void Oscillator::RenderPulse() {
     next_sample += modulator_phase < pw ? 0 : 32767;
     this_sample = (this_sample - 16384) << 1;
     svf_.RenderSample(this_sample);
-    if (shape_ == OSC_SHAPE_FILTERED_PULSE) this_sample = svf_.lp << 1;
+    if (shape_ == OSC_SHAPE_LP_PULSE) this_sample = svf_.lp << 1;
   )
 }
 
@@ -246,7 +246,7 @@ void Oscillator::RenderSaw() {
     next_sample += (modulator_phase - pw) >> 18;
     this_sample = (this_sample - 16384) << 1;
     svf_.RenderSample(this_sample);
-    if (shape_ == OSC_SHAPE_FILTERED_SAW) this_sample = svf_.lp << 1;
+    if (shape_ == OSC_SHAPE_LP_SAW) this_sample = svf_.lp << 1;
   )
 }
 
