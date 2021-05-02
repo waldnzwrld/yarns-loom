@@ -270,9 +270,10 @@ void Oscillator::RenderFoldSine() {
 
 void Oscillator::RenderTanhSine() {
   RENDER_LOOP(
-    this_sample = (32768 + Interpolate824(wav_sine, phase)) >> 1;
-    this_sample += this_sample * timbre_.value() >> 15;
-    this_sample = Interpolate88(ws_violent_overdrive, this_sample);
+    this_sample = Interpolate824(wav_sine, phase);
+    int16_t baseline = this_sample >> 6;
+    this_sample = baseline + ((this_sample - baseline) * timbre_.value() >> 15);
+    this_sample = Interpolate88(ws_violent_overdrive, this_sample + 32768);
   )
 }
 
