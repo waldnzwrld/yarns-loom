@@ -42,13 +42,6 @@
     - Notch
     - Band-pass
     - High-pass
-- Pulse-width modulation
-  - `TIMBRE` sets pulse width
-  - Sub-shapes:
-    - Pulse
-    - Saw
-- Hard-synced sine
-  - `TIMBRE` sets detuning of the secondary oscillator
 - Phase distortion
   - `TIMBRE` sets filter cutoff
   - Sub-shapes:
@@ -56,6 +49,20 @@
     - Peaking
     - Band-pass
     - High-pass
+- Pulse-width modulation
+  - `TIMBRE` sets pulse width
+  - Sub-shapes:
+    - Pulse
+    - Saw
+- State-variable filter emulation
+  - `TIMBRE` sets filter cutoff (resonance is fixed)
+  - Sub-shapes:
+    - Pulse
+    - Saw
+- Hard-synced sine
+  - `TIMBRE` sets detuning of the secondary oscillator
+- Compressed sine (`tanh`)
+  - `TIMBRE` sets compression amount
 - Wavefolder
   - `TIMBRE` sets fold gain
   - Sub-shapes:
