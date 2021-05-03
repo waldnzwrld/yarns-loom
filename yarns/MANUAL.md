@@ -34,32 +34,22 @@
   - `TV (TIMBRE VEL MOD)` sets the bipolar modulation by velocity of the envelope modulation of timbre (e.g. velocity can polarize the timbre envelope)
 
 ### Oscillator synthesis models
-- Filtered noise
-  - `TIMBRE` sets filter cutoff
+- Filtered noise: `TIMBRE` sets filter cutoff
   - Voice pitch sets filter resonance
   - Sub-shapes: low-pass, notch, band-pass, high-pass
-- Phase distortion
-  - `TIMBRE` sets filter cutoff
+- Phase distortion: `TIMBRE` sets filter cutoff
   - Sub-shapes: low-pass, peaking, band-pass, high-pass
-- Pulse-width modulation
-  - `TIMBRE` sets pulse width
+- Pulse-width modulation: `TIMBRE` sets pulse width
   - Sub-shapes: pulse, saw
-- State-variable filter emulation
-  - `TIMBRE` sets filter cutoff (resonance is fixed)
+- State-variable filter: `TIMBRE` sets filter cutoff (resonance is fixed)
   - Sub-shapes: pulse, saw
-- Hard-synced sine
-  - `TIMBRE` sets detuning of the secondary oscillator
-- Compressed sine (`tanh`)
-  - `TIMBRE` sets compression amount
-- Wavefolder
-  - `TIMBRE` sets fold gain
+- Hard-synced sine: `TIMBRE` sets detuning of the secondary oscillator
+- Compressed sine (`tanh`): `TIMBRE` sets compression amount
+- Wavefolder: `TIMBRE` sets fold gain
   - Sub-shapes: sine, triangle
-- Dirac comb
-  - `TIMBRE` sets harmonic content
-- Frequency modulation
-  - `TIMBRE` sets the modulation depth
-  - Includes carrier frequency correction to maintain a consistent fundamental pitch
-  - Sub-shapes: [55 integer ratios, ordered from harmonic to inharmonic](./resources.cc#L943)
+- Dirac comb: `TIMBRE` sets harmonic content
+- Frequency modulation: `TIMBRE` sets modulation index
+  - Sub-shapes: 15 integer ratios, ordered from harmonic to inharmonic
 
 ### Amplitude dynamics: ADSR envelopes (with velocity modulation) and tremolo
 - Configured via the `▽A (AMPLITUDE MENU)`
@@ -167,7 +157,7 @@
 
 ### Clock ratios
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
-- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./resources.cc#L959)
+- Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
   
 ### Other tweaks
 - Broadened portamento setting range from 51 to 64 values per curve shape
