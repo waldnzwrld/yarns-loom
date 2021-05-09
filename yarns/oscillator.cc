@@ -185,6 +185,40 @@ void Oscillator::Render() {
   modulator_phase_ = modulator_phase; \
   modulator_phase_increment_ = modulator_phase_increment;
 
+#define EDGES_SAW(this_sample, next_sample) \
+  if (!high_) { \
+    if (modulator_phase < pw) break; \
+    uint32_t t = (modulator_phase - pw) / (modulator_phase_increment >> 16); \
+    this_sample -= ThisBlepSample(t) >> 1; \
+    next_sample -= NextBlepSample(t) >> 1; \
+    high_ = true; \
+  } \
+  if (high_) { \
+    if (!self_reset) break; \
+    self_reset = false; \
+    uint32_t t = modulator_phase / (modulator_phase_increment >> 16); \
+    this_sample -= ThisBlepSample(t) >> 1; \
+    next_sample -= NextBlepSample(t) >> 1; \
+    high_ = false; \
+  }
+
+#define EDGES_PULSE(this_sample, next_sample) \
+  if (!high_) { \
+    if (modulator_phase < pw) break; \
+    uint32_t t = (modulator_phase - pw) / (modulator_phase_increment >> 16); \
+    this_sample += ThisBlepSample(t); \
+    next_sample += NextBlepSample(t); \
+    high_ = true; \
+  } \
+  if (high_) { \
+    if (!self_reset) break; \
+    self_reset = false; \
+    uint32_t t = modulator_phase / (modulator_phase_increment >> 16); \
+    this_sample -= ThisBlepSample(t); \
+    next_sample -= NextBlepSample(t); \
+    high_ = false; \
+  }
+
 void Oscillator::RenderPulse() {
   svf_.RenderInit(timbre_.target(), 0x7fff);
   modulator_phase_increment_ = phase_increment_;
@@ -194,21 +228,7 @@ void Oscillator::RenderPulse() {
       ? (static_cast<uint32_t>(32768 - timbre_.value()) << 16)
       : 0x80000000;
     while (true) {
-      if (!high_) {
-        if (modulator_phase < pw) break;
-        uint32_t t = (modulator_phase - pw) / (modulator_phase_increment >> 16);
-        this_sample += ThisBlepSample(t);
-        next_sample += NextBlepSample(t);
-        high_ = true;
-      }
-      if (high_) {
-        if (!self_reset) break;
-        self_reset = false;
-        uint32_t t = modulator_phase / (modulator_phase_increment >> 16);
-        this_sample -= ThisBlepSample(t);
-        next_sample -= NextBlepSample(t);
-        high_ = false;
-      }
+      EDGES_PULSE(this_sample, next_sample);
     }
     next_sample += modulator_phase < pw ? 0 : 32767;
     this_sample = (this_sample - 16384) << 1;
@@ -226,21 +246,7 @@ void Oscillator::RenderSaw() {
       ? (static_cast<uint32_t>(timbre_.value()) << 16)
       : 0;
     while (true) {
-      if (!high_) {
-        if (modulator_phase < pw) break;
-        uint32_t t = (modulator_phase - pw) / (modulator_phase_increment >> 16);
-        this_sample -= ThisBlepSample(t) >> 1;
-        next_sample -= NextBlepSample(t) >> 1;
-        high_ = true;
-      }
-      if (high_) {
-        if (!self_reset) break;
-        self_reset = false;
-        uint32_t t = modulator_phase / (modulator_phase_increment >> 16);
-        this_sample -= ThisBlepSample(t) >> 1;
-        next_sample -= NextBlepSample(t) >> 1;
-        high_ = false;
-      }
+      EDGES_SAW(this_sample, next_sample);
     }
     next_sample += modulator_phase >> 18;
     next_sample += (modulator_phase - pw) >> 18;
@@ -298,26 +304,14 @@ void Oscillator::RenderSineSync() {
       uint32_t master_reset_time = static_cast<uint32_t>(master_sync_time) << 9;
       uint32_t modulator_phase_at_reset = modulator_phase + \
         (65535 - master_reset_time) * (modulator_phase_increment >> 16);
-      int32_t before = 0;
-      int32_t after = 0;
-      switch (shape_) {
-        case OSC_SHAPE_SYNC_SINE:
-          before = Interpolate824(wav_sine, modulator_phase_at_reset);
-          after = wav_sine[0];
-          break;
-        default: break;
-      }
+      int32_t before = Interpolate824(wav_sine, modulator_phase_at_reset);
+      int32_t after = wav_sine[0];
       int32_t discontinuity = after - before;
       this_sample += discontinuity * ThisBlepSample(master_reset_time) >> 15;
       next_sample += discontinuity * NextBlepSample(master_reset_time) >> 15;
       modulator_phase = master_reset_time * (modulator_phase_increment >> 16);
     }
-    switch (shape_) {
-      case OSC_SHAPE_SYNC_SINE:
-        next_sample += Interpolate824(wav_sine, modulator_phase);
-        break;
-      default: break;
-    }
+    next_sample += Interpolate824(wav_sine, modulator_phase);
   )
 }
 
