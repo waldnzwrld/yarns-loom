@@ -160,7 +160,7 @@ characters = {
   '\x80': 'jlbc',
   '\x81': 'efgn',
   '\x82': 'agj',
-  '\x83': 'dnl',
+  '\x83': 'dnlm',
   
   # LRDU arrow
   '\x84': 'jkl',
@@ -199,6 +199,7 @@ characters = {
   '\x9F': 'fab',
 
   '\xA0': 'pl', # Low pass
+  '\xA1': 'nk', # High pass
   
   '\xFF': 'abcdefghjklmnp',
   

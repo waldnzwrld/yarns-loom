@@ -53,12 +53,12 @@ class StateVariableFilter {
 };
 
 enum OscillatorShape {
-  OSC_SHAPE_NOISE_LP,
   OSC_SHAPE_NOISE_NOTCH,
+  OSC_SHAPE_NOISE_LP,
   OSC_SHAPE_NOISE_BP,
   OSC_SHAPE_NOISE_HP,
-  OSC_SHAPE_CZ_LP,
   OSC_SHAPE_CZ_PK,
+  OSC_SHAPE_CZ_LP,
   OSC_SHAPE_CZ_BP,
   OSC_SHAPE_CZ_HP,
   OSC_SHAPE_VARIABLE_PULSE,
@@ -118,7 +118,7 @@ class Oscillator {
   void RenderSyncPulse();
   void RenderSyncSaw();
   void RenderTanhSine();
-  void RenderPhaseDistortion();
+  void RenderPhaseDistortionSaw();
   void RenderBuzz();
   void RenderFilteredNoise();
   

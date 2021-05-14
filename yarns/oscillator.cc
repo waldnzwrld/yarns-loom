@@ -50,10 +50,10 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderFilteredNoise,
   &Oscillator::RenderFilteredNoise,
   &Oscillator::RenderFilteredNoise,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
-  &Oscillator::RenderPhaseDistortion,
+  &Oscillator::RenderPhaseDistortionSaw,
+  &Oscillator::RenderPhaseDistortionSaw,
+  &Oscillator::RenderPhaseDistortionSaw,
+  &Oscillator::RenderPhaseDistortionSaw,
   // Width
   &Oscillator::RenderPulse,
   &Oscillator::RenderSaw,
@@ -371,33 +371,29 @@ void Oscillator::RenderFM() {
 }
 
 const uint32_t kPhaseReset[] = {
-  0,
   0x80000000,
+  0,
   0x40000000,
   0x80000000
 };
 
-void Oscillator::RenderPhaseDistortion() {
+void Oscillator::RenderPhaseDistortionSaw() {
   int16_t shifted_pitch = pitch_ + ((timbre_.target() - 2048) >> 2);
-  uint8_t filter_type = shape_ - OSC_SHAPE_CZ_LP;
+  uint8_t filter_type = shape_ - OSC_SHAPE_CZ_PK;
   uint32_t modulator_phase_increment_ = ComputePhaseIncrement(shifted_pitch);
   RENDER_LOOP(
     if (phase < phase_increment) {
       modulator_phase = kPhaseReset[filter_type];
     }
     int32_t carrier = Interpolate824(wav_sine, modulator_phase);
-    uint16_t saw = ~(phase >> 16);
-    // uint16_t triangle = (phase >> 15) ^ (phase & 0x80000000 ? 0xffff : 0x0000);
-    uint16_t window = saw; // aux_parameter_ < 16384 ? saw : triangle;
-    int16_t saw_tri_signal;
+    uint16_t window = ~(phase >> 16); // Saw
+    int16_t output;
     if (filter_type & 2) {
-      saw_tri_signal = (carrier * window) >> 16;
+      output = (window * carrier) >> 16;
     } else {
-      saw_tri_signal = (window * (carrier + 32768) >> 16) - 32768;
+      output = (window * (carrier + 32768) >> 16) - 32768;
     }
-    this_sample = saw_tri_signal;
-    // uint16_t balance = (aux_parameter_ < 16384 ? 
-    //                     aux_parameter_ : ~aux_parameter_) << 2;
+    this_sample = output;
   )
 }
 
