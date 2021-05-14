@@ -197,7 +197,8 @@ characters = {
   '\x9D': 'def',
   '\x9E': 'efa',
   '\x9F': 'fab',
-  '\xA0': 'abcdefghjklmnp',
+
+  '\xA0': 'pl', # Low pass
   
   '\xFF': 'abcdefghjklmnp',
   
