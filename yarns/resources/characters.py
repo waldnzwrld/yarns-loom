@@ -198,8 +198,19 @@ characters = {
   '\x9E': 'efa',
   '\x9F': 'fab',
 
-  '\xA0': 'pl', # Low pass
-  '\xA1': 'nk', # High pass
+  '\xA0': 'pl', # low pass
+  '\xA1': 'nk', # high pass
+  '\xA2': 'pmk', # notch
+
+  '\xB0': 'fabpl', # pulse low pass
+  '\xB1': 'fabdnlm', # pulse peaking
+  '\xB2': 'fabnl', # pulse band pass
+  '\xB3': 'fabnk', # pulse high pass
+
+  '\xC0': 'jbpl', # saw low pass
+  '\xC1': 'jbdnlm', # saw peaking
+  '\xC2': 'jbnl', # saw band pass
+  '\xC3': 'jbnk', # saw high pass
   
   '\xFF': 'abcdefghjklmnp',
   

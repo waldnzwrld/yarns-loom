@@ -52,15 +52,24 @@ class StateVariableFilter {
   Interpolator cutoff, damp;
 };
 
+struct PhaseDistortionSquareModulator {
+  int32_t integrator;
+  bool polarity;
+};
+
 enum OscillatorShape {
   OSC_SHAPE_NOISE_NOTCH,
   OSC_SHAPE_NOISE_LP,
   OSC_SHAPE_NOISE_BP,
   OSC_SHAPE_NOISE_HP,
-  OSC_SHAPE_CZ_PK,
-  OSC_SHAPE_CZ_LP,
-  OSC_SHAPE_CZ_BP,
-  OSC_SHAPE_CZ_HP,
+  OSC_SHAPE_CZ_PULSE_LP,
+  OSC_SHAPE_CZ_PULSE_PK,
+  OSC_SHAPE_CZ_PULSE_BP,
+  OSC_SHAPE_CZ_PULSE_HP,
+  OSC_SHAPE_CZ_SAW_LP,
+  OSC_SHAPE_CZ_SAW_PK,
+  OSC_SHAPE_CZ_SAW_BP,
+  OSC_SHAPE_CZ_SAW_HP,
   OSC_SHAPE_VARIABLE_PULSE,
   OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_SYNC_SINE,
@@ -118,6 +127,7 @@ class Oscillator {
   void RenderSyncPulse();
   void RenderSyncSaw();
   void RenderTanhSine();
+  void RenderPhaseDistortionPulse();
   void RenderPhaseDistortionSaw();
   void RenderBuzz();
   void RenderFilteredNoise();
@@ -154,7 +164,9 @@ class Oscillator {
   uint32_t modulator_phase_;
   uint32_t modulator_phase_increment_;
   bool high_;
+
   StateVariableFilter svf_;
+  PhaseDistortionSquareModulator pd_square_;
   
   int32_t next_sample_;
   int32_t scale_;
