@@ -58,21 +58,21 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderPhaseDistortionSaw,
   &Oscillator::RenderPhaseDistortionSaw,
   &Oscillator::RenderPhaseDistortionSaw,
-  // Width
+  // SVF LP
   &Oscillator::RenderPulse,
   &Oscillator::RenderSaw,
-  // Sync
+  // Width mod
+  &Oscillator::RenderPulse,
+  &Oscillator::RenderSaw,
   &Oscillator::RenderSyncSine,
   &Oscillator::RenderSyncPulse,
   &Oscillator::RenderSyncSaw,
-  // LP SVF
-  &Oscillator::RenderPulse,
-  &Oscillator::RenderSaw,
-  &Oscillator::RenderTanhSine,
   &Oscillator::RenderFoldSine,
   &Oscillator::RenderFoldTriangle,
+  &Oscillator::RenderTanhSine,
   &Oscillator::RenderBuzz,
   &Oscillator::RenderFM,
+  // &Oscillator::RenderAudioRatePWM,
 };
 
 void StateVariableFilter::Init(uint8_t interpolation_slope) {
@@ -294,8 +294,13 @@ void Oscillator::RenderSaw() {
   )
 }
 
+#define SET_SYNC_INCREMENT \
+  modulator_phase_increment_ = ComputePhaseIncrement( \
+    pitch_ + (timbre_.target() >> 4) \
+  );
+
 void Oscillator::RenderSyncSine() {
-  SetSyncSlaveFreq();
+  SET_SYNC_INCREMENT;
   RENDER_LOOP_WITHOUT_MOD_PHASE_INCREMENT(
     SYNC(
       wav_sine[0] - Interpolate824(wav_sine, reset_modulator_phase),
@@ -307,7 +312,7 @@ void Oscillator::RenderSyncSine() {
 }
 
 void Oscillator::RenderSyncPulse() {
-  SetSyncSlaveFreq();
+  SET_SYNC_INCREMENT;
   uint32_t pw = 0x80000000;
   RENDER_LOOP_WITHOUT_MOD_PHASE_INCREMENT(
     SYNC(
@@ -320,7 +325,7 @@ void Oscillator::RenderSyncPulse() {
 }
 
 void Oscillator::RenderSyncSaw() {
-  SetSyncSlaveFreq();
+  SET_SYNC_INCREMENT;
   uint32_t pw = 0;
   RENDER_LOOP_WITHOUT_MOD_PHASE_INCREMENT(
     SYNC(

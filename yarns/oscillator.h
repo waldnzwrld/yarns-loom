@@ -70,16 +70,16 @@ enum OscillatorShape {
   OSC_SHAPE_CZ_SAW_PK,
   OSC_SHAPE_CZ_SAW_BP,
   OSC_SHAPE_CZ_SAW_HP,
+  OSC_SHAPE_LP_PULSE,
+  OSC_SHAPE_LP_SAW,
   OSC_SHAPE_VARIABLE_PULSE,
   OSC_SHAPE_VARIABLE_SAW,
   OSC_SHAPE_SYNC_SINE,
   OSC_SHAPE_SYNC_PULSE,
   OSC_SHAPE_SYNC_SAW,
-  OSC_SHAPE_LP_PULSE,
-  OSC_SHAPE_LP_SAW,
-  OSC_SHAPE_TANH_SINE,
   OSC_SHAPE_FOLD_SINE,
   OSC_SHAPE_FOLD_TRIANGLE,
+  OSC_SHAPE_TANH_SINE,
   OSC_SHAPE_BUZZ,
   OSC_SHAPE_FM,
 };
@@ -133,12 +133,6 @@ class Oscillator {
   void RenderFilteredNoise();
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch) const;
-
-  void SetSyncSlaveFreq() {
-    modulator_phase_increment_ = ComputePhaseIncrement(
-      pitch_ + (timbre_.target() >> 4)
-    );
-  }
   
   inline int32_t ThisBlepSample(uint32_t t) const {
     if (t > 65535) {
