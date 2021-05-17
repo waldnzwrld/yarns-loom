@@ -169,9 +169,9 @@ characters = {
   '\x87': 'nml',
   
   # Waveforms
-  '\x88': 'njbc',  # Saw
+  '\x88': 'efgl',  # Saw
   '\x89': 'pjb',   # CSaw
-  '\x8A': 'mn',    # Baby saw
+  '\x8A': 'ml',    # Baby saw
   '\x8B': 'nl',    # Tri
   '\x8C': 'efabc', # Square
   '\x8D': 'epkc',   # Baby square
@@ -207,10 +207,10 @@ characters = {
   '\xB2': 'fabnl', # pulse band pass
   '\xB3': 'fabnk', # pulse high pass
 
-  '\xC0': 'jbpl', # saw low pass
-  '\xC1': 'jbdnlm', # saw peaking
-  '\xC2': 'jbnl', # saw band pass
-  '\xC3': 'jbnk', # saw high pass
+  '\xC0': 'fgpl', # saw low pass
+  '\xC1': 'fgdnlm', # saw peaking
+  '\xC2': 'fgnl', # saw band pass
+  '\xC3': 'fgnk', # saw high pass
   
   '\xFF': 'abcdefghjklmnp',
   

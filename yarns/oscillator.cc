@@ -379,10 +379,10 @@ void Oscillator::RenderFM() {
   modulator_phase_increment_ = ComputePhaseIncrement(shifted_pitch);
 
 const uint32_t kPhaseResetSaw[] = {
-  0, // Low-pass: 0.5 - 0.5cos(w) = 0.5 + 0.5sin(w + 0.75)
-  0x80000000, // Peaking: 0.5+0.5sin(w)
-  0x40000000, // Band-pass: sin(w)
-  0x80000000, // High-pass: cos(w)
+  0, // Low-pass: -cos
+  0x40000000, // Peaking: sin
+  0x40000000, // Band-pass: sin
+  0x80000000, // High-pass: cos
 };
 
 const uint32_t kPhaseResetPulse[] = {
@@ -404,7 +404,7 @@ void Oscillator::RenderPhaseDistortionPulse() {
     int32_t carrier = Interpolate824(wav_sine, modulator_phase);
     uint16_t window = ~(phase >> 15); // Double saw
     int32_t pulse = (carrier * window) >> 16;
-    if (!pd_square_.polarity) pulse = -pulse;
+    if (pd_square_.polarity) pulse = -pulse;
     uint16_t integrator_gain = modulator_phase_increment >> 16; // Orig 14
     integrator += (pulse * integrator_gain) >> 14; // Orig 16
     CLIP(integrator)
