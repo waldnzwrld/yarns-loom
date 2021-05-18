@@ -1,7 +1,6 @@
-// Copyright 2013 Emilie Gillet.
-// Copyright 2020 Chris Rogers.
+// Copyright 2021 Chris Rogers.
 //
-// Author: Emilie Gillet (emilie.o.gillet@gmail.com)
+// Author: Chris Rogers
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,54 +24,46 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Clock division definitions.
+// Linear interpolator.
 
-#ifndef YARNS_CLOCK_DIVISION_H_
-#define YARNS_CLOCK_DIVISION_H_
+#ifndef YARNS_INTERPOLATOR_H
+#define YARNS_INTERPOLATOR_H
+
+#include <cstdio>
 
 namespace yarns {
-namespace clock_division {
 
-struct ClockDivision {
-  const char* const display; // Ratio out:in
-  const uint16_t num_ticks; // PPQN
+// https://hbfs.wordpress.com/2009/07/28/faster-than-bresenhams-algorithm/
+class Interpolator {
+ public:
+  typedef union {
+    int32_t i;
+    struct { // endian-specific!
+      int16_t lo;
+      int16_t hi;
+    };
+  } fixed_point;
+
+  void Init(uint8_t dx) {
+    x_delta_ = dx;
+    y_.i = 0;
+    m_ = 0;
+  }
+  void SetTarget(int16_t y) { y_target_ = y; } // 15-bit
+  void ComputeSlope() {
+    m_ = static_cast<int32_t>((y_target_ - y_.hi) << 16) / x_delta_;
+  }
+  void Tick() { y_.i += m_; }
+  int16_t value() const { return y_.hi; }
+  int16_t target() const { return y_target_; }
+
+private:
+  uint8_t x_delta_;
+  fixed_point y_;
+  int16_t y_target_;
+  int32_t m_;
 };
 
-const uint8_t count = 29;
-const uint8_t unity = 17;
-const ClockDivision list[count] = {
-  { "18 1/8", 192 },
-  { "29 2/9", 108 },
-  { "14 1/4", 96 },
-  { "27 2/7", 84 },
-  { "13 1/3", 72 },
-  { "38 3/8", 64 },
-  { "25 2/5", 60 },
-  { "37 3/7", 56 },
-  { "49 4/9", 54 },
-  { "12 1/2", 48 },
-  { "47 4/7", 42 },
-  { "35 3/5", 40 },
-  { "23 2/3", 36 },
-  { "34 3/4", 32 },
-  { "45 4/5", 30 },
-  { "67 6/7", 28 },
-  { "89 8/9", 27 },
-  { "11 1/1", 24 },
-  { "87 8/7", 21 },
-  { "65 6/5", 20 },
-  { "43 4/3", 18 },
-  { "32 3/2", 16 },
-  { "85 8/5", 15 },
-  { "21 2/1", 12 },
-  { "83 8/3", 9 },
-  { "31 3/1", 8 },
-  { "41 4/1", 6 },
-  { "61 6/1", 4 },
-  { "81 8/1", 3 },
-};
-
-}  // namespace clock_division
 }  // namespace yarns
 
-#endif // YARNS_CLOCK_DIVISIONS_H_
+#endif // YARNS_INTERPOLATOR_H_

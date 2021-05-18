@@ -32,6 +32,15 @@
 
 namespace yarns {
 
+enum LFOShape {
+  LFO_SHAPE_TRIANGLE,
+  LFO_SHAPE_SAW_DOWN,
+  LFO_SHAPE_SAW_UP,
+  LFO_SHAPE_SQUARE,
+
+  LFO_SHAPE_LAST
+};
+
 class SyncedLFO {
  public:
 
@@ -62,10 +71,22 @@ class SyncedLFO {
     return Increment(phase_increment_);
   }
 
-  int16_t Triangle(uint32_t phase) const {
-    return phase < 1UL << 31       // x < 0.5
-      ?  INT16_MIN + (phase >> 15) // y = -0.5 + 2x = 2(x - 1/4)
-      : 0x17fff - (phase >> 15);   // y =  1.5 - 2x = 2(3/4 - x)
+  int16_t shape(LFOShape s) const { return shape(s, phase_); }
+  int16_t shape(LFOShape shape, uint32_t phase) const {
+    switch (shape) {
+      case LFO_SHAPE_TRIANGLE:
+        return phase < 1UL << 31      // x < 0.5
+          ? INT16_MIN + (phase >> 15) // y = -0.5 + 2x = 2(x - 1/4)
+          : 0x17fff - (phase >> 15);  // y =  1.5 - 2x = 2(3/4 - x)
+      case LFO_SHAPE_SAW_DOWN:
+        return INT16_MAX - (phase >> 16);
+      case LFO_SHAPE_SAW_UP:
+        return INT16_MIN + (phase >> 16);
+      case LFO_SHAPE_SQUARE:
+        return phase < 1UL << 31 ? INT16_MAX : INT16_MIN;
+      default:
+        return 0;
+    } 
   }
 
   void Tap(uint16_t num_ticks, uint32_t phase_offset = 0) {

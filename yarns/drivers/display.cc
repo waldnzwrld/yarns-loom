@@ -44,8 +44,6 @@ const uint16_t kScrollingDelay = 180;
 const uint16_t kScrollingPreDelay = 600;
 const uint16_t kBlinkMask = 128;
 
-// Sets max:min brightness ratio. Here, 2^5 results in brightness floor of 1/32
-const uint8_t kDisplayBrightnessRatioBits = 5;
 // PWM >6 bits causes visible flickering due to over-long PWM cycle at 8kHz
 const uint8_t kDisplayBrightnessPWMBits = 6;
 const uint8_t kDisplayBrightnessPWMMax = 1 << kDisplayBrightnessPWMBits;
@@ -90,6 +88,13 @@ void Display::Scroll() {
   }
 }
 
+void Display::set_brightness(uint16_t fraction) {
+  // Applying a brightness fraction naively to PWM results in a visual bias
+  // toward over-brightness -- expo conversion biases it back toward darkness
+  uint8_t phase = UINT8_MAX - (fraction >> 8);
+  brightness_ = UINT16_MAX - lut_env_expo[(phase >> 1) + (phase >> 2)];
+}
+
 void Display::RefreshSlow() {
 #ifdef APPLICATION
   if (scrolling_) {
@@ -120,8 +125,6 @@ void Display::RefreshSlow() {
   } else {
     actual_brightness_ = brightness_;
   }
-  // E.g.: actual_brightness_ = 1/8 + 7/8 * actual_brightness_
-  actual_brightness_ = (1 << (16 - kDisplayBrightnessRatioBits)) + ((1 << kDisplayBrightnessRatioBits) - 1) * (actual_brightness_ >> kDisplayBrightnessRatioBits);
   blink_counter_ = (blink_counter_ + 1) % (kBlinkMask * 2);
   std::fill(&redraw_[0], &redraw_[kDisplayWidth], true); // Force redraw
 

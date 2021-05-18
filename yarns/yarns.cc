@@ -65,9 +65,10 @@ extern "C" {
 
 uint16_t cv[4];
 bool gate[4];
-bool has_audio_sources;
-bool audio_source[4];
+bool has_audio_source[4];
+bool has_envelope[4];
 uint16_t factory_testing_counter;
+uint8_t refresh_counter;
 
 void SysTick_Handler() {
   // MIDI I/O, and CV/Gate refresh at 8kHz.
@@ -77,10 +78,7 @@ void SysTick_Handler() {
     ui.Poll();
     system_clock.Tick();
   }
-  // When there is audio sources, lower the display refresh rate to 8kHz.
-  if (has_audio_sources) {
-    ui.PollFast();
-  }
+  ui.PollFast(); // Display refresh at 8kHz
   
   // Try to read some MIDI input if available.
   if (midi_io.readable()) {
@@ -101,17 +99,27 @@ void SysTick_Handler() {
     }
   }
 
-  // Observe that the gate output is written with a systick (0.125 ms) delay
+  // Observe that the gate output is written with a systick * 4 (0.5 ms) delay
   // compared to the CV output. This ensures that the CV output will have been
   // refreshed to the right value when the trigger/gate is sent.
-  gate_output.Write(gate);
-  multi.Refresh();
-  multi.GetCvGate(cv, gate);
-  audio_source[0] = multi.cv_output(0).has_audio();
-  audio_source[1] = multi.cv_output(1).has_audio();
-  audio_source[2] = multi.cv_output(2).has_audio();
-  audio_source[3] = multi.cv_output(3).has_audio();
-  has_audio_sources = audio_source[0] || audio_source[1] || audio_source[2] || audio_source[3];
+  refresh_counter = (refresh_counter + 1) % 4; // Sample rate = 2 kHz
+  bool refresh = refresh_counter == 0;
+  if (refresh) {
+    gate_output.Write(gate);
+  }
+  multi.ClockFast();
+  if (refresh) {
+    multi.Refresh();
+    multi.GetCvGate(cv, gate);
+  }
+  has_audio_source[0] = multi.cv_output(0).is_audio();
+  has_audio_source[1] = multi.cv_output(1).is_audio();
+  has_audio_source[2] = multi.cv_output(2).is_audio();
+  has_audio_source[3] = multi.cv_output(3).is_audio();
+  has_envelope[0] = multi.cv_output(0).is_envelope();
+  has_envelope[1] = multi.cv_output(1).is_envelope();
+  has_envelope[2] = multi.cv_output(2).is_envelope();
+  has_envelope[3] = multi.cv_output(3).is_envelope();
   
   // In calibration mode, overrides the DAC outputs with the raw calibration
   // table values.
@@ -145,9 +153,10 @@ void TIM1_UP_IRQHandler(void) {
   TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
 
   dac.Cycle();
-  if (audio_source[dac.channel()]) {
-    uint16_t audio_sample = multi.mutable_cv_output(dac.channel())->ReadSample();
-    dac.Write(audio_sample);
+  if (has_audio_source[dac.channel()]) {
+    dac.Write(multi.mutable_cv_output(dac.channel())->GetAudioSample());
+  } else if (has_envelope[dac.channel()]) {
+    dac.Write(multi.mutable_cv_output(dac.channel())->GetEnvelopeSample());
   } else {
     // Use value written there during previous CV refresh.
     dac.Write();
@@ -156,10 +165,6 @@ void TIM1_UP_IRQHandler(void) {
   if (dac.channel() == 0) {
     // Internal clock refresh at 48kHz
     multi.RefreshInternalClock();
-  } else if (dac.channel() == 1) {
-    if (!has_audio_sources) {
-      ui.PollFast();
-    }
   }
 }
 
@@ -182,6 +187,8 @@ void Init() {
   midi_io.Init();
   midi_handler.Init();
   sys.StartTimers();
+
+  refresh_counter = 0;
 }
 
 int main(void) {
@@ -189,9 +196,7 @@ int main(void) {
   while (1) {
     ui.DoEvents();
     midi_handler.ProcessInput();
-    multi.ProcessInternalClockEvents();
-    multi.AdvanceLoopers();
-    multi.RenderAudio();
+    multi.LowPriority();
     if (midi_handler.factory_testing_requested()) {
       midi_handler.AcknowledgeFactoryTestingRequest();
       ui.StartFactoryTesting();

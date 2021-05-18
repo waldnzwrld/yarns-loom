@@ -19,25 +19,54 @@
 - Moved configuration-type settings into a submenu, accessed by opening `▽S (SETUP MENU)`
 - Print flat notes as lowercase character (instead of denoting flatness with `b`) so that octave can always be displayed
 - Improved clock-sync of display fade for the `TE(MPO)` setting
+- Splash on save/load
 
 # Synth voice
 
 ### Oscillator controls
 - Configured via the `▽O (OSCILLATOR MENU)`
 - `OM (OSCILLATOR MODE)` switches the oscillator between `OFF`, `DRONE`, and `ENVELOPED`
-- `OS (OSCILLATOR SHAPE)` sets the waveform
-- A pulse-width modulated rectangle wave replaces the "25% rectangle" wave
-  - The modulating LFO for the PWM is the quadrature of the vibrato LFO
-  - `OSC PW INITIAL` sets initial pulse width
-  - `OSC PW MOD` sets the bipolar depth of pulse width modulation by the LFO
+- `OS (OSCILLATOR SHAPE)` sets the waveform (see below)
+- Each wave shape has a timbral parameter that can be modulated by several sources
+  - `TI (TIMBRE INITIAL)` sets initial timbre
+  - `TL (TIMBRE LFO MOD)` sets the depth of timbre modulation by the voice's bipolar LFO
+  - `TE (TIMBRE ENV MOD)` sets the initial bipolar depth of modulation of timbre by envelope
+  - `TV (TIMBRE VEL MOD)` sets the bipolar modulation by velocity of the envelope modulation of timbre (e.g. velocity can polarize the timbre envelope)
 
-### ADSR envelopes, modulated by velocity
-- Configured via the `▽📉 (ENVELOPE MENU)`
-- Controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
-- Available as an assignable CV output (`ENVELOPE`) in all layouts
-- The envelope's amplitude and its sensitivity to velocity are set by `GAIN INIT` and `GAIN MOD`
-- The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
-  - Segment times range from 0.375 ms (3 ticks) to 3 seconds
+### Oscillator synthesis models
+- Filtered noise: `TIMBRE` sets filter cutoff
+  - Voice pitch sets filter resonance
+  - Sub-shapes: low-pass, notch, band-pass, high-pass
+- Phase distortion, resonant saw: `TIMBRE` sets filter cutoff
+  - Sub-shapes: low-pass, peaking, band-pass, high-pass
+- Phase distortion, resonant pulse: `TIMBRE` sets filter cutoff
+  - Sub-shapes: low-pass, peaking, band-pass, high-pass
+- State-variable filter, low-pass: `TIMBRE` sets filter cutoff (resonance is fixed)
+  - Sub-shapes: pulse, saw
+- Pulse-width modulation: `TIMBRE` sets pulse width
+  - Sub-shapes: pulse, saw
+- Hard sync: `TIMBRE` sets detuning of the secondary oscillator
+  - Sub-shapes: sine, pulse, saw
+- Wavefolder: `TIMBRE` sets fold gain
+  - Sub-shapes: sine, triangle
+- Compressed sine (`tanh`): `TIMBRE` sets compression amount
+- Dirac comb: `TIMBRE` sets harmonic content
+- Frequency modulation: `TIMBRE` sets modulation index
+  - Sub-shapes: 15 integer ratios, ordered from harmonic to inharmonic
+
+### Amplitude dynamics: ADSR envelopes (with velocity modulation) and tremolo
+- Configured via the `▽A (AMPLITUDE MENU)`
+- ADSR envelope with velocity modulation
+  - Envelope controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
+  - Envelope is available as an assignable CV output (`ENVELOPE`) in all layouts
+  - Peak attack amplitude can be velocity-scaled via `PV (PEAK MOD VEL)`
+    - Positive values = damp on low velocity, negative values = damp on high velocity
+  - The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
+    - Segment times range from 1 ms (2 ticks) to 5 seconds
+- Tremolo can be applied to envelope and oscillator
+  - Tremolo uses the same LFO frequency as vibrato
+  - `TR (TREMOLO DEPTH)` sets the amount of tremolo
+  - `TS (TREMOLO SHAPE)` applies a waveshaper to the LFO (triangle, down saw, up saw, square)
   
 # Sequencer
 
@@ -57,8 +86,8 @@
   - Hold `TAP` to toggle overwrite mode, which will clear the loop as soon as a new note is recorded
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
-- Holds 31 notes max -- past this limit, overwrites oldest note
-- Step sequencer also reduced from 64 to 31 notes, to free up space in the preset storage
+- Holds 30 notes max -- past this limit, overwrites oldest note
+- Step sequencer also reduced from 64 to 30 notes, to free up space in the preset storage
 
 ### Sequencer-driven arpeggiator
 - Activated by setting the `ARP PATTERN` to `SEQUENCER`
@@ -67,14 +96,14 @@
 - The velocity of the arpeggiator output is the product of the velocities of the sequencer step and the held key
 - New arpeggiator directions that use the note pitch as movement instructions:
   - Notes are interpreted based on key color (black/white) and distance above/below middle C
-  - `ROTATE` treats white keys as relative movement through the chord, and black keys as absolute positions in the chord
+  - `ROTATE` treats white keys as relative movement through the chord, and black keys as offsets from the current position
   - `SUBROTATE` generates quasi-cartesian patterns
 
 # MIDI
 
 ### Layouts
-- `22` 3-part layout: one two-voice polyphonic part, two monophonic parts
-- `21` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
+- `2+2` 3-part layout: one two-voice polyphonic part, two monophonic parts
+- `2+1` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
 - `*2` 3-part layout: 3-voice paraphonic part, 1 monophonic part with modulation, 1 monophonic part without modulation
   - Paraphonic part can use the new [envelopes](#adsr-envelopes-modulated-by-velocity)
   - Audio mode is always on for the paraphonic part
@@ -94,9 +123,9 @@
   - `SOSTENUTO` sustains only the notes held at the time the pedal goes down
   - `LATCH` uses the semantics of the front-panel latching in stock Yarns
   - `MOMENTARY LATCH` resembles `LATCH`, but releases latched notes as soon as the pedal is released, instead of on the next note
-  - `CLUTCH UP` is a hybrid of `SOSTENUTO` and `LATCH` -- when the pedal goes down, sustains any held notes; while the pedal is up, pressing any note will release held notes
-  - `CLUTCH DOWN` is the same as `CLUTCH UP`, but with reversed up/down semantics
-- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html)
+  - `CLUTCH` is a hybrid of `SOSTENUTO` and `LATCH` -- when the pedal goes down, sustains any held notes; while the pedal is up, pressing any note will release held notes
+  - `FILTER` causes the part to only receive notes while the pedal is in a given state, and latches any notes that are "silently" released
+- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse pedal semantics
 
 ### Event routing, filtering, and transformation
 - New `SI (SEQ INPUT RESPONSE)` setting changes how a playing sequence responds to manual input
@@ -114,6 +143,13 @@
 - Recording 
   - Any MIDI events ignored by the recording part can be received by other parts
   - Recording part now responds to MIDI start
+
+### `VOICING` allocation methods
+- New `NICE` option: voice-sticky like `POLY`, but without stealing
+- Allow `POLY`/etc voice allocation methods to be played legato
+- Fixed `UNISON` to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
+- Improve `UNISON`/`SORTED` to avoid unnecessary reassignment/retrigger of voices during a partial chord change
+- `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
   
 ### Expanded support for Control Change events
 - The result of a received CC is briefly displayed
@@ -124,16 +160,8 @@
 
 ### Clock ratios
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
-- [Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more](./clock_division.h#L43)
-
-### Vibrato
-- New setting `VI(BRATO AMP INITIAL)` for setting a baseline vibrato amplitude when the vibrato controller is absent or at its minimum
-- Tweaks to per-voice vibrato LFO for parts in polyphonic layouts:
-  - When vibrato speed is synced to clock, each voice's LFO uses the quadrature of the previous voice
-  - When vibrato speed is free-running, each voice's LFO frequency is slighter higher than the previous voice
+- Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
   
 ### Other tweaks
-- Fixed `UNISON` voice allocation methods to respect `NOTE PRIORITY` and allocate notes without gaps; added new `FIRST` setting to `NOTE PRIORITY`
-- Voicing algorithms `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
 - Broadened portamento setting range from 51 to 64 values per curve shape
 - Allow an explicit clock start (from panel switch or MIDI) to supersede an implicit clock start (from keyboard)

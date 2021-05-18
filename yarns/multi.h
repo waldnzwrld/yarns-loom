@@ -372,32 +372,27 @@ class Multi {
   }
   
   void AfterDeserialize();
+  void ClockFast();
   void Refresh();
   void RefreshInternalClock() {
     if (running() && internal_clock() && internal_clock_.Process()) {
       ++internal_clock_ticks_;
     }
   }
-  void ProcessInternalClockEvents() {
+
+  void LowPriority() {
     while (internal_clock_ticks_) {
       Clock();
       --internal_clock_ticks_;
     }
-  }
 
-  void AdvanceLoopers() {
-    if (!running()) {
-      return;
-    }
-    for (uint8_t j = 0; j < num_active_parts_; ++j) {
-      if (!part_[j].looper_in_use()) { continue; }
-      part_[j].mutable_looper().AdvanceToPresent();
-    }
-  }
-
-  inline void RenderAudio() {
-    for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-      cv_outputs_[i].RenderAudio();
+    for (uint8_t p = 0; p < num_active_parts_; ++p) {
+      if (running() && part_[p].looper_in_use()) {
+        part_[p].mutable_looper().AdvanceToPresent();
+      }
+      for (uint8_t v = 0; v < part_[p].num_voices(); ++v) {
+        part_[p].voice(v)->RenderSamples();
+      }
     }
   }
   
@@ -456,6 +451,11 @@ class Multi {
     return true;
   }
   
+  void AssignOutputVoice(
+    uint8_t cv_i, uint8_t voice_i, DCRole r, uint8_t num_audio_voices
+  ) {
+    cv_outputs_[cv_i].assign(&voice_[voice_i], r, num_audio_voices);
+  }
   void AssignVoicesToCVOutputs();
   void GetCvGate(uint16_t* cv, bool* gate);
   void GetLedsBrightness(uint8_t* brightness);
@@ -469,7 +469,7 @@ class Multi {
     settings_.Pack(packed);
     const uint16_t size = sizeof(packed);
     // char (*__debug)[size] = 1;
-    STATIC_ASSERT(size == 1020, expected);
+    STATIC_ASSERT(size == 1012, expected);
     STATIC_ASSERT(size % 4 == 0, flash_word);
     STATIC_ASSERT(size <= kMaxSize, capacity);
     stream_buffer->Write(packed);

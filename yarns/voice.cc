@@ -46,7 +46,6 @@ using namespace stmlib_midi;
 const int32_t kOctave = 12 << 7;
 const int32_t kMaxNote = 120 << 7;
 const int32_t kQuadrature = 0x40000000;
-const uint8_t kOscillatorPWMRatioBits = 7;
 
 void Voice::Init() {
   note_ = -1;
@@ -60,6 +59,11 @@ void Voice::Init() {
   modulation_sync_ticks_ = 0;
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
+
+  tremolo_mod_current_ = 0;
+  timbre_mod_lfo_current_ = 0;
+  timbre_mod_envelope_current_ = 0;
+  timbre_init_current_ = 0;
   
   synced_lfo_.Init();
   envelope_.Init();
@@ -70,6 +74,15 @@ void Voice::Init() {
   trigger_duration_ = 2;
 }
 
+/* static */
+CVOutput::DCFn CVOutput::dc_fn_table_[] = {
+  &CVOutput::note_dac_code,
+  &CVOutput::velocity_dac_code,
+  &CVOutput::aux_cv_dac_code,
+  &CVOutput::aux_cv_dac_code_2,
+  &CVOutput::trigger_dac_code,
+};
+
 void CVOutput::Init(bool reset_calibration) {
   if (reset_calibration) {
     for (uint8_t i = 0; i < kNumOctaves; ++i) {
@@ -77,6 +90,8 @@ void CVOutput::Init(bool reset_calibration) {
     }
   }
   dirty_ = false;
+
+  dac_interpolator_.Init(24);
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
@@ -86,8 +101,12 @@ void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
       &calibrated_dac_code_[0]);
 }
 
-inline void CVOutput::NoteToDacCode() {
+void CVOutput::NoteToDacCode() {
   int32_t note = dc_voice_->note();
+  if (note_ == note && !dirty_) return;
+  dirty_ = false;
+  note_ = note;
+
   if (note <= 0) {
     note = 0;
   }
@@ -109,7 +128,7 @@ inline void CVOutput::NoteToDacCode() {
 
 void Voice::ResetAllControllers() {
   mod_pitch_bend_ = 8192;
-  mod_wheel_ = 0;
+  vibrato_mod_ = 0;
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
@@ -117,14 +136,25 @@ void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
   if (modulation_rate < LUT_LFO_INCREMENTS_SIZE) {
     modulation_increment_ = lut_lfo_increments[modulation_rate];
     modulation_increment_ *= pow(1.123f, (int) index);
+    modulation_increment_ = lut_lfo_increments[modulation_rate];
     modulation_sync_ticks_ = 0;
   } else {
     modulation_increment_ = 0;
-    modulation_sync_ticks_ = clock_division::list[modulation_rate - LUT_LFO_INCREMENTS_SIZE].num_ticks;
+    modulation_sync_ticks_ = lut_clock_ratio_ticks[modulation_rate - LUT_LFO_INCREMENTS_SIZE];
   }
 }
 
 void Voice::Refresh(uint8_t voice_index) {
+  // Slew coarse inputs to avoid clicks
+  tremolo_mod_current_ = stmlib::slew(
+    tremolo_mod_current_, tremolo_mod_target_);
+  timbre_init_current_ = stmlib::slew(
+    timbre_init_current_, timbre_init_target_);
+  timbre_mod_lfo_current_ = stmlib::slew(
+    timbre_mod_lfo_current_, timbre_mod_lfo_target_);
+  timbre_mod_envelope_current_ = stmlib::slew(
+    timbre_mod_envelope_current_, timbre_mod_envelope_target_);
+
   // Compute base pitch with portamento.
   portamento_phase_ += portamento_phase_increment_;
   if (portamento_phase_ < portamento_phase_increment_) {
@@ -146,34 +176,45 @@ void Voice::Refresh(uint8_t voice_index) {
   // Add transposition/fine tuning.
   note += tuning_;
   
-  // Add vibrato.
+  // Render modulation sources
+  envelope_.ReadSample();
   if (modulation_increment_) {
     synced_lfo_.Increment(modulation_increment_);
   } else {
     synced_lfo_.Refresh();
   }
-  uint32_t lfo_phase = synced_lfo_.GetPhase() + (voice_index << 30);
-  int32_t lfo = synced_lfo_.Triangle(lfo_phase);
-  uint16_t vibrato_level = mod_wheel_ + (vibrato_initial_ << 1);
-  CONSTRAIN(vibrato_level, 0, 127);
-  int32_t attenuated_lfo = lfo * vibrato_level;
-  note += attenuated_lfo * vibrato_range_ >> 15;
+  // Use voice index to put voice LFOs in quadrature
+  uint32_t lfo_phase = synced_lfo_.GetPhase();// + (voice_index << 30);
+
+  // Add vibrato.
+  int32_t vibrato_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
+  int32_t scaled_vibrato_lfo = vibrato_lfo * vibrato_mod_;
+  note += scaled_vibrato_lfo * vibrato_range_ >> 15;
+
+  // Use quadrature phase for timbre modulation
+  int32_t timbre_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
+  int32_t timbre_envelope_31 = envelope_.value() * timbre_mod_envelope_current_;
+  int32_t timbre_15 =
+    (timbre_init_current_ >> (16 - 15)) +
+    (timbre_envelope_31 >> (31 - 15)) +
+    (timbre_lfo * timbre_mod_lfo_current_ >> (31 - 15));
+  CONSTRAIN(timbre_15, 0, (1 << 15) - 1);
+
+  uint16_t tremolo_lfo = 32767 - synced_lfo_.shape(tremolo_shape_, lfo_phase);
+  uint16_t scaled_tremolo_lfo = tremolo_lfo * tremolo_mod_current_ >> 16;
+  uint16_t tremolo_drone = UINT16_MAX - scaled_tremolo_lfo;
+  uint16_t tremolo_envelope = envelope_.value() * tremolo_drone >> 16;
+  uint16_t gain = oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
+    tremolo_envelope : tremolo_drone;
+
+  oscillator_.Refresh(note, timbre_15, gain);
+
   mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
-  mod_aux_[MOD_AUX_MODULATION] = mod_wheel_ << 9;
+  mod_aux_[MOD_AUX_MODULATION] = vibrato_mod_ << 9;
   mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[MOD_AUX_VIBRATO_LFO] = (attenuated_lfo >> 7) + 32768;
-  mod_aux_[MOD_AUX_FULL_LFO] = lfo + 32768;
-  
-  // Use quadrature phase for PWM LFO
-  lfo = synced_lfo_.Triangle(lfo_phase + kQuadrature);
-  int32_t pw_20bit = \
-    // Initial range 0..1
-    (oscillator_pw_initial_ << (20 - 6)) +
-    // Mod range -1..1 with cubic scaling
-    lfo * oscillator_pw_mod_;
-  int32_t min_pw = 1 << (20 - kOscillatorPWMRatioBits);
-  CONSTRAIN(pw_20bit, min_pw, (1 << 20) - min_pw)
-  oscillator_.SetPulseWidth(pw_20bit << (32 - 20));
+  mod_aux_[MOD_AUX_VIBRATO_LFO] = (scaled_vibrato_lfo >> 7) + 32768;
+  mod_aux_[MOD_AUX_FULL_LFO] = vibrato_lfo + 32768;
+  mod_aux_[MOD_AUX_ENVELOPE] = tremolo_envelope;
 
   if (retrigger_delay_) {
     --retrigger_delay_;
@@ -191,25 +232,14 @@ void Voice::Refresh(uint8_t voice_index) {
     }
   }
 
-  uint16_t envelope_value = (envelope_.Render() * envelope_amplitude_) >> 16;
-  mod_aux_[MOD_AUX_ENVELOPE] = envelope_value;
-  oscillator_.set_gain(
-    oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
-    envelope_value : UINT16_MAX
-  );
-
   note_ = note;
 }
 
 void CVOutput::Refresh() {
-  if (has_audio()) { return; }
-  int32_t note = dc_voice_->note();
-  bool changed = note_ != note;
-  note_ = note;
-  if (changed || dirty_) {
-    NoteToDacCode();
-    dirty_ = false;
-  }
+  if (is_audio()) return;
+  if (dc_role_ == DC_PITCH) NoteToDacCode();
+  dac_interpolator_.SetTarget((this->*dc_fn_table_[dc_role_])() >> 1);
+  dac_interpolator_.ComputeSlope();
 }
 
 void Voice::NoteOn(
@@ -241,7 +271,7 @@ void Voice::NoteOn(
     retrigger_delay_ = 3;
   }
   if (trigger) {
-    trigger_pulse_ = trigger_duration_ * 8;
+    trigger_pulse_ = trigger_duration_ * 2;
     trigger_phase_ = 0;
     trigger_phase_increment_ = lut_portamento_increments[trigger_duration_];
     envelope_.GateOff();
@@ -257,10 +287,6 @@ void Voice::NoteOff() {
 
 void Voice::ControlChange(uint8_t controller, uint8_t value) {
   switch (controller) {
-    case kCCModulationWheelMsb:
-      mod_wheel_ = value;
-      break;
-    
     case kCCBreathController:
       mod_aux_[MOD_AUX_BREATH] = value << 9;
       break;
@@ -271,7 +297,7 @@ void Voice::ControlChange(uint8_t controller, uint8_t value) {
   }
 }
 
-int32_t Voice::trigger_value() const {
+uint16_t Voice::trigger_value() const {
   if (trigger_phase_ <= trigger_phase_increment_) {
     return 0;
   } else {
@@ -294,157 +320,6 @@ int32_t Voice::trigger_value() const {
     }
     value = value * velocity_coefficient >> 15;
     return value;
-  }
-}
-
-static const uint16_t kHighestNote = 128 * 128;
-static const uint16_t kPitchTableStart = 116 * 128;
-
-
-void Oscillator::Init(int32_t scale, int32_t offset) {
-  audio_buffer_.Init();
-  phase_ = 0;
-  next_sample_ = 0;
-  high_ = false;
-  scale_ = scale;
-  offset_ = offset;
-  integrator_state_ = 0;
-  pulse_width_ = 0x80000000;
-}
-
-uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
-  if (midi_pitch >= kHighestNote) {
-    midi_pitch = kHighestNote - 1;
-  }
-
-  int32_t ref_pitch = midi_pitch;
-  ref_pitch -= kPitchTableStart;
-
-  size_t num_shifts = 0;
-  while (ref_pitch < 0) {
-    ref_pitch += kOctave;
-    ++num_shifts;
-  }
-
-  uint32_t a = lut_oscillator_increments[ref_pitch >> 4];
-  uint32_t b = lut_oscillator_increments[(ref_pitch >> 4) + 1];
-  uint32_t phase_increment = a + \
-      (static_cast<int32_t>(b - a) * (ref_pitch & 0xf) >> 4);
-  phase_increment >>= num_shifts;
-  return phase_increment;
-}
-
-void Oscillator::RenderSilence() {
-  size_t size = kAudioBlockSize;
-  while (size--) {
-    WriteSample(0);
-  }
-}
-
-void Oscillator::RenderSine(uint32_t phase_increment) {
-  size_t size = kAudioBlockSize;
-  while (size--) {
-    phase_ += phase_increment;
-    WriteSample(Interpolate1022(wav_sine, phase_));
-  }
-}
-
-void Oscillator::RenderNoise() {
-  size_t size = kAudioBlockSize;
-  while (size--) {
-    WriteSample(Random::GetSample());
-  }
-}
-
-void Oscillator::RenderSaw(uint32_t phase_increment) {
-  uint32_t phase = phase_;
-  int32_t next_sample = next_sample_;
-  size_t size = kAudioBlockSize;
-
-  while (size--) {
-    int32_t this_sample = next_sample;
-    next_sample = 0;
-    phase += phase_increment;
-    if (phase < phase_increment) {
-      uint32_t t = phase / (phase_increment >> 16);
-      this_sample -= ThisBlepSample(t);
-      next_sample -= NextBlepSample(t);
-    }
-    next_sample += phase >> 17;
-    this_sample = (this_sample - 16384) << 1;
-    WriteSample(this_sample);
-  }
-  next_sample_ = next_sample;
-  phase_ = phase;
-}
-
-void Oscillator::RenderSquare(
-    uint32_t phase_increment,
-    uint32_t pw,
-    bool integrate) {
-  uint32_t phase = phase_;
-  int32_t next_sample = next_sample_;
-  int32_t integrator_state = integrator_state_;
-  int16_t integrator_coefficient = phase_increment >> 18;
-  size_t size = kAudioBlockSize;
-
-  while (size--) {
-    int32_t this_sample = next_sample;
-    next_sample = 0;
-    phase += phase_increment;
-
-    if (!high_) {
-      if (phase >= pw) {
-        uint32_t t = (phase - pw) / (phase_increment >> 16);
-        this_sample += ThisBlepSample(t);
-        next_sample += NextBlepSample(t);
-        high_ = true;
-      }
-    }
-    if (high_ && (phase < phase_increment)) {
-      uint32_t t = phase / (phase_increment >> 16);
-      this_sample -= ThisBlepSample(t);
-      next_sample -= NextBlepSample(t);
-      high_ = false;
-    }
-    next_sample += phase < pw ? 0 : 32767;
-    this_sample = (this_sample - 16384) << 1;
-    if (integrate) {
-      integrator_state += integrator_coefficient * (this_sample - integrator_state) >> 15;
-      this_sample = integrator_state << 3;
-    }
-    WriteSample(this_sample);
-  }
-  integrator_state_ = integrator_state;
-  next_sample_ = next_sample;
-  phase_ = phase;
-}
-
-void Oscillator::Render(uint8_t shape, int16_t note, bool gate) {
-  if (audio_buffer_.writable() < kAudioBlockSize) {
-    return;
-  }
-  
-  uint32_t phase_increment = ComputePhaseIncrement(note);
-  switch (shape) {
-    case OSCILLATOR_SHAPE_SAW:
-      RenderSaw(phase_increment);
-      break;
-    case OSCILLATOR_SHAPE_PULSE_VARIABLE:
-      RenderSquare(phase_increment, pulse_width_, false);
-      break;
-    case OSCILLATOR_SHAPE_PULSE_50:
-      RenderSquare(phase_increment, 0x80000000, false);
-      break;
-    case OSCILLATOR_SHAPE_TRIANGLE:
-      RenderSquare(phase_increment, 0x80000000, true);
-      break;
-    case OSCILLATOR_SHAPE_SINE:
-      RenderSine(phase_increment);
-      break;
-    case OSCILLATOR_SHAPE_NOISE:
-      RenderNoise();
-      break;
   }
 }
 
