@@ -82,7 +82,6 @@ void StateVariableFilter::Init(uint8_t interpolation_slope) {
 
 // 15-bit params
 void StateVariableFilter::RenderInit(int16_t frequency, int16_t resonance) {
-  frequency = 2048 + (frequency >> 1) - (frequency >> 4); // 1/16...1/2
   cutoff.SetTarget(Interpolate824(lut_svf_cutoff, frequency << 17) >> 1);
   damp.SetTarget(Interpolate824(lut_svf_damp, resonance << 17) >> 1);
   cutoff.ComputeSlope();
@@ -261,8 +260,13 @@ void Oscillator::Render() {
     high_ = false; \
   }
 
+#define TRACKING_FILTER_CUTOFF \
+  int32_t cutoff = (pitch_ >> 1) + (timbre_.target() >> 1); \
+  CONSTRAIN(cutoff, 0, 0x7fff);
+
 void Oscillator::RenderPulse() {
-  svf_.RenderInit(timbre_.target(), 0x7fff); // TODO track pitch?
+  TRACKING_FILTER_CUTOFF;
+  svf_.RenderInit(cutoff, 0x7fff);
   uint32_t pw = 0x80000000;
   RENDER_LOOP(
     if (shape_ == OSC_SHAPE_VARIABLE_PULSE) {
@@ -278,7 +282,8 @@ void Oscillator::RenderPulse() {
 }
 
 void Oscillator::RenderSaw() {
-  svf_.RenderInit(timbre_.target(), 0x6000);
+  TRACKING_FILTER_CUTOFF;
+  svf_.RenderInit(cutoff, 0x6000);
   uint32_t pw = 0;
   RENDER_LOOP(
     if (shape_ == OSC_SHAPE_VARIABLE_SAW) {
@@ -462,7 +467,8 @@ void Oscillator::RenderBuzz() {
 }
 
 void Oscillator::RenderFilteredNoise() {
-  svf_.RenderInit(timbre_.target(), pitch_ << 1);
+  int32_t cutoff = 0x1000 + (timbre_.target() >> 1); // 1/4...1/2
+  svf_.RenderInit(cutoff, pitch_ << 1);
   // int32_t scale = Interpolate824(lut_svf_scale, pitch_ << 18);
   // int32_t gain_correction = cutoff > scale ? scale * 32767 / cutoff : 32767;
   RENDER_LOOP(
