@@ -37,16 +37,19 @@
 - Filtered noise: `TIMBRE` sets filter cutoff
   - Voice pitch sets filter resonance
   - Sub-shapes: low-pass, notch, band-pass, high-pass
-- Phase distortion: `TIMBRE` sets filter cutoff
+- Phase distortion, resonant saw: `TIMBRE` sets filter cutoff
   - Sub-shapes: low-pass, peaking, band-pass, high-pass
+- Phase distortion, resonant pulse: `TIMBRE` sets filter cutoff
+  - Sub-shapes: low-pass, peaking, band-pass, high-pass
+- State-variable filter, low-pass: `TIMBRE` sets filter cutoff (resonance is fixed)
+  - Sub-shapes: pulse, saw
 - Pulse-width modulation: `TIMBRE` sets pulse width
   - Sub-shapes: pulse, saw
-- State-variable filter: `TIMBRE` sets filter cutoff (resonance is fixed)
-  - Sub-shapes: pulse, saw
-- Hard-synced sine: `TIMBRE` sets detuning of the secondary oscillator
-- Compressed sine (`tanh`): `TIMBRE` sets compression amount
+- Hard sync: `TIMBRE` sets detuning of the secondary oscillator
+  - Sub-shapes: sine, pulse, saw
 - Wavefolder: `TIMBRE` sets fold gain
   - Sub-shapes: sine, triangle
+- Compressed sine (`tanh`): `TIMBRE` sets compression amount
 - Dirac comb: `TIMBRE` sets harmonic content
 - Frequency modulation: `TIMBRE` sets modulation index
   - Sub-shapes: 15 integer ratios, ordered from harmonic to inharmonic
