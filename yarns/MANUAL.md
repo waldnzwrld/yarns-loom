@@ -64,7 +64,7 @@
   - The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
     - Segment times range from 1 ms (2 ticks) to 5 seconds
 - Tremolo can be applied to envelope and oscillator
-  - Tremolo uses the same LFO frequency as vibrato
+  - Tremolo uses the same LFO speed as vibrato
   - `TR (TREMOLO DEPTH)` sets the amount of tremolo
   - `TS (TREMOLO SHAPE)` applies a waveshaper to the LFO (triangle, down saw, up saw, square)
   
