@@ -260,12 +260,12 @@ void Oscillator::Render() {
     high_ = false; \
   }
 
-#define TRACKING_FILTER_CUTOFF \
+#define SET_TRACKING_FILTER_CUTOFF \
   int32_t cutoff = (pitch_ >> 1) + (timbre_.target() >> 1); \
   CONSTRAIN(cutoff, 0, 0x7fff);
 
 void Oscillator::RenderPulse() {
-  TRACKING_FILTER_CUTOFF;
+  SET_TRACKING_FILTER_CUTOFF;
   svf_.RenderInit(cutoff, 0x7fff);
   uint32_t pw = 0x80000000;
   RENDER_LOOP(
@@ -282,7 +282,7 @@ void Oscillator::RenderPulse() {
 }
 
 void Oscillator::RenderSaw() {
-  TRACKING_FILTER_CUTOFF;
+  SET_TRACKING_FILTER_CUTOFF;
   svf_.RenderInit(cutoff, 0x6000);
   uint32_t pw = 0;
   RENDER_LOOP(
