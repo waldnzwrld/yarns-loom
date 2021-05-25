@@ -36,7 +36,6 @@
 #include "yarns/just_intonation_processor.h"
 #include "yarns/midi_handler.h"
 #include "yarns/settings.h"
-#include "yarns/clock_division.h"
 #include "yarns/ui.h"
 
 namespace yarns {
@@ -72,7 +71,7 @@ void Multi::Init(bool reset_calibration) {
   settings_.clock_tempo = 120;
   settings_.clock_swing = 0;
   settings_.clock_input_division = 1;
-  settings_.clock_output_division = clock_division::unity;
+  settings_.clock_output_division = 20;
   settings_.clock_bar_duration = 4;
   settings_.clock_override = 0;
   settings_.nudge_first_tick = 0;
@@ -101,7 +100,7 @@ void Multi::Clock() {
     return;
   }
   
-  uint16_t output_division = clock_division::list[settings_.clock_output_division].num_ticks;
+  uint16_t output_division = lut_clock_ratio_ticks[settings_.clock_output_division];
   uint16_t input_division = settings_.clock_input_division;
   
   if (previous_output_division_ &&
@@ -234,7 +233,7 @@ void Multi::Stop() {
   song_pointer_ = NULL;
 }
 
-void Multi::Refresh() {
+void Multi::ClockFast() {
   if (clock_pulse_counter_) {
     --clock_pulse_counter_;
   }
@@ -253,7 +252,9 @@ void Multi::Refresh() {
       --swing_predelay_[i];
     }
   }
+}
 
+void Multi::Refresh() {
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
     Part& part = part_[j];
     part.mutable_looper().Refresh();
@@ -286,22 +287,31 @@ bool Multi::Set(uint8_t address, uint8_t value) {
 }
 
 void Multi::AssignVoicesToCVOutputs() {
+  for (uint8_t v = 0; v < kNumSystemVoices; ++v) {
+    voice_[v].set_has_audio_listener(false);
+  }
   switch (settings_.layout) {
     case LAYOUT_MONO:
     case LAYOUT_DUAL_POLYCHAINED:
-      cv_outputs_[0].assign(&voice_[0], 0);
-      cv_outputs_[1].assign(&voice_[0], 0);
-      cv_outputs_[2].assign(&voice_[0], 0);
-      cv_outputs_[3].assign(&voice_[0], 1);
+      AssignOutputVoice(0, 0, DC_PITCH, 0);
+      AssignOutputVoice(1, 0, DC_VELOCITY, 0);
+      AssignOutputVoice(2, 0, DC_AUX_1, 0);
+      AssignOutputVoice(3, 0, DC_AUX_2, 1);
       break;
 
     case LAYOUT_DUAL_MONO:
+      AssignOutputVoice(0, 0, DC_PITCH, 0);
+      AssignOutputVoice(1, 1, DC_PITCH, 0);
+      AssignOutputVoice(2, 0, DC_AUX_1, 1);
+      AssignOutputVoice(3, 1, DC_AUX_1, 1);
+      break;
+
     case LAYOUT_DUAL_POLY:
     case LAYOUT_QUAD_POLYCHAINED:
-      cv_outputs_[0].assign(&voice_[0], 0);
-      cv_outputs_[1].assign(&voice_[1], 0);
-      cv_outputs_[2].assign(&voice_[0], 1);
-      cv_outputs_[3].assign(&voice_[1], 1);
+      AssignOutputVoice(0, 0, DC_PITCH, 0);
+      AssignOutputVoice(1, 1, DC_PITCH, 0);
+      AssignOutputVoice(2, 0, DC_AUX_1, 1);
+      AssignOutputVoice(3, 1, DC_AUX_2, 1);
       break;
 
     case LAYOUT_QUAD_MONO:
@@ -309,37 +319,45 @@ void Multi::AssignVoicesToCVOutputs() {
     case LAYOUT_OCTAL_POLYCHAINED:
     case LAYOUT_THREE_ONE:
     case LAYOUT_TWO_TWO:
-    case LAYOUT_QUAD_TRIGGERS:
+      for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
+        AssignOutputVoice(i, i, DC_PITCH, 1);
+      }
+      break;
     case LAYOUT_QUAD_VOLTAGES:
       for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
-        cv_outputs_[i].assign(&voice_[i], 1);
+        AssignOutputVoice(i, i, DC_AUX_1, 1);
+      }
+      break;
+    case LAYOUT_QUAD_TRIGGERS:
+      for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
+        AssignOutputVoice(i, i, DC_TRIGGER, 1);
       }
       break;
 
     case LAYOUT_TWO_ONE:
-      cv_outputs_[0].assign(&voice_[0], 1);
-      cv_outputs_[1].assign(&voice_[1], 1);
-      cv_outputs_[2].assign(&voice_[2], 1);
-      cv_outputs_[3].assign(&voice_[2], 0);
+      AssignOutputVoice(0, 0, DC_PITCH, 1);
+      AssignOutputVoice(1, 1, DC_PITCH, 1);
+      AssignOutputVoice(2, 2, DC_PITCH, 1);
+      AssignOutputVoice(3, 2, DC_AUX_2, 0);
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      cv_outputs_[0].assign(&voice_[0], kNumParaphonicVoices);
-      cv_outputs_[1].assign(&voice_[kNumParaphonicVoices], 1);
-      cv_outputs_[2].assign(&voice_[kNumParaphonicVoices], 0);
-      cv_outputs_[3].assign(&voice_[kNumParaphonicVoices + 1], 1);
+      AssignOutputVoice(0, 0, DC_PITCH, kNumParaphonicVoices);
+      AssignOutputVoice(1, kNumParaphonicVoices, DC_PITCH, 1);
+      AssignOutputVoice(2, kNumParaphonicVoices, DC_AUX_1, 0);
+      AssignOutputVoice(3, kNumParaphonicVoices + 1, DC_PITCH, 1);
       break;
   }
 }
 
 void Multi::GetCvGate(uint16_t* cv, bool* gate) {
+  for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
+    cv[i] = cv_outputs_[i].dc_dac_code();
+  }
+
   switch (settings_.layout) {
     case LAYOUT_MONO:
     case LAYOUT_DUAL_POLYCHAINED:
-      cv[0] = cv_outputs_[0].note_dac_code();
-      cv[1] = cv_outputs_[1].velocity_dac_code();
-      cv[2] = cv_outputs_[2].aux_cv_dac_code();
-      cv[3] = cv_outputs_[3].aux_cv_dac_code_2();
       gate[0] = voice_[0].gate();
       gate[1] = voice_[0].trigger();
       gate[2] = clock();
@@ -347,10 +365,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
       
     case LAYOUT_DUAL_MONO:
-      cv[0] = cv_outputs_[0].note_dac_code();
-      cv[1] = cv_outputs_[1].note_dac_code();
-      cv[2] = cv_outputs_[2].aux_cv_dac_code();
-      cv[3] = cv_outputs_[3].aux_cv_dac_code();
       gate[0] = voice_[0].gate();
       gate[1] = voice_[1].gate();
       gate[2] = clock();
@@ -359,10 +373,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
     
     case LAYOUT_DUAL_POLY:
     case LAYOUT_QUAD_POLYCHAINED:
-      cv[0] = cv_outputs_[0].note_dac_code();
-      cv[1] = cv_outputs_[1].note_dac_code();
-      cv[2] = cv_outputs_[2].aux_cv_dac_code();
-      cv[3] = cv_outputs_[3].aux_cv_dac_code_2();
       gate[0] = voice_[0].gate();
       gate[1] = voice_[1].gate();
       gate[2] = clock();
@@ -372,10 +382,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
     case LAYOUT_QUAD_MONO:
     case LAYOUT_QUAD_POLY:
     case LAYOUT_OCTAL_POLYCHAINED:
-      cv[0] = cv_outputs_[0].note_dac_code();
-      cv[1] = cv_outputs_[1].note_dac_code();
-      cv[2] = cv_outputs_[2].note_dac_code();
-      cv[3] = cv_outputs_[3].note_dac_code();
       gate[0] = voice_[0].gate();
       gate[1] = voice_[1].gate();
       if (settings_.clock_override) {
@@ -389,10 +395,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
 
     case LAYOUT_THREE_ONE:
     case LAYOUT_TWO_TWO:
-      cv[0] = cv_outputs_[0].note_dac_code();
-      cv[1] = cv_outputs_[1].note_dac_code();
-      cv[2] = cv_outputs_[2].note_dac_code();
-      cv[3] = cv_outputs_[3].note_dac_code();
       gate[0] = voice_[0].gate();
       gate[1] = voice_[1].gate();
       gate[2] = voice_[2].gate();
@@ -404,10 +406,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
     
     case LAYOUT_TWO_ONE:
-      cv[0] = cv_outputs_[0].note_dac_code();
-      cv[1] = cv_outputs_[1].note_dac_code();
-      cv[2] = cv_outputs_[2].note_dac_code();
-      cv[3] = cv_outputs_[3].aux_cv_dac_code_2();
       gate[0] = voice_[0].gate();
       gate[1] = voice_[1].gate();
       gate[2] = voice_[2].gate();
@@ -415,10 +413,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      cv[0] = 0; // Paraphonic output only outputs audio, not CV
-      cv[1] = cv_outputs_[1].note_dac_code();
-      cv[2] = cv_outputs_[2].aux_cv_dac_code();
-      cv[3] = cv_outputs_[3].note_dac_code();
       gate[0] = cv_outputs_[0].gate();
       gate[1] = cv_outputs_[1].gate();
       gate[2] = settings_.clock_override ? clock() : voice_[kNumParaphonicVoices].trigger();
@@ -426,10 +420,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
 
     case LAYOUT_QUAD_TRIGGERS:
-      cv[0] = cv_outputs_[0].trigger_dac_code();
-      cv[1] = cv_outputs_[1].trigger_dac_code();
-      cv[2] = cv_outputs_[2].trigger_dac_code();
-      cv[3] = cv_outputs_[3].trigger_dac_code();
       gate[0] = voice_[0].trigger() && ~voice_[1].gate();
       gate[1] = voice_[0].trigger() && voice_[1].gate();
       gate[2] = clock();
@@ -437,10 +427,6 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
 
     case LAYOUT_QUAD_VOLTAGES:
-      cv[0] = cv_outputs_[0].aux_cv_dac_code();
-      cv[1] = cv_outputs_[1].aux_cv_dac_code();
-      cv[2] = cv_outputs_[2].aux_cv_dac_code();
-      cv[3] = cv_outputs_[3].aux_cv_dac_code();
       gate[0] = voice_[0].gate();
       gate[1] = voice_[1].gate();
       if (settings_.clock_override) {
@@ -510,7 +496,8 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
       {
         const NoteEntry& last_note = part_[0].priority_note(NOTE_STACK_PRIORITY_LAST);
         const uint8_t last_voice_index = part_[0].FindVoiceForNote(last_note.note);
-        brightness[0] = (cv_outputs_[0].gate() && last_voice_index != VOICE_ALLOCATION_NOT_FOUND) ? (part_[0].voice(last_voice_index)->velocity() << 1) : 0;
+        brightness[0] = (last_voice_index == VOICE_ALLOCATION_NOT_FOUND) ? 0 :
+          (part_[0].voice(last_voice_index)->mod_aux(MOD_AUX_ENVELOPE) >> 8);
         brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
         brightness[2] = voice_[kNumParaphonicVoices].aux_cv();
         brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;

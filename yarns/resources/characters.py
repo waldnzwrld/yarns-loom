@@ -160,7 +160,7 @@ characters = {
   '\x80': 'jlbc',
   '\x81': 'efgn',
   '\x82': 'agj',
-  '\x83': 'dnl',
+  '\x83': 'dnlm',
   
   # LRDU arrow
   '\x84': 'jkl',
@@ -169,9 +169,9 @@ characters = {
   '\x87': 'nml',
   
   # Waveforms
-  '\x88': 'njbc',  # Saw
-  '\x89': 'enjb',  # Centered saw
-  '\x8A': 'mn',    # Baby saw
+  '\x88': 'efgl',  # Saw
+  '\x89': 'pjb',   # CSaw
+  '\x8A': 'ml',    # Baby saw
   '\x8B': 'nl',    # Tri
   '\x8C': 'efabc', # Square
   '\x8D': 'epkc',   # Baby square
@@ -197,7 +197,20 @@ characters = {
   '\x9D': 'def',
   '\x9E': 'efa',
   '\x9F': 'fab',
-  '\xA0': 'abcdefghjklmnp',
+
+  '\xA0': 'pl', # low pass
+  '\xA1': 'nk', # high pass
+  '\xA2': 'pmk', # notch
+
+  '\xB0': 'fabpl', # pulse low pass
+  '\xB1': 'fabdnlm', # pulse peaking
+  '\xB2': 'fabnl', # pulse band pass
+  '\xB3': 'fabnk', # pulse high pass
+
+  '\xC0': 'fgpl', # saw low pass
+  '\xC1': 'fgdnlm', # saw peaking
+  '\xC2': 'fgnl', # saw band pass
+  '\xC3': 'fgnk', # saw high pass
   
   '\xFF': 'abcdefghjklmnp',
   

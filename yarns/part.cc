@@ -38,7 +38,6 @@
 #include "yarns/midi_handler.h"
 #include "yarns/resources.h"
 #include "yarns/voice.h"
-#include "yarns/clock_division.h"
 #include "yarns/multi.h"
 #include "yarns/ui.h"
 
@@ -80,33 +79,35 @@ void Part::Init() {
   voicing_.portamento = 0;
   voicing_.pitch_bend_range = 2;
   voicing_.vibrato_range = 1;
-  voicing_.vibrato_initial = 5;
+  voicing_.vibrato_mod = 0;
   voicing_.modulation_rate = 50;
   voicing_.trigger_duration = 2;
-  voicing_.aux_cv = MOD_AUX_MODULATION;
-  voicing_.aux_cv_2 = MOD_AUX_VIBRATO_LFO;
-  voicing_.oscillator_pw_initial = 40;
-  voicing_.oscillator_pw_mod = 5;
+  voicing_.aux_cv = MOD_AUX_ENVELOPE;
+  voicing_.aux_cv_2 = MOD_AUX_ENVELOPE;
   voicing_.tuning_transpose = 0;
   voicing_.tuning_fine = 0;
   voicing_.tuning_root = 0;
   voicing_.tuning_system = TUNING_SYSTEM_EQUAL;
   voicing_.tuning_factor = 0;
   voicing_.oscillator_mode = OSCILLATOR_MODE_OFF;
-  voicing_.oscillator_shape = OSCILLATOR_SHAPE_PULSE_VARIABLE;
+  voicing_.oscillator_shape = OSC_SHAPE_FM;
 
-  voicing_.envelope_amplitude_init = 16;
-  voicing_.envelope_amplitude_mod = 24;
-  voicing_.env_init_attack = 30;
-  voicing_.env_init_decay = 20;
-  voicing_.env_init_sustain = 40;
-  voicing_.env_init_release = 40;
-  voicing_.env_mod_attack = -16;
-  voicing_.env_mod_decay = -8;
-  voicing_.env_mod_sustain = 8;
-  voicing_.env_mod_release = 16;
+  voicing_.timbre_initial = 64;
+  voicing_.timbre_mod_velocity = 32;
+  voicing_.timbre_mod_envelope = -16;
+  voicing_.timbre_mod_lfo = 16;
 
-  seq_.clock_division = clock_division::unity;
+  voicing_.amplitude_mod_velocity = 48;
+  voicing_.env_init_attack = 64;
+  voicing_.env_init_decay = 64;
+  voicing_.env_init_sustain = 64;
+  voicing_.env_init_release = 32;
+  voicing_.env_mod_attack = -32;
+  voicing_.env_mod_decay = -32;
+  voicing_.env_mod_sustain = 0;
+  voicing_.env_mod_release = 32;
+
+  seq_.clock_division = 20;
   seq_.gate_length = 3;
   seq_.arp_range = 0;
   seq_.arp_direction = 0;
@@ -259,7 +260,6 @@ void Part::ResetLatch() {
 
 bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   switch (controller) {
-    case kCCModulationWheelMsb:
     case kCCBreathController:
     case kCCFootPedalMsb:
       for (uint8_t i = 0; i < num_voices_; ++i) {
@@ -425,7 +425,7 @@ void Part::Clock() {
       if (step.is_continuation()) {
         // The next step contains a "sustain" message; or a slid note. Extends
         // the duration of the current note.
-        gate_length_counter_ += clock_division::list[seq_.clock_division].num_ticks;
+        gate_length_counter_ += lut_clock_ratio_ticks[seq_.clock_division];
       } else {
         StopSequencerArpeggiatorNotes();
       }
@@ -433,7 +433,7 @@ void Part::Clock() {
   }
   
   ++arp_seq_prescaler_;
-  if (arp_seq_prescaler_ >= clock_division::list[seq_.clock_division].num_ticks) {
+  if (arp_seq_prescaler_ >= lut_clock_ratio_ticks[seq_.clock_division]) {
     arp_seq_prescaler_ = 0;
   }
   
@@ -853,15 +853,22 @@ void Part::VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato) {
       break;
   }
 
-  int32_t amplitude_12bit = (voicing_.envelope_amplitude_init << 6) + vel * voicing_.envelope_amplitude_mod;
-  CONSTRAIN(amplitude_12bit, 0, (1 << 12) - 1)
-  voice->set_envelope_amplitude(amplitude_12bit << 4);
+  int32_t timbre_14 = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
+  CONSTRAIN(timbre_14, -1 << 13, (1 << 13) - 1)
+  voice->set_timbre_mod_envelope(timbre_14 << 2);
+
+  uint16_t vel_concave_up = UINT16_MAX - lut_env_expo[((127 - vel) << 1)];
+  int32_t damping_22 = -voicing_.amplitude_mod_velocity * vel_concave_up;
+  if (voicing_.amplitude_mod_velocity >= 0) {
+    damping_22 += voicing_.amplitude_mod_velocity << 16;
+  }
 
   voice->envelope()->SetADSR(
-    modulate_7bit(voicing_.env_init_attack << 1, voicing_.env_mod_attack << 1, vel),
-    modulate_7bit(voicing_.env_init_decay << 1, voicing_.env_mod_decay << 1, vel),
-    modulate_7bit(voicing_.env_init_sustain << 1, voicing_.env_mod_sustain << 1, vel),
-    modulate_7bit(voicing_.env_init_release << 1, voicing_.env_mod_release << 1, vel)
+    UINT16_MAX - (damping_22 >> (22 - 16)),
+    modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack, vel),
+    modulate_7bit(voicing_.env_init_decay, voicing_.env_mod_decay, vel),
+    modulate_7bit(voicing_.env_init_sustain, voicing_.env_mod_sustain, vel),
+    modulate_7bit(voicing_.env_init_release, voicing_.env_mod_release, vel)
   );
 
   voice->NoteOn(Tune(pitch), vel, portamento, trigger);
@@ -1022,7 +1029,9 @@ void Part::TouchVoices() {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
     voice_[i]->set_modulation_rate(voicing_.modulation_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
-    voice_[i]->set_vibrato_initial(voicing_.vibrato_initial);
+    voice_[i]->set_vibrato_mod(voicing_.vibrato_mod);
+    voice_[i]->set_tremolo_mod(voicing_.tremolo_mod);
+    voice_[i]->set_tremolo_shape(voicing_.tremolo_shape);
     voice_[i]->set_trigger_duration(voicing_.trigger_duration);
     voice_[i]->set_trigger_scale(voicing_.trigger_scale);
     voice_[i]->set_trigger_shape(voicing_.trigger_shape);
@@ -1031,8 +1040,8 @@ void Part::TouchVoices() {
     voice_[i]->set_oscillator_mode(voicing_.oscillator_mode);
     voice_[i]->set_oscillator_shape(voicing_.oscillator_shape);
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
-    voice_[i]->set_oscillator_pw_initial(voicing_.oscillator_pw_initial);
-    voice_[i]->set_oscillator_pw_mod(voicing_.oscillator_pw_mod);
+    voice_[i]->set_timbre_init(voicing_.timbre_initial);
+    voice_[i]->set_timbre_mod_lfo(voicing_.timbre_mod_lfo);
   }
 }
 
@@ -1063,7 +1072,9 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_PITCH_BEND_RANGE:
     case PART_VOICING_MODULATION_RATE:
     case PART_VOICING_VIBRATO_RANGE:
-    case PART_VOICING_VIBRATO_INITIAL:
+    case PART_VOICING_VIBRATO_MOD:
+    case PART_VOICING_TREMOLO_MOD:
+    case PART_VOICING_TREMOLO_SHAPE:
     case PART_VOICING_TRIGGER_DURATION:
     case PART_VOICING_TRIGGER_SHAPE:
     case PART_VOICING_TRIGGER_SCALE:
@@ -1071,8 +1082,8 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_AUX_CV_2:
     case PART_VOICING_OSCILLATOR_MODE:
     case PART_VOICING_OSCILLATOR_SHAPE:
-    case PART_VOICING_OSCILLATOR_PW_INITIAL:
-    case PART_VOICING_OSCILLATOR_PW_MOD:
+    case PART_VOICING_TIMBRE_INIT:
+    case PART_VOICING_TIMBRE_MOD_LFO:
     case PART_VOICING_TUNING_TRANSPOSE:
     case PART_VOICING_TUNING_FINE:
       TouchVoices();

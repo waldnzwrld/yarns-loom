@@ -18,12 +18,14 @@
 #define YARNS_ENVELOPE_H_
 
 #include "stmlib/stmlib.h"
-
+#include "stmlib/utils/ring_buffer.h"
 #include "stmlib/utils/dsp.h"
 
 #include "yarns/resources.h"
 
 namespace yarns {
+
+const size_t kEnvBlockSize = 2;
 
 using namespace stmlib;
 
@@ -44,7 +46,6 @@ class Envelope {
   void Init() {
     gate_ = false;
 
-    target_[ENV_SEGMENT_ATTACK] = 65535;
     target_[ENV_SEGMENT_RELEASE] = 0;
     target_[ENV_SEGMENT_DEAD] = 0;
 
@@ -56,6 +57,7 @@ class Envelope {
     if (!gate_) {
       gate_ = true;
       Trigger(ENV_SEGMENT_ATTACK);
+      samples_.Flush();
     }
   }
 
@@ -67,6 +69,7 @@ class Envelope {
         break;
       case ENV_SEGMENT_SUSTAIN:
         Trigger(ENV_SEGMENT_RELEASE);
+        samples_.Flush();
         break;
       default:
         break;
@@ -78,7 +81,9 @@ class Envelope {
   }
 
   // All params 7-bit
-  inline void SetADSR(uint8_t a, uint8_t d, uint8_t s, uint8_t r) {
+  inline void SetADSR(uint16_t peak, uint8_t a, uint8_t d, uint8_t s, uint8_t r) {
+    target_[ENV_SEGMENT_ATTACK] = peak;
+    // TODO could interpolate these from 16-bit parameters
     increment_[ENV_SEGMENT_ATTACK] = lut_portamento_increments[a];
     increment_[ENV_SEGMENT_DECAY] = lut_portamento_increments[d];
     target_[ENV_SEGMENT_DECAY] = target_[ENV_SEGMENT_SUSTAIN] = s << 9;
@@ -97,24 +102,32 @@ class Envelope {
     }
     a_ = value_;
     b_ = target_[segment];
+    phase_increment_ = increment_[segment];
     segment_ = segment;
     phase_ = 0;
   }
 
-  inline uint16_t Render() {
-    uint32_t increment = increment_[segment_];
-    phase_ += increment;
-    if (phase_ < increment) {
-      value_ = Mix(a_, b_, 65535);
-      Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
+  inline void RenderSamples(size_t size = kEnvBlockSize) {
+    if (samples_.writable() < size) return;
+
+    while (size--) {
+      phase_ += phase_increment_;
+      if (phase_ < phase_increment_) {
+        value_ = b_;
+        Trigger(static_cast<EnvelopeSegment>(segment_ + 1));
+      }
+      if (phase_increment_) {
+        value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
+      }
+      samples_.Overwrite(value_);
     }
-    if (increment_[segment_]) {
-      value_ = Mix(a_, b_, Interpolate824(lut_env_expo, phase_));
-    }
-    return value_;
   }
-  
-  inline uint16_t value() const { return value_; }
+
+  inline void ReadSample() {
+    value_read_ = samples_.ImmediateRead();
+  }
+
+  inline uint16_t value() const { return value_read_; }
 
  private:
   bool gate_;
@@ -132,7 +145,11 @@ class Envelope {
   uint16_t a_;
   uint16_t b_;
   uint16_t value_;
+  uint16_t value_read_;
   uint32_t phase_;
+  uint32_t phase_increment_;
+
+  stmlib::RingBuffer<uint16_t, kEnvBlockSize * 2> samples_;
 
   DISALLOW_COPY_AND_ASSIGN(Envelope);
 };

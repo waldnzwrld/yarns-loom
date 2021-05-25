@@ -38,15 +38,6 @@ namespace yarns {
 
 const uint8_t kDisplayWidth = 2;
 const uint8_t kScrollBufferSize = 32;
-
-// Applying a brightness fraction naively to PWM results in a visual bias toward
-// over-brightness -- exponentiating the fraction biases it back toward darkness
-const uint8_t kDisplayBrightnessLinearizingExponent = 2;
-// Max number of bits that, when exponentiated, will fit in a uint32_t
-const uint8_t kDisplayBrightnessLinearizingBaseBits = 32 / kDisplayBrightnessLinearizingExponent;
-// Max number of bits used by the result of exponentiation
-const uint8_t kDisplayBrightnessLinearizingPowerBits = kDisplayBrightnessLinearizingExponent * kDisplayBrightnessLinearizingBaseBits;
-
 class Display {
  public:
   Display() { }
@@ -67,11 +58,7 @@ class Display {
   }
   
   char* mutable_buffer() { return short_buffer_; }
-  void set_brightness(uint16_t fraction) {
-    uint16_t base = fraction >> (16 - kDisplayBrightnessLinearizingBaseBits);
-    uint32_t power = base * base;
-    brightness_ = power >> (kDisplayBrightnessLinearizingPowerBits - 16);
-  }
+  void set_brightness(uint16_t fraction);
   void Scroll();
   
   inline bool scrolling() const { return scrolling_; }

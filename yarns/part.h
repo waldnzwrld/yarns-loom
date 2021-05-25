@@ -42,7 +42,7 @@ namespace yarns {
 
 class Voice;
 
-const uint8_t kNumSteps = 31;
+const uint8_t kNumSteps = 30;
 const uint8_t kNumMaxVoicesPerPart = 4;
 const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
@@ -144,7 +144,7 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 struct PackedPart {
-  // Currently has 4 bits to spare
+  // Currently has 36 bits to spare
 
   struct PackedSequencerStep {
     unsigned int
@@ -158,7 +158,7 @@ struct PackedPart {
     looper_oldest_index : looper::kBitsNoteIndex,
     looper_size         : looper::kBitsNoteIndex;
 
-  static const uint8_t kTimbreBits = 6;
+  static const uint8_t kTimbreBits = 7;
 
   signed int
     // MidiSettings
@@ -166,8 +166,9 @@ struct PackedPart {
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
-    oscillator_pw_mod : kTimbreBits,
-    envelope_amplitude_mod : kTimbreBits,
+    amplitude_mod_velocity : kTimbreBits,
+    timbre_mod_envelope : kTimbreBits,
+    timbre_mod_velocity : kTimbreBits,
     env_mod_attack : kTimbreBits,
     env_mod_decay : kTimbreBits,
     env_mod_sustain : kTimbreBits,
@@ -193,8 +194,9 @@ struct PackedPart {
     portamento : 7,
     legato_mode : 2,
     pitch_bend_range : 5,
+    vibrato_shape: 3,
     vibrato_range : 4,
-    vibrato_initial : kTimbreBits,
+    vibrato_mod : 7,
     modulation_rate : 7,
     tuning_root : 4,
     tuning_system : 6,
@@ -205,9 +207,11 @@ struct PackedPart {
     aux_cv_2 : 4, // barely
     tuning_factor : 4,
     oscillator_mode : 2,
-    oscillator_shape : 3,
-    oscillator_pw_initial : kTimbreBits,
-    envelope_amplitude_init : kTimbreBits,
+    oscillator_shape : 7,
+    tremolo_mod : kTimbreBits,
+    tremolo_shape : 3,
+    timbre_initial : kTimbreBits,
+    timbre_mod_lfo : kTimbreBits,
     env_init_attack : kTimbreBits,
     env_init_decay : kTimbreBits,
     env_init_sustain : kTimbreBits,
@@ -280,7 +284,9 @@ struct VoicingSettings {
   uint8_t legato_mode;
   uint8_t pitch_bend_range;
   uint8_t vibrato_range;
-  uint8_t vibrato_initial;
+  uint8_t vibrato_mod;
+  uint8_t tremolo_mod;
+  uint8_t tremolo_shape;
   uint8_t modulation_rate;
   int8_t tuning_transpose;
   int8_t tuning_fine;
@@ -294,10 +300,11 @@ struct VoicingSettings {
   uint8_t tuning_factor;
   uint8_t oscillator_mode;
   uint8_t oscillator_shape;
-  uint8_t oscillator_pw_initial;
-  int8_t oscillator_pw_mod;
-  uint8_t envelope_amplitude_init;
-  int8_t envelope_amplitude_mod;
+  uint8_t timbre_initial;
+  uint8_t timbre_mod_lfo;
+  int8_t timbre_mod_envelope;
+  int8_t timbre_mod_velocity;
+  int8_t amplitude_mod_velocity;
   uint8_t env_init_attack;
   uint8_t env_init_decay;
   uint8_t env_init_sustain;
@@ -306,7 +313,7 @@ struct VoicingSettings {
   int8_t env_mod_decay;
   int8_t env_mod_sustain;
   int8_t env_mod_release;
-  uint8_t padding[1];
+  // uint8_t padding[-2];
 
   void Pack(PackedPart& packed) const {
     packed.allocation_mode = allocation_mode;
@@ -315,7 +322,9 @@ struct VoicingSettings {
     packed.legato_mode = legato_mode;
     packed.pitch_bend_range = pitch_bend_range;
     packed.vibrato_range = vibrato_range;
-    packed.vibrato_initial = vibrato_initial;
+    packed.vibrato_mod = vibrato_mod;
+    packed.tremolo_mod = tremolo_mod;
+    packed.tremolo_shape = tremolo_shape;
     packed.modulation_rate = modulation_rate;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
@@ -329,10 +338,11 @@ struct VoicingSettings {
     packed.tuning_factor = tuning_factor;
     packed.oscillator_mode = oscillator_mode;
     packed.oscillator_shape = oscillator_shape;
-    packed.oscillator_pw_initial = oscillator_pw_initial;
-    packed.oscillator_pw_mod = oscillator_pw_mod;
-    packed.envelope_amplitude_init = envelope_amplitude_init;
-    packed.envelope_amplitude_mod = envelope_amplitude_mod;
+    packed.timbre_initial = timbre_initial;
+    packed.timbre_mod_lfo = timbre_mod_lfo;
+    packed.timbre_mod_envelope = timbre_mod_envelope;
+    packed.timbre_mod_velocity = timbre_mod_velocity;
+    packed.amplitude_mod_velocity = amplitude_mod_velocity;
     packed.env_init_attack = env_init_attack;
     packed.env_init_decay = env_init_decay;
     packed.env_init_sustain = env_init_sustain;
@@ -350,7 +360,9 @@ struct VoicingSettings {
     legato_mode = packed.legato_mode;
     pitch_bend_range = packed.pitch_bend_range;
     vibrato_range = packed.vibrato_range;
-    vibrato_initial = packed.vibrato_initial;
+    vibrato_mod = packed.vibrato_mod;
+    tremolo_mod = packed.tremolo_mod;
+    tremolo_shape = packed.tremolo_shape;
     modulation_rate = packed.modulation_rate;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
@@ -364,10 +376,11 @@ struct VoicingSettings {
     tuning_factor = packed.tuning_factor;
     oscillator_mode = packed.oscillator_mode;
     oscillator_shape = packed.oscillator_shape;
-    oscillator_pw_initial = packed.oscillator_pw_initial;
-    oscillator_pw_mod = packed.oscillator_pw_mod;
-    envelope_amplitude_init = packed.envelope_amplitude_init;
-    envelope_amplitude_mod = packed.envelope_amplitude_mod;
+    timbre_initial = packed.timbre_initial;
+    timbre_mod_lfo = packed.timbre_mod_lfo;
+    timbre_mod_envelope = packed.timbre_mod_envelope;
+    timbre_mod_velocity = packed.timbre_mod_velocity;
+    amplitude_mod_velocity = packed.amplitude_mod_velocity;
     env_init_attack = packed.env_init_attack;
     env_init_decay = packed.env_init_decay;
     env_init_sustain = packed.env_init_sustain;
@@ -400,7 +413,9 @@ enum PartSetting {
   PART_VOICING_LEGATO_MODE,
   PART_VOICING_PITCH_BEND_RANGE,
   PART_VOICING_VIBRATO_RANGE,
-  PART_VOICING_VIBRATO_INITIAL,
+  PART_VOICING_VIBRATO_MOD,
+  PART_VOICING_TREMOLO_MOD,
+  PART_VOICING_TREMOLO_SHAPE,
   PART_VOICING_MODULATION_RATE,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
@@ -414,10 +429,11 @@ enum PartSetting {
   PART_VOICING_TUNING_FACTOR,
   PART_VOICING_OSCILLATOR_MODE,
   PART_VOICING_OSCILLATOR_SHAPE,
-  PART_VOICING_OSCILLATOR_PW_INITIAL,
-  PART_VOICING_OSCILLATOR_PW_MOD,
-  PART_VOICING_ENVELOPE_AMPLITUDE_INIT,
-  PART_VOICING_ENVELOPE_AMPLITUDE_MOD,
+  PART_VOICING_TIMBRE_INIT,
+  PART_VOICING_TIMBRE_MOD_LFO,
+  PART_VOICING_TIMBRE_MOD_ENVELOPE,
+  PART_VOICING_TIMBRE_MOD_VELOCITY,
+  PART_VOICING_ENV_PEAK_MOD_VELOCITY,
   PART_VOICING_ENV_INIT_ATTACK,
   PART_VOICING_ENV_INIT_DECAY,
   PART_VOICING_ENV_INIT_SUSTAIN,
@@ -717,7 +733,7 @@ class Part {
   inline bool looper_in_use() const {
     return looped() && (
       midi_.play_mode == PLAY_MODE_SEQUENCER ||
-      (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && seq_driven_arp())
+      seq_driven_arp()
     );
   }
 

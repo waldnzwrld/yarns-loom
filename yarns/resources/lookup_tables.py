@@ -29,6 +29,8 @@
 # Lookup table definitions.
 
 import numpy
+from fractions import Fraction
+import itertools
 
 """----------------------------------------------------------------------------
 LFO and portamento increments.
@@ -36,7 +38,7 @@ LFO and portamento increments.
 
 lookup_tables_32 = []
 
-sample_rate = 8000
+sample_rate = 2000
 min_frequency = 1.0 / 8.0  # Hertz
 max_frequency = 16.0  # Hertz
 
@@ -54,8 +56,8 @@ lookup_tables_32.append(
 
 # Create lookup table for portamento.
 num_values = 128
-max_time = 3.0  # seconds
-min_time = 3.0 / sample_rate
+max_time = 5.0  # seconds
+min_time = 1.9 / sample_rate
 gamma = 0.25
 min_increment = excursion / (max_time * sample_rate)
 max_increment = excursion / (min_time * sample_rate)
@@ -98,7 +100,6 @@ env_linear = numpy.arange(0, 257.0) / 256.0
 env_linear[-1] = env_linear[-2]
 env_expo = 1.0 - numpy.exp(-4 * env_linear)
 lookup_tables.append(('env_expo', env_expo / env_expo.max() * 65535.0))
-
 
 
 """----------------------------------------------------------------------------
@@ -465,3 +466,103 @@ scales = [
 
 for scale, values in scales:
   lookup_tables_signed.append(('scale_%s' % scale, values))
+
+
+"""----------------------------------------------------------------------------
+Integer ratios for clock sync and FM
+----------------------------------------------------------------------------"""
+
+lookup_tables_string = []
+
+# irrationals = [
+#   0.5 * 2 ** (16 / 1200.0),
+#   1.0 * 2 ** (16 / 1200.0),
+#   2 * 2 ** (16 / 1200.0),
+#   numpy.pi / 4,
+#   numpy.pi / 2,
+#   numpy.pi,
+#   numpy.pi * 3 / 2,
+#   numpy.sqrt(2) / 2,
+#   numpy.sqrt(2) * 1,
+#   numpy.sqrt(2) * 2,
+#   numpy.sqrt(2) * 3,
+#   numpy.sqrt(2) * 4,
+#   numpy.sqrt(3) * 2,
+# ]
+
+# Build normal form of carrier/modulator ratio, then use it to categorize
+# ratios, and calculate a correction factor for the carrier to keep a consistent
+# fundamental frequency
+# Thanks to Barry Truax: https://www.sfu.ca/~truax/fmtut.html
+def make_fm(ratio):
+  nf_car = car = ratio.numerator
+  nf_mod = mod = ratio.denominator
+  while not (
+    (nf_car == 1 and nf_mod == 1) or
+    nf_mod >= 2.0 * nf_car
+  ):
+    nf_car = abs(nf_car - nf_mod)
+  family = Fraction(nf_car, nf_mod)
+  carrier_correction = car / float(nf_car)
+  # print(ratio, family, nf_car, carrier_correction)
+  return (family, ratio, carrier_correction)
+
+fm_ratio_names = []
+fm_carrier_corrections = []
+fm_modulator_intervals = []
+
+fms = map(make_fm, numpy.unique([Fraction(*x) for x in itertools.product(range(1, 10), range(1, 10))]))
+fms = sorted(fms, key=lambda (family, ratio, carrier_correction): (family.numerator, family.denominator, ratio))
+seen = {}
+for (family, ratio, carrier_correction) in fms:
+  family = str(family)
+  if seen.has_key(family):
+    continue
+  seen[family] = True
+  fm_ratio_names.append(
+    str(ratio.numerator) + str(ratio.denominator) + ' FM ' + str(ratio.numerator) + '/' + str(ratio.denominator)
+  )
+  fm_modulator_intervals.append(128 * 12 * numpy.log2(1.0 / ratio))
+  fm_carrier_corrections.append(128 * 12 * numpy.log2(carrier_correction))
+
+lookup_tables_string.append(('fm_ratio_names', fm_ratio_names))
+# lookup_tables_signed.append(('fm_carrier_corrections', fm_carrier_corrections))
+lookup_tables_signed.append(('fm_modulator_intervals', fm_modulator_intervals))
+
+
+clock_ratio_ticks = []
+clock_ratio_names = []
+for ratio in numpy.unique([Fraction(*x) for x in itertools.product(range(1, 10), range(1, 10))]):
+  ticks = (24.0 / ratio)
+  if ticks % 1 != 0 or ratio < 1.0 / 8:
+    continue
+  clock_ratio_ticks.append(float(ticks))
+  clock_ratio_names.append(
+    str(ratio.numerator) + str(ratio.denominator) + ' ' + str(ratio.numerator) + '/' + str(ratio.denominator)
+  )
+lookup_tables.append(('clock_ratio_ticks', clock_ratio_ticks))
+lookup_tables_string.append(('clock_ratio_names', clock_ratio_names))
+
+"""----------------------------------------------------------------------------
+SVF coefficients
+----------------------------------------------------------------------------"""
+
+cutoff = 440.0 * 2 ** ((numpy.arange(0, 257) - 69) / 12.0)
+f = cutoff / sample_rate
+f[f > 1 / 8.0] = 1 / 8.0
+f = 2 * numpy.sin(numpy.pi * f)
+resonance = numpy.arange(0, 257) / 260.0
+damp = numpy.minimum(2 * (1 - resonance ** 0.25),
+       numpy.minimum(2, 2 / f - f * 0.5))
+
+lookup_tables.append(
+    ('svf_cutoff', f * 32767.0)
+)
+
+lookup_tables.append(
+    ('svf_damp', damp * 32767.0)
+)
+
+lookup_tables.append(
+    ('svf_scale', ((damp / 2) ** 0.5) * 32767.0)
+)

@@ -29,7 +29,7 @@
 
 #include "yarns/settings.h"
 #include "yarns/resources.h"
-#include "yarns/clock_division.h"
+#include "yarns/oscillator.h"
 
 #include "yarns/multi.h"
 #include "yarns/part.h"
@@ -72,7 +72,36 @@ const char* const voicing_oscillator_mode_values[] = {
 };
 
 const char* const voicing_oscillator_shape_values[] = {
-  "\x88\x88", "\x8C\x8C", "\x8C_", "/\\", "SINE", "**"
+  "*\xA2 NOISE NOTCH SVF",
+  "*\xA0 NOISE LOW-PASS SVF",
+  "*^ NOISE BAND-PASS SVF",
+  "*\xA1 NOISE HIGH-PASS SVF",
+  "Z\xB0 LOW-PASS PULSE PHASE DISTORTION",
+  "Z\xB1 PEAKING PULSE PHASE DISTORTION",
+  "Z\xB2 BAND-PASS PULSE PHASE DISTORTION",
+  "Z\xB3 HIGH-PASS PULSE PHASE DISTORTION",
+  "Z\xC0 LOW-PASS SAW PHASE DISTORTION",
+  "Z\xC1 PEAKING SAW PHASE DISTORTION",
+  "Z\xC2 BAND-PASS SAW PHASE DISTORTION",
+  "Z\xC3 HIGH-PASS SAW PHASE DISTORTION",
+  "\x8C\xA0 PULSE LOW-PASS SVF",
+  "\x88\xA0 SAW LOW-PASS SVF",
+  "W\x8C PULSE WIDTH MOD",
+  "W\x88 SAW WIDTH MOD",
+  "S$ SINE SYNC",
+  "\x8C$ PULSE SYNC",
+  "\x88$ SAW SYNC",
+  "SF SINE FOLD",
+  "^F TRIANGLE FOLD",
+  "ST SINE TANH",
+  "\x8E\x8E DIRAC COMB",
+};
+
+const char* const tremolo_shape_values[] = {
+  "/\\",
+  "|\\",
+  "/|",
+  "\x8C_",
 };
 
 const char* const voicing_allocation_priority_values[] = {
@@ -171,7 +200,7 @@ const char* const tuning_factor_values[] = {
   "ALPHA"
 };
 
-const uint8_t kVibratoSpeedMax = LUT_LFO_INCREMENTS_SIZE + clock_division::count - 1;
+const uint8_t kVibratoSpeedMax = LUT_LFO_INCREMENTS_SIZE + LUT_CLOCK_RATIO_NAMES_SIZE - 1;
 STATIC_ASSERT(kVibratoSpeedMax <= 127, overflow);
 
 /* static */
@@ -189,7 +218,7 @@ const Setting Settings::settings_[] = {
     0xff, 0xff,
   },
   {
-    "\x82""\x8F", "ENVELOPE MENU",
+    "\x82""A", "AMPLITUDE MENU",
     SETTING_DOMAIN_MULTI, { 0, 0 },
     SETTING_UNIT_UINT8, 0, 0, NULL,
     0xff, 0xff,
@@ -201,7 +230,7 @@ const Setting Settings::settings_[] = {
     0xff, 1,
   },
   {
-    "TE", "TEMPO",
+    "TM", "TEMPO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_TEMPO, 0 },
     SETTING_UNIT_TEMPO, TEMPO_EXTERNAL, 240, NULL,
     0xff, 2,
@@ -221,7 +250,7 @@ const Setting Settings::settings_[] = {
   {
     "O/", "OUTPUT CLK RATIO",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OUTPUT_DIVISION, 0 },
-    SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
+    SETTING_UNIT_CLOCK_DIV, 0, LUT_CLOCK_RATIO_NAMES_SIZE - 1, NULL,
     0xff, 0,
   },
   {
@@ -340,10 +369,22 @@ const Setting Settings::settings_[] = {
     23, 14,
   },
   {
-    "VI", "VIBRATO AMP INITIAL",
-    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_INITIAL, 0 },
-    SETTING_UNIT_UINT8, 0, 63, NULL,
-    81, 0xff,
+    "VB", "VIBRATO AMOUNT",
+    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_MOD, 0 },
+    SETTING_UNIT_UINT8, 0, 127, NULL,
+    1, 0xff,
+  },
+  {
+    "TR", "TREMOLO DEPTH",
+    SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_MOD, 0 },
+    SETTING_UNIT_UINT8, 0, 127, NULL,
+    93, 0xff,
+  },
+  {
+    "TS", "TREMOLO SHAPE",
+    SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, tremolo_shape_values,
+    94, 0xff,
   },
   {
     "TT", "TRANSPOSE",
@@ -358,13 +399,13 @@ const Setting Settings::settings_[] = {
     25, 16,
   },
   {
-    "TR", "TUNING ROOT",
+    "RN", "TUNING ROOT NOTE",
     SETTING_DOMAIN_PART, { PART_VOICING_TUNING_ROOT, 0 },
     SETTING_UNIT_ENUMERATION, 0, 11, note_values,
     26, 17,
   },
   {
-    "TS", "TUNING SYSTEM",
+    "TU", "TUNING SYSTEM",
     SETTING_DOMAIN_PART, { PART_VOICING_TUNING_SYSTEM, 0 },
     SETTING_UNIT_ENUMERATION, 0, TUNING_SYSTEM_LAST - 1,
     tuning_system_values,
@@ -415,85 +456,91 @@ const Setting Settings::settings_[] = {
   {
     "OS", "OSC SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, OSCILLATOR_SHAPE_LAST - 1, voicing_oscillator_shape_values,
+    SETTING_UNIT_OSCILLATOR_SHAPE, 0, OSC_SHAPE_FM + LUT_FM_RATIO_NAMES_SIZE - 1, NULL,
     71, 23,
   },
   {
-    "PW", "OSC PW INITIAL",
-    SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_INITIAL, 0 },
-    SETTING_UNIT_UINT8, 0, 63, NULL,
+    "TI", "TIMBRE INIT",
+    SETTING_DOMAIN_PART, { PART_VOICING_TIMBRE_INIT, 0 },
+    SETTING_UNIT_UINT8, 0, 127, NULL,
     82, 0xff,
   },
   {
-    "PM", "OSC PW MOD",
-    SETTING_DOMAIN_PART, { PART_VOICING_OSCILLATOR_PW_MOD, 0 },
-    SETTING_UNIT_INT8, -32, 31, NULL,
+    "TL", "TIMBRE LFO MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_TIMBRE_MOD_LFO, 0 },
+    SETTING_UNIT_UINT8, 0, 127, NULL,
     83, 0xff,
   },
   {
-    "GI", "GAIN INITIAL",
-    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_INIT, 0 },
-    SETTING_UNIT_UINT8, 0, 63, NULL,
+    "TE", "TIMBRE ENV MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_TIMBRE_MOD_ENVELOPE, 0 },
+    SETTING_UNIT_INT8, -64, 63, NULL,
     90, 0xff,
   },
   {
-    "GM", "GAIN MOD",
-    SETTING_DOMAIN_PART, { PART_VOICING_ENVELOPE_AMPLITUDE_MOD, 0 },
-    SETTING_UNIT_INT8, -32, 31, NULL,
+    "TV", "TIMBRE VEL MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_TIMBRE_MOD_VELOCITY, 0 },
+    SETTING_UNIT_INT8, -64, 63, NULL,
     91, 0xff,
   },
   {
-    "AI", "ATTACK TIME INIT",
+    "PV", "PEAK VEL MOD",
+    SETTING_DOMAIN_PART, { PART_VOICING_ENV_PEAK_MOD_VELOCITY, 0 },
+    SETTING_UNIT_INT8, -64, 63, NULL,
+    92, 0xff,
+  },
+  {
+    "AI", "ATTACK INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_ATTACK, 0 },
-    SETTING_UNIT_UINT8, 0, 63, NULL,
+    SETTING_UNIT_UINT8, 0, 127, NULL,
     77, 0xff,
   },
   {
-    "DI", "DECAY TIME INIT",
+    "DI", "DECAY INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_DECAY, 0 },
-    SETTING_UNIT_UINT8, 0, 63, NULL,
+    SETTING_UNIT_UINT8, 0, 127, NULL,
     78, 0xff,
   },
   {
-    "SI", "SUSTAIN LEVEL INIT",
+    "SI", "SUSTAIN INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_SUSTAIN, 0 },
-    SETTING_UNIT_UINT8, 0, 63, NULL,
+    SETTING_UNIT_UINT8, 0, 127, NULL,
     79, 0xff,
   },
   {
-    "RI", "RELEASE TIME INIT",
+    "RI", "RELEASE INIT",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_INIT_RELEASE, 0 },
-    SETTING_UNIT_UINT8, 0, 63, NULL,
+    SETTING_UNIT_UINT8, 0, 127, NULL,
     80, 0xff,
   },
   {
-    "AM", "ATTACK TIME MOD",
+    "AM", "ATTACK MOD VEL",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_ATTACK, 0 },
-    SETTING_UNIT_INT8, -32, 31, NULL,
+    SETTING_UNIT_INT8, -64, 63, NULL,
     86, 0xff,
   },
   {
-    "DM", "DECAY TIME MOD",
+    "DM", "DECAY MOD VEL",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_DECAY, 0 },
-    SETTING_UNIT_INT8, -32, 31, NULL,
+    SETTING_UNIT_INT8, -64, 63, NULL,
     87, 0xff,
   },
   {
-    "SM", "SUSTAIN LEVEL MOD",
+    "SM", "SUSTAIN MOD VEL",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_SUSTAIN, 0 },
-    SETTING_UNIT_INT8, -32, 31, NULL,
+    SETTING_UNIT_INT8, -64, 63, NULL,
     88, 0xff,
   },
   {
-    "RM", "RELEASE TIME MOD",
+    "RM", "RELEASE MOD VEL",
     SETTING_DOMAIN_PART, { PART_VOICING_ENV_MOD_RELEASE, 0 },
-    SETTING_UNIT_INT8, -32, 31, NULL,
+    SETTING_UNIT_INT8, -64, 63, NULL,
     89, 0xff,
   },
   {
     "C/", "CLK RATIO OUT-IN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_CLOCK_DIVISION, 0 },
-    SETTING_UNIT_CLOCK_DIV, 0, clock_division::count - 1, NULL,
+    SETTING_UNIT_CLOCK_DIV, 0, LUT_CLOCK_RATIO_NAMES_SIZE - 1, NULL,
     102, 24,
   },
   {
@@ -663,7 +710,7 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       break;
 
     case SETTING_UNIT_CLOCK_DIV:
-      strcpy(buffer, clock_division::list[value].display);
+      strcpy(buffer, lut_clock_ratio_names[value]);
       break;
     
     case SETTING_UNIT_VIBRATO_SPEED:
@@ -699,6 +746,14 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
 
     case SETTING_UNIT_LOOP_LENGTH:
       PrintInteger(buffer, 1 << value);
+      break;
+
+    case SETTING_UNIT_OSCILLATOR_SHAPE:
+      if (value >= OSC_SHAPE_FM) {
+        strcpy(buffer, lut_fm_ratio_names[value - OSC_SHAPE_FM]);
+      } else {
+        strcpy(buffer, voicing_oscillator_shape_values[value]);
+      }
       break;
       
     default:
