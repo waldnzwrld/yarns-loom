@@ -377,7 +377,8 @@ void Oscillator::RenderFM() {
   modulator_phase_increment_ = ComputePhaseIncrement(pitch_ + interval);
   RENDER_LOOP(
     int16_t modulator = Interpolate824(wav_sine, modulator_phase);
-    uint32_t phase_mod = (modulator * timbre_.value()) << 3;
+    uint32_t phase_mod = modulator * timbre_.value();
+    phase_mod = (phase_mod << 3) + (phase_mod << 2); // FM index 0-3
     this_sample = Interpolate824(wav_sine, phase + phase_mod);
   )
 }
