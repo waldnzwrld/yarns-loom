@@ -54,7 +54,7 @@
 - Frequency modulation: `TIMBRE` sets modulation index
   - Sub-shapes: 15 integer ratios, ordered from harmonic to inharmonic
 
-### Amplitude dynamics: ADSR envelopes (with velocity modulation) and tremolo
+### Amplitude dynamics: envelope and tremolo
 - Configured via the `▽A (AMPLITUDE MENU)`
 - Tremolo can be applied to envelope and oscillator
   - Tremolo uses the same LFO frequency as vibrato
