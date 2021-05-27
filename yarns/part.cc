@@ -444,6 +444,11 @@ void Part::Clock() {
   looper_.Clock();
 }
 
+bool Part::new_beat() const {
+  return arp_seq_prescaler_ > 0 &&
+    arp_seq_prescaler_ <= (lut_clock_ratio_ticks[seq_.clock_division] >> 3);
+}
+
 void Part::Start() {
   arp_seq_prescaler_ = 0;
 
