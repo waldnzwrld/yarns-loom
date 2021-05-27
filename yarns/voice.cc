@@ -242,16 +242,20 @@ void CVOutput::Refresh() {
   dac_interpolator_.ComputeSlope();
 }
 
-void Voice::NoteOn(
-    int16_t note,
-    uint8_t velocity,
-    uint8_t portamento,
-    bool trigger) {
+void Voice::SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento) {
   note_source_ = note_portamento_;  
   note_target_ = note;
   if (!portamento) {
     note_source_ = note_target_;
   }
+}
+
+void Voice::NoteOn(
+    int16_t note,
+    uint8_t velocity,
+    uint8_t portamento,
+    bool trigger) {
+  SetPortamento(note, velocity, portamento);
   portamento_phase_ = 0;
   uint32_t num_portamento_increments_per_shape = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
   if (portamento < num_portamento_increments_per_shape) {
