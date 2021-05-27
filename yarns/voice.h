@@ -161,7 +161,7 @@ class Voice {
     timbre_mod_lfo_target_ = UINT16_MAX - lut_env_expo[((127 - n) << 1)];
   }
   inline void set_timbre_mod_envelope(int16_t n) {
-    timbre_mod_envelope_target_ = n;
+    timbre_mod_envelope_ = n;
   }
   
   inline void set_tuning(int8_t coarse, int8_t fine) {
@@ -249,8 +249,7 @@ class Voice {
   uint16_t timbre_mod_lfo_current_;
   uint16_t timbre_init_target_;
   uint16_t timbre_init_current_;
-  int16_t timbre_mod_envelope_target_;
-  int16_t timbre_mod_envelope_current_;
+  int16_t timbre_mod_envelope_;
 
   bool has_audio_listener_;
 

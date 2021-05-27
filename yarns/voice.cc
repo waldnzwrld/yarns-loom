@@ -62,7 +62,6 @@ void Voice::Init() {
 
   tremolo_mod_current_ = 0;
   timbre_mod_lfo_current_ = 0;
-  timbre_mod_envelope_current_ = 0;
   timbre_init_current_ = 0;
   
   synced_lfo_.Init();
@@ -152,8 +151,6 @@ void Voice::Refresh(uint8_t voice_index) {
     timbre_init_current_, timbre_init_target_);
   timbre_mod_lfo_current_ = stmlib::slew(
     timbre_mod_lfo_current_, timbre_mod_lfo_target_);
-  timbre_mod_envelope_current_ = stmlib::slew(
-    timbre_mod_envelope_current_, timbre_mod_envelope_target_);
 
   // Compute base pitch with portamento.
   portamento_phase_ += portamento_phase_increment_;
@@ -193,7 +190,7 @@ void Voice::Refresh(uint8_t voice_index) {
 
   // Use quadrature phase for timbre modulation
   int32_t timbre_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
-  int32_t timbre_envelope_31 = envelope_.value() * timbre_mod_envelope_current_;
+  int32_t timbre_envelope_31 = envelope_.value() * timbre_mod_envelope_;
   int32_t timbre_15 =
     (timbre_init_current_ >> (16 - 15)) +
     (timbre_envelope_31 >> (31 - 15)) +
