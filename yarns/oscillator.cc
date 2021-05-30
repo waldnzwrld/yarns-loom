@@ -103,7 +103,7 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     // if (shape_ >= OSC_SHAPE_FM) {
     //   pitch_ += lut_fm_carrier_corrections[shape_ - OSC_SHAPE_FM];
     // }
-    raw_gain_ = gain;
+    gain_.SetTarget((scale_ * gain) >> 17);
 
     int32_t strength = 32767;
     if (shape_ == OSC_SHAPE_FOLD_SINE || shape_ >= OSC_SHAPE_FM) {
@@ -163,10 +163,6 @@ void Oscillator::Render() {
     pitch_ = 0;
   }
   phase_increment_ = ComputePhaseIncrement(pitch_);
-  // TODO could track dirty on raw_gain_
-  gain_.SetTarget((scale_ * raw_gain_) >> 17);
-  gain_.ComputeSlope();
-  timbre_.ComputeSlope();
   
   uint8_t fn_index = shape_;
   CONSTRAIN(fn_index, 0, OSC_SHAPE_FM);
@@ -175,6 +171,7 @@ void Oscillator::Render() {
 }
 
 #define RENDER_LOOP_WITHOUT_MOD_PHASE_INCREMENT(body) \
+  timbre_.ComputeSlope(); gain_.ComputeSlope(); \
   int32_t next_sample = next_sample_; \
   uint32_t phase = phase_; \
   uint32_t phase_increment = phase_increment_; \
