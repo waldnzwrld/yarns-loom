@@ -256,13 +256,8 @@ void Multi::ClockFast() {
 
 void Multi::Refresh() {
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
-    Part& part = part_[j];
-    part.mutable_looper().Refresh();
-    for (uint8_t v = 0; v < part.num_voices(); ++v) {
-      part.voice(v)->Refresh(v);
-    }
+    part_[j].Refresh();
   }
-
   for (uint8_t i = 0; i < kNumCVOutputs; ++i) {
     cv_outputs_[i].Refresh();
   }
