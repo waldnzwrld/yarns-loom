@@ -152,6 +152,7 @@ class Oscillator {
   OscillatorShape shape_;
   Interpolator timbre_, gain_;
   int16_t pitch_;
+  uint16_t raw_gain_;
 
   uint32_t phase_;
   uint32_t phase_increment_;
