@@ -242,6 +242,9 @@ class Voice {
   uint32_t trigger_phase_increment_;
   uint32_t trigger_phase_;
 
+  uint8_t refresh_counter_;
+  Interpolator pitch_lfo_, timbre_lfo_, amplitude_lfo_, scaled_vibrato_lfo_;
+
   uint16_t tremolo_mod_target_;
   uint16_t tremolo_mod_current_;
 
