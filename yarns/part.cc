@@ -625,7 +625,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
       pattern_length = seq_.euclidean_length;
       pattern_mask = 1 << ((next.step_index + seq_.euclidean_rotate) % seq_.euclidean_length);
       // Read euclidean pattern from ROM.
-      uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) * 32;
+      uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) << 5;
       pattern = lut_euclidean[offset + seq_.euclidean_fill];
       hit = pattern_mask & pattern;
     } else {
