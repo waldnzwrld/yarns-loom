@@ -98,7 +98,7 @@ void CVOutput::Init(bool reset_calibration) {
   }
   dirty_ = false;
 
-  dac_interpolator_.Init(24); // 48000 / 2000
+  dac_interpolator_.Init(20); // 40000 / 2000
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {

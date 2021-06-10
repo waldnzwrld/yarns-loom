@@ -71,7 +71,7 @@ lookup_tables_32.append(
 )
 
 
-sample_rate = 48000
+sample_rate = 40000
 
 # Create table for pitch.
 a4_midi = 69

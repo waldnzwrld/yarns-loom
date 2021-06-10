@@ -145,7 +145,7 @@ void SysTick_Handler() {
 }
 
 void TIM1_UP_IRQHandler(void) {
-  // DAC refresh at 4x 48kHz.
+  // DAC refresh at 4x 40kHz.
   if (TIM_GetITStatus(TIM1, TIM_IT_Update) == RESET) {
     return;
   }
@@ -162,7 +162,7 @@ void TIM1_UP_IRQHandler(void) {
   }
   
   if (dac.channel() == 0) {
-    // Internal clock refresh at 48kHz
+    // Internal clock refresh at 40kHz
     multi.RefreshInternalClock();
   }
 }
