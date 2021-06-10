@@ -47,7 +47,7 @@ const int32_t kOctave = 12 << 7;
 const int32_t kMaxNote = 120 << 7;
 const int32_t kQuadrature = 0x40000000;
 
-const uint8_t kLowFreqRefresh = 16; // 2000 / 16 = 125 Hz (the ~minimum that doesn't cause obvious LFO sampling error)
+const uint8_t kLowFreqRefresh = 32; // 4 kHz / 32 = 125 Hz (the ~minimum that doesn't cause obvious LFO sampling error)
 
 void Voice::Init() {
   note_ = -1;
@@ -98,7 +98,7 @@ void CVOutput::Init(bool reset_calibration) {
   }
   dirty_ = false;
 
-  dac_interpolator_.Init(20); // 40000 / 2000
+  dac_interpolator_.Init(10); // 40 kHz / 4 kHz
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {

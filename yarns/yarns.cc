@@ -98,7 +98,7 @@ void SysTick_Handler() {
     }
   }
 
-  bool refresh = (counter & 3) == 0; // Sample rate = 2 kHz
+  bool refresh = (counter & 1) == 0; // Sample rate = 4 kHz
   if (refresh) {
     // Observe that the gate output is written with a systick * 2 (0.25 ms) delay
     // compared to the CV output. This ensures that the CV output will have been
