@@ -98,7 +98,7 @@ void CVOutput::Init(bool reset_calibration) {
   }
   dirty_ = false;
 
-  dac_interpolator_.Init(24);
+  dac_interpolator_.Init(24); // 48000 / 2000
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
@@ -259,7 +259,7 @@ void CVOutput::Refresh() {
   if (is_audio()) return;
   if (dc_role_ == DC_PITCH) NoteToDacCode();
   dac_interpolator_.SetTarget((this->*dc_fn_table_[dc_role_])() >> 1);
-  dac_interpolator_.ComputeSlope();
+  if (is_envelope()) dac_interpolator_.ComputeSlope();
 }
 
 void Voice::SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento) {
