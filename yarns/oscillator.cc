@@ -276,8 +276,10 @@ void Oscillator::RenderPulse() {
     while (true) { EDGES_PULSE(phase, phase_increment) }
     next_sample += phase < pw ? 0 : 32767;
     this_sample = (this_sample - 16384) << 1;
-    svf_.RenderSample(this_sample);
-    if (shape_ == OSC_SHAPE_LP_PULSE) this_sample = svf_.lp << 1;
+    if (shape_ == OSC_SHAPE_LP_PULSE) {
+      svf_.RenderSample(this_sample);
+      this_sample = svf_.lp << 1;
+    }
   )
 }
 
@@ -294,8 +296,10 @@ void Oscillator::RenderSaw() {
     next_sample += phase >> 18;
     next_sample += (phase - pw) >> 18;
     this_sample = (this_sample - 16384) << 1;
-    svf_.RenderSample(this_sample);
-    if (shape_ == OSC_SHAPE_LP_SAW) this_sample = svf_.lp << 1;
+    if (shape_ == OSC_SHAPE_LP_SAW) {
+      svf_.RenderSample(this_sample);
+      this_sample = svf_.lp << 1;
+    }
   )
 }
 
