@@ -1027,14 +1027,14 @@ void Ui::PrintLatch() {
   stmlib::NoteEntry note_entry;
   bool blink = system_clock.milliseconds() % 160 < 80;
   while (note_index) {
-    display_pos = note_ordinal / kNotesPerDisplayChar;
-    if (display_pos > kDisplayWidth) { break; }
+    if (note_ordinal >= (kNotesPerDisplayChar << 1)) break;
+    display_pos = note_ordinal < kNotesPerDisplayChar ? 0 : 1;
 
     note_entry = keys.stack.note(note_index);
     bool sustained = keys.IsSustained(note_entry);
     bool top;
     if (sustained) {
-      top = keys.release_latched_keys_on_next_note_on ? blink : true;
+      top = (keys.release_latched_keys_on_next_note_on && !keys.ignore_note_off_messages) ? blink : true;
     } else {
       top = keys.IsSustainable(note_index);
     }
