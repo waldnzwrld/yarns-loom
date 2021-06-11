@@ -383,6 +383,7 @@ void Oscillator::RenderFM() {
     int16_t modulator = Interpolate824(wav_sine, modulator_phase);
     uint32_t phase_mod = modulator * timbre_.value();
     phase_mod = (phase_mod << 3) + (phase_mod << 2); // FM index 0-3
+    if (shape_ == OSC_SHAPE_FM) phase_mod <<= 1; // Index 0-6 for 1:1 FM ratio
     this_sample = Interpolate824(wav_sine, phase + phase_mod);
   )
 }
