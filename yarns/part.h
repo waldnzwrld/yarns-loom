@@ -685,6 +685,7 @@ class Part {
   bool Aftertouch(uint8_t channel, uint8_t velocity);
   void AllNotesOff();
   void StopSequencerArpeggiatorNotes();
+  void StopGeneratedNote(uint8_t pitch);
   void Reset();
   void Clock();
   void Start();
@@ -770,7 +771,7 @@ class Part {
           InternalNoteOff(output_pitch_for_looper_note_[looper_note_index]);
         }
         output_pitch_for_looper_note_[looper_note_index] = pitch;
-      } //  else if tie, arp_pitch_for_looper_note_ is already set to the tied pitch
+      } //  else if tie, output_pitch_for_looper_note_ is already set to the tied pitch
     } else if (looper_can_control(pitch)) {
       InternalNoteOn(pitch, velocity);
       output_pitch_for_looper_note_[looper_note_index] = pitch;
@@ -994,8 +995,11 @@ class Part {
   void TouchVoices();
   
   void ReleaseLatchedNotes(PressedKeys &keys);
-  void DispatchSortedNotes(bool legato);
-  void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato);
+  void DispatchSortedNotes(bool note_off);
+  void VoiceNoteOn(
+    uint8_t voice, uint8_t pitch, uint8_t vel,
+    bool legato//, bool reset_gate_counter
+  );
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
@@ -1041,7 +1045,7 @@ class Part {
   // Post-transpose
   uint8_t output_pitch_for_looper_note_[looper::kMaxNotes];
 
-  uint16_t gate_length_counter_;
+  uint16_t gate_length_counter_[kNumMaxVoicesPerPart];
   
   bool has_siblings_;
   
