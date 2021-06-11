@@ -287,14 +287,15 @@ class CVOutput {
     }
   }
 
-  inline bool gate() const {
+  inline bool gate() const { return dc_voice_->gate(); }
+  inline bool trigger() const {
     if (is_audio()) {
       for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-        if (audio_voices_[i]->gate()) { return true; }
+        if (audio_voices_[i]->trigger()) { return true; }
       }
       return false;
     } else {
-      return dc_voice_->gate();
+      return dc_voice_->trigger();
     }
   }
 
