@@ -305,7 +305,7 @@ void Oscillator::RenderSaw() {
 
 #define SET_SYNC_INCREMENT \
   int32_t modulator_pitch = pitch_ + (timbre_.target() >> 3); \
-  CONSTRAIN(modulator_pitch, 0, 16383); \
+  CONSTRAIN(modulator_pitch, 0, kHighestNote - 1); \
   modulator_phase_increment_ = ComputePhaseIncrement(modulator_pitch);
 
 void Oscillator::RenderSyncSine() {
