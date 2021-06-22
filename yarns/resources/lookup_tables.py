@@ -474,27 +474,11 @@ Integer ratios for clock sync and FM
 
 lookup_tables_string = []
 
-# irrationals = [
-#   0.5 * 2 ** (16 / 1200.0),
-#   1.0 * 2 ** (16 / 1200.0),
-#   2 * 2 ** (16 / 1200.0),
-#   numpy.pi / 4,
-#   numpy.pi / 2,
-#   numpy.pi,
-#   numpy.pi * 3 / 2,
-#   numpy.sqrt(2) / 2,
-#   numpy.sqrt(2) * 1,
-#   numpy.sqrt(2) * 2,
-#   numpy.sqrt(2) * 3,
-#   numpy.sqrt(2) * 4,
-#   numpy.sqrt(3) * 2,
-# ]
-
 # Build normal form of carrier/modulator ratio, then use it to categorize
 # ratios, and calculate a correction factor for the carrier to keep a consistent
 # fundamental frequency
 # Thanks to Barry Truax: https://www.sfu.ca/~truax/fmtut.html
-def make_fm(ratio):
+def build_harmonic_fm(ratio):
   nf_car = car = ratio.numerator
   nf_mod = mod = ratio.denominator
   while not (
@@ -511,19 +495,46 @@ fm_ratio_names = []
 fm_carrier_corrections = []
 fm_modulator_intervals = []
 
-fms = map(make_fm, numpy.unique([Fraction(*x) for x in itertools.product(range(1, 10), range(1, 10))]))
+fms = map(build_harmonic_fm, numpy.unique([Fraction(*x) for x in itertools.product(range(1, 10), range(1, 10))]))
 fms = sorted(fms, key=lambda (family, ratio, carrier_correction): (family.numerator, family.denominator, ratio))
 seen = {}
 for (family, ratio, carrier_correction) in fms:
   family = str(family)
   if seen.has_key(family):
+    # Among the ratios that share a given normal form, the set of sidebands is shared, but the energy skews toward higher sidebands as the carrier frequency increases.  This is timbrally interesting, but the effect is broadly similar to increasing the FM index.  Additionally, the carrier correction required by non-normal-form ratios only works when the FM index is greater than zero.  Finally, there are 15 normal-form ratios, plus 40 non-normal-forms ratios.  There's more bang for the buck in using normal forms only.
     continue
   seen[family] = True
   fm_ratio_names.append(
     str(ratio.numerator) + str(ratio.denominator) + ' FM ' + str(ratio.numerator) + '/' + str(ratio.denominator)
   )
   fm_modulator_intervals.append(128 * 12 * numpy.log2(1.0 / ratio))
-  fm_carrier_corrections.append(128 * 12 * numpy.log2(carrier_correction))
+  # fm_carrier_corrections.append(128 * 12 * numpy.log2(carrier_correction))
+
+# for (name, ratio) in ([
+#   # 0.5 * 2 ** (16 / 1200.0), # 1/75 octave? Vibrato-like
+#   # 1.0 * 2 ** (16 / 1200.0),
+#   # 2 * 2 ** (16 / 1200.0),
+#   ('\\xC1""4', numpy.pi / 4),
+#   ('\\xC1""2', numpy.pi / 2),
+#   ('1\\xC1""', numpy.pi),
+#   ('3\\xC1""', numpy.pi * 3 / 2),
+#   ('\\xC0""2', numpy.sqrt(2) / 2),
+#   ('1\\xC0""', numpy.sqrt(2) * 1), # Great bell
+#   ('2\\xC0""', numpy.sqrt(2) * 2),
+#   ('3\\xC0""', numpy.sqrt(2) * 3),
+#   ('4\\xC0""', numpy.sqrt(2) * 4),
+#   ('1\\xC0""', numpy.sqrt(3)),
+#   ('2\\xC0""', numpy.sqrt(3) * 2), # Even better bell
+# ] + [
+#   # Metallic means
+#   ('M' + str(n), (n + numpy.sqrt(n ** 2 + 4)) / 2) for n in range(1, 10)
+# ]):
+#   fm_modulator_intervals.append(128 * 12 * numpy.log2(ratio))
+#   fm_ratio_names.append(name + ' FM')
+
+# for n in [2, 3, 5, 6, 7, 8]:
+#   fm_modulator_intervals.append(128 * 12 * numpy.log2(numpy.sqrt(n)))
+#   fm_ratio_names.append('\\xC0""' + str(n))
 
 lookup_tables_string.append(('fm_ratio_names', fm_ratio_names))
 # lookup_tables_signed.append(('fm_carrier_corrections', fm_carrier_corrections))
