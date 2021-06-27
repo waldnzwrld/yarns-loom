@@ -373,8 +373,8 @@ class Multi {
     }
 
     for (uint8_t p = 0; p < num_active_parts_; ++p) {
-      if (running() && part_[p].looper_in_use()) {
-        part_[p].mutable_looper().AdvanceToPresent();
+      if (running()) {
+        part_[p].mutable_looper().AdvanceToPresent(part_[p].looper_in_use());
       }
       for (uint8_t v = 0; v < part_[p].num_voices(); ++v) {
         part_[p].voice(v)->RenderSamples();
