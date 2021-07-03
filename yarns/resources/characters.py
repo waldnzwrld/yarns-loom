@@ -150,7 +150,7 @@ characters = {
   ';': 'hn',
   '<': 'jl',
   '>': 'gn',
-  '?': 'fajm',
+  '?': 'fabkm',
   '=': 'pkd',
   '@': 'kmcbafed',
   '[': 'afed',
