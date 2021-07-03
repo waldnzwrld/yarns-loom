@@ -278,7 +278,7 @@ class CVOutput {
 
     num_audio_voices_ = num_audio;
     uint16_t offset = volts_dac_code(0);
-    uint16_t scale = volts_dac_code(3) - volts_dac_code(-3); // 6Vpp
+    uint16_t scale = volts_dac_code(6) - offset; // 6Vpp
     scale /= num_audio_voices_;
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
       Voice* audio_voice = audio_voices_[i] = dc_voice_ + i;
