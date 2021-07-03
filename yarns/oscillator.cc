@@ -184,7 +184,7 @@ void Oscillator::Render() {
     phase += phase_increment; \
     timbre_.Tick(); gain_.Tick(); \
     body \
-    audio_buffer_.Overwrite(offset_ - ((gain_.value() * this_sample) >> 15)); \
+    audio_buffer_.Overwrite(offset_ + ((gain_.value() * this_sample) >> 15)); \
   } \
   next_sample_ = next_sample; \
   phase_ = phase; \

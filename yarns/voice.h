@@ -277,9 +277,9 @@ class CVOutput {
     dc_role_ = dc_role;
 
     num_audio_voices_ = num_audio;
-    int32_t offset = volts_dac_code(0);
-    // Combined audio amplitude 4Vpp
-    int32_t scale = (offset - volts_dac_code(4)) / num_audio_voices_;
+    uint16_t offset = volts_dac_code(0);
+    uint16_t scale = volts_dac_code(3) - volts_dac_code(-3); // 6Vpp
+    scale /= num_audio_voices_;
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
       Voice* audio_voice = audio_voices_[i] = dc_voice_ + i;
       audio_voice->oscillator()->Init(scale, offset);
@@ -329,8 +329,8 @@ class CVOutput {
 
   inline uint16_t DacCodeFrom16BitValue(uint16_t value) const {
     uint32_t v = static_cast<uint32_t>(value);
-    uint32_t scale = volts_dac_code(0) - volts_dac_code(7);
-    return static_cast<uint16_t>(volts_dac_code(0) - (scale * v >> 16));
+    int32_t scale = volts_dac_code(7) - volts_dac_code(0);
+    return static_cast<uint16_t>(volts_dac_code(0) + (scale * v >> 16));
   }
 
   inline uint16_t note_dac_code() const {
