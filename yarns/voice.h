@@ -70,6 +70,13 @@ enum ModAux {
   MOD_AUX_VIBRATO_LFO,
   MOD_AUX_FULL_LFO,
   MOD_AUX_ENVELOPE,
+  MOD_AUX_PITCH_1,
+  MOD_AUX_PITCH_2,
+  MOD_AUX_PITCH_3,
+  MOD_AUX_PITCH_4,
+  MOD_AUX_PITCH_5,
+  MOD_AUX_PITCH_6,
+  MOD_AUX_PITCH_7,
 
   MOD_AUX_LAST
 };
@@ -168,11 +175,11 @@ class Voice {
     tuning_ = (static_cast<int32_t>(coarse) << 7) + fine;
   }
   
-  inline bool aux_1_envelope() const {
-    return aux_cv_source_ == MOD_AUX_ENVELOPE;
+  inline ModAux aux_1_source() const {
+    return static_cast<ModAux>(aux_cv_source_);
   }
-  inline bool aux_2_envelope() const {
-    return aux_cv_source_2_ == MOD_AUX_ENVELOPE;
+  inline ModAux aux_2_source() const {
+    return static_cast<ModAux>(aux_cv_source_2_);
   }
   inline void set_has_audio_listener(bool b) {
     has_audio_listener_ = b;
@@ -304,8 +311,8 @@ class CVOutput {
   }
   inline bool is_envelope() const {
     return
-      (dc_role_ == DC_AUX_1 && dc_voice_->aux_1_envelope()) ||
-      (dc_role_ == DC_AUX_2 && dc_voice_->aux_2_envelope());
+      (dc_role_ == DC_AUX_1 && dc_voice_->aux_1_source() == MOD_AUX_ENVELOPE) ||
+      (dc_role_ == DC_AUX_2 && dc_voice_->aux_2_source() == MOD_AUX_ENVELOPE);
   }
 
   inline uint16_t GetAudioSample() {
@@ -341,9 +348,21 @@ class CVOutput {
     return DacCodeFrom16BitValue(dc_voice_->velocity() << 9);
   }
   inline uint16_t aux_cv_dac_code() const {
+    if (dc_voice_->aux_1_source() >= MOD_AUX_PITCH_1) {
+      return NoteToDacCode(
+        dc_voice_->note() +
+        lut_fm_modulator_intervals[dc_voice_->aux_1_source() - MOD_AUX_PITCH_1]
+      );
+    }
     return DacCodeFrom16BitValue(dc_voice_->aux_cv_16bit());
   }
   inline uint16_t aux_cv_dac_code_2() const {
+    if (dc_voice_->aux_2_source() >= MOD_AUX_PITCH_1) {
+      return NoteToDacCode(
+        dc_voice_->note() +
+        lut_fm_modulator_intervals[dc_voice_->aux_2_source() - MOD_AUX_PITCH_1]
+      );
+    }
     return DacCodeFrom16BitValue(dc_voice_->aux_cv_2_16bit());
   }
   inline uint16_t trigger_dac_code() const {
@@ -366,7 +385,7 @@ class CVOutput {
   }
 
  private:
-  void NoteToDacCode();
+  uint16_t NoteToDacCode(int32_t note) const;
 
   Voice* dc_voice_;
   Voice* audio_voices_[kNumMaxVoicesPerPart];
