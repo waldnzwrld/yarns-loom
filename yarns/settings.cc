@@ -38,7 +38,7 @@
 
 namespace yarns {
 
-const char* const layout_values[] = {
+const char* const layout_values[LAYOUT_LAST] = {
   "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "31", "22", "21", "*2"
 };
 
@@ -50,12 +50,12 @@ const char* const boolean_values[] = {
   "OFF", "ON"
 };
 
-const char* const voicing_allocation_mode_values[] = {
+const char* const voicing_allocation_mode_values[VOICE_ALLOCATION_MODE_LAST] = {
   "MONO", "POLY", "CYCLIC", "RANDOM", "VELO", "SORTED", "U1 UNISON",
   "U2 UNISON 2", "STEAL MOST RECENT", "NICE"
 };
 
-const char* const sequencer_arp_direction_values[] = {
+const char* const sequencer_arp_direction_values[ARPEGGIATOR_DIRECTION_LAST] = {
   "LINEAR", "BOUNCE", "RANDOM", "ROTATE", "SUBROTATE"
 };
 
@@ -63,15 +63,15 @@ const char* const voicing_aux_cv_values[] = {
   "VELOCITY", "MODULATION", "AT", "BREATH", "PEDAL", "BEND", "VIBRATO LFO", "LFO", "ENVELOPE"
 };
 
-const char* const legato_mode_values[] = {
+const char* const legato_mode_values[LEGATO_MODE_LAST] = {
   "OFF", "AUTO PORTAMENTO", "ON"
 };
 
-const char* const voicing_oscillator_mode_values[] = {
+const char* const voicing_oscillator_mode_values[OSCILLATOR_MODE_LAST] = {
   "OFF", "DRONE", "ENVELOPED"
 };
 
-const char* const voicing_oscillator_shape_values[] = {
+const char* const voicing_oscillator_shape_values[OSC_SHAPE_FM] = {
   "*\xA2 NOISE NOTCH SVF",
   "*\xA0 NOISE LOW-PASS SVF",
   "*^ NOISE BAND-PASS SVF",
@@ -97,7 +97,7 @@ const char* const voicing_oscillator_shape_values[] = {
   "\x8E\x8E DIRAC COMB",
 };
 
-const char* const tremolo_shape_values[] = {
+const char* const tremolo_shape_values[LFO_SHAPE_LAST] = {
   "/\\",
   "|\\",
   "/|",
@@ -112,11 +112,11 @@ const char* const trigger_shape_values[] = {
   "SQ", "LINEAR", "EXPO", "RING", "STEP", "BURST"
 };
 
-const char* const note_values[] = {
+const char* const note_values[12] = {
   "C ", "Db", "D", "Eb", "E ", "F ", "Gb", "G ", "Ab", "A ", "Bb", "B "
 };
 
-const char* const tuning_system_values[] = {
+const char* const tuning_system_values[TUNING_SYSTEM_LAST] = {
   "EQUAL TEMPERAMENT",
   "JUST INTONATION",
   "PYTHAGOREAN",
@@ -153,7 +153,7 @@ const char* const tuning_system_values[] = {
   "CUSTOM"
 };
 
-const char* const sequencer_play_mode_values[] = {
+const char* const sequencer_play_mode_values[PLAY_MODE_LAST] = {
   "MANUAL",
   "ARPEGGIATOR",
   "SEQUENCER",
@@ -164,11 +164,11 @@ const char* const sequencer_clock_quantization_values[] = {
   "STEP"
 };
 
-const char* const sequencer_input_response_values[] = {
+const char* const sequencer_input_response_values[SEQUENCER_INPUT_RESPONSE_LAST] = {
   "OFF", "TRANSPOSE", "REPLACE", "DIRECT"
 };
 
-const char* const sustain_mode_values[] = {
+const char* const sustain_mode_values[SUSTAIN_MODE_LAST] = {
   "OFF",
   "SUSTAIN",
   "SOSTENUTO",
