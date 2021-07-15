@@ -108,7 +108,7 @@ const char* const voicing_allocation_priority_values[] = {
   "LAST", "LOW", "HIGH", "FIRST"
 };
 
-const char* const trigger_shape_values[] = {
+const char* const trigger_shape_values[TRIGGER_SHAPE_LAST] = {
   "SQ", "LINEAR", "EXPO", "RING", "STEP", "BURST"
 };
 
@@ -426,7 +426,7 @@ const Setting Settings::settings_[] = {
   {
     "T\x88", "TRIG SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_TRIGGER_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 5, trigger_shape_values,
+    SETTING_UNIT_ENUMERATION, 0, TRIGGER_SHAPE_LAST - 1, trigger_shape_values,
     30, 21,
   },
   {
