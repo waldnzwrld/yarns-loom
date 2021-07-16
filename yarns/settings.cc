@@ -363,10 +363,22 @@ const Setting Settings::settings_[] = {
     22, 13,
   },
   {
-    "VS", "VIBRATO SPEED",
+    "LF", "LFO RATE",
     SETTING_DOMAIN_PART, { PART_VOICING_LFO_RATE, 0 },
     SETTING_UNIT_VIBRATO_SPEED, 0, kVibratoSpeedMax, NULL,
     23, 14,
+  },
+  {
+    "LT", "LFO DETUNE TYPES",
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_DETUNE_TYPES, 0 },
+    SETTING_UNIT_INT8, -64, 63, NULL,
+    0, 0, // TODO
+  },
+  {
+    "LV", "LFO DETUNE VOICES",
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_DETUNE_VOICES, 0 },
+    SETTING_UNIT_INT8, -64, 63, NULL,
+    0, 0, // TODO
   },
   {
     "VB", "VIBRATO AMOUNT",

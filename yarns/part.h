@@ -144,7 +144,7 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 struct PackedPart {
-  // Currently has 36 bits to spare
+  // Currently has 7 bits to spare
 
   struct PackedSequencerStep {
     unsigned int
@@ -166,6 +166,8 @@ struct PackedPart {
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
+    lfo_detune_types : kTimbreBits,
+    lfo_detune_voices : kTimbreBits,
     amplitude_mod_velocity : kTimbreBits,
     timbre_mod_envelope : kTimbreBits,
     timbre_mod_velocity : kTimbreBits,
@@ -207,7 +209,7 @@ struct PackedPart {
     aux_cv_2 : 4, // barely
     tuning_factor : 4,
     oscillator_mode : 2,
-    oscillator_shape : 7,
+    oscillator_shape : 7, // 1 bit unused
     tremolo_mod : kTimbreBits,
     tremolo_shape : 3,
     timbre_initial : kTimbreBits,
@@ -288,6 +290,8 @@ struct VoicingSettings {
   uint8_t tremolo_mod;
   uint8_t tremolo_shape;
   uint8_t lfo_rate;
+  int8_t lfo_detune_types;
+  int8_t lfo_detune_voices;
   int8_t tuning_transpose;
   int8_t tuning_fine;
   int8_t tuning_root;
@@ -326,6 +330,8 @@ struct VoicingSettings {
     packed.tremolo_mod = tremolo_mod;
     packed.tremolo_shape = tremolo_shape;
     packed.lfo_rate = lfo_rate;
+    packed.lfo_detune_types = lfo_detune_types;
+    packed.lfo_detune_voices = lfo_detune_voices;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
     packed.tuning_root = tuning_root;
@@ -364,6 +370,8 @@ struct VoicingSettings {
     tremolo_mod = packed.tremolo_mod;
     tremolo_shape = packed.tremolo_shape;
     lfo_rate = packed.lfo_rate;
+    lfo_detune_types = packed.lfo_detune_types;
+    lfo_detune_voices = packed.lfo_detune_voices;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
     tuning_root = packed.tuning_root;
@@ -417,6 +425,8 @@ enum PartSetting {
   PART_VOICING_TREMOLO_MOD,
   PART_VOICING_TREMOLO_SHAPE,
   PART_VOICING_LFO_RATE,
+  PART_VOICING_LFO_DETUNE_TYPES,
+  PART_VOICING_LFO_DETUNE_VOICES,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
   PART_VOICING_TUNING_ROOT,
