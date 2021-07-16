@@ -57,8 +57,8 @@ void Voice::Init() {
   mod_velocity_ = 0x7f;
   ResetAllControllers();
   
-  modulation_increment_ = lut_lfo_increments[50];
-  modulation_sync_ticks_ = 0;
+  lfo_phase_increment_ = lut_lfo_increments[50];
+  lfo_ticks_per_cycle_ = 0;
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
 
@@ -139,15 +139,15 @@ void Voice::ResetAllControllers() {
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
-void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
-  if (modulation_rate < LUT_LFO_INCREMENTS_SIZE) {
-    modulation_increment_ = lut_lfo_increments[modulation_rate];
-    modulation_increment_ *= pow(1.123f, (int) index);
-    modulation_increment_ = lut_lfo_increments[modulation_rate];
-    modulation_sync_ticks_ = 0;
+void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index) {
+  if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
+    lfo_phase_increment_ = lut_lfo_increments[lfo_rate];
+    lfo_phase_increment_ *= pow(1.123f, (int) index);
+    lfo_phase_increment_ = lut_lfo_increments[lfo_rate];
+    lfo_ticks_per_cycle_ = 0;
   } else {
-    modulation_increment_ = 0;
-    modulation_sync_ticks_ = lut_clock_ratio_ticks[modulation_rate - LUT_LFO_INCREMENTS_SIZE];
+    lfo_phase_increment_ = 0;
+    lfo_ticks_per_cycle_ = lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE];
   }
 }
 
@@ -183,8 +183,8 @@ void Voice::Refresh(uint8_t voice_index) {
   
   // Render modulation sources
   envelope_.ReadSample();
-  if (modulation_increment_) {
-    synced_lfo_.Increment(modulation_increment_);
+  if (lfo_phase_increment_) {
+    synced_lfo_.Increment(lfo_phase_increment_);
   } else {
     synced_lfo_.Refresh();
   }
