@@ -143,7 +143,7 @@ void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
   if (modulation_rate < LUT_LFO_INCREMENTS_SIZE) {
     modulation_increment_ = lut_lfo_increments[modulation_rate];
     modulation_increment_ *= pow(1.123f, (int) index);
-    modulation_increment_ = lut_lfo_increments[modulation_rate];
+    modulation_increment_ = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - modulation_rate - 1];
     modulation_sync_ticks_ = 0;
   } else {
     modulation_increment_ = 0;
@@ -277,12 +277,12 @@ void Voice::NoteOn(
     bool trigger) {
   SetPortamento(note, velocity, portamento);
   portamento_phase_ = 0;
-  uint32_t num_portamento_increments_per_shape = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
-  if (portamento < num_portamento_increments_per_shape) {
-    portamento_phase_increment_ = lut_portamento_increments[portamento << 1];
+  uint32_t split_point = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
+  if (portamento < split_point) {
+    portamento_phase_increment_ = lut_portamento_increments[(split_point - portamento) << 1];
     portamento_exponential_shape_ = true;
   } else {
-    uint32_t base_increment = lut_portamento_increments[(portamento - num_portamento_increments_per_shape) << 1];
+    uint32_t base_increment = lut_portamento_increments[(portamento - split_point) << 1];
     uint32_t delta = abs(note_target_ - note_source_) + 1;
     portamento_phase_increment_ = (1536 * (base_increment >> 11) / delta) << 11;
     CONSTRAIN(portamento_phase_increment_, 1, 0x7FFFFFFF);
