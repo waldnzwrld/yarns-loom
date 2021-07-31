@@ -106,10 +106,10 @@ class Voice {
   }
 
   inline void Clock() {
-    if (!modulation_sync_ticks_) { return; }
-    synced_lfo_.Tap(modulation_sync_ticks_);
+    if (!lfo_ticks_per_cycle_) { return; }
+    synced_lfo_.Tap(lfo_ticks_per_cycle_);
   }
-  void set_modulation_rate(uint8_t modulation_rate, uint8_t index);
+  void set_lfo_rate(uint8_t lfo_rate, uint8_t index);
   inline void set_pitch_bend_range(uint8_t pitch_bend_range) {
     pitch_bend_range_ = pitch_bend_range;
   }
@@ -216,8 +216,8 @@ class Voice {
   uint8_t mod_velocity_;
   
   uint8_t pitch_bend_range_;
-  uint32_t modulation_increment_;
-  uint16_t modulation_sync_ticks_;
+  uint32_t lfo_phase_increment_;
+  uint16_t lfo_ticks_per_cycle_;
   uint8_t vibrato_range_;
   uint8_t vibrato_mod_;
   
@@ -245,7 +245,7 @@ class Voice {
   uint32_t trigger_phase_;
 
   uint8_t refresh_counter_;
-  Interpolator pitch_lfo_, timbre_lfo_, amplitude_lfo_, scaled_vibrato_lfo_;
+  Interpolator pitch_lfo_interpolator_, timbre_lfo_interpolator_, amplitude_lfo_interpolator_, scaled_vibrato_lfo_interpolator_;
 
   uint16_t tremolo_mod_target_;
   uint16_t tremolo_mod_current_;

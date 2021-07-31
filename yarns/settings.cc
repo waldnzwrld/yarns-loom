@@ -364,7 +364,7 @@ const Setting Settings::settings_[] = {
   },
   {
     "VS", "VIBRATO SPEED",
-    SETTING_DOMAIN_PART, { PART_VOICING_MODULATION_RATE, 0 },
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_RATE, 0 },
     SETTING_UNIT_VIBRATO_SPEED, 0, kVibratoSpeedMax, NULL,
     23, 14,
   },

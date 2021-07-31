@@ -57,8 +57,8 @@ void Voice::Init() {
   mod_velocity_ = 0x7f;
   ResetAllControllers();
   
-  modulation_increment_ = lut_lfo_increments[50];
-  modulation_sync_ticks_ = 0;
+  lfo_phase_increment_ = lut_lfo_increments[50];
+  lfo_ticks_per_cycle_ = 0;
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
 
@@ -67,10 +67,10 @@ void Voice::Init() {
   timbre_init_current_ = 0;
 
   refresh_counter_ = 0;
-  pitch_lfo_.Init(kLowFreqRefresh);
-  timbre_lfo_.Init(kLowFreqRefresh);
-  amplitude_lfo_.Init(kLowFreqRefresh);
-  scaled_vibrato_lfo_.Init(kLowFreqRefresh);
+  pitch_lfo_interpolator_.Init(kLowFreqRefresh);
+  timbre_lfo_interpolator_.Init(kLowFreqRefresh);
+  amplitude_lfo_interpolator_.Init(kLowFreqRefresh);
+  scaled_vibrato_lfo_interpolator_.Init(kLowFreqRefresh);
   
   synced_lfo_.Init();
   envelope_.Init();
@@ -139,15 +139,15 @@ void Voice::ResetAllControllers() {
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
-void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
-  if (modulation_rate < LUT_LFO_INCREMENTS_SIZE) {
-    modulation_increment_ = lut_lfo_increments[modulation_rate];
-    modulation_increment_ *= pow(1.123f, (int) index);
-    modulation_increment_ = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - modulation_rate - 1];
-    modulation_sync_ticks_ = 0;
+void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index) {
+  if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
+    lfo_phase_increment_ = lut_lfo_increments[lfo_rate];
+    lfo_phase_increment_ *= pow(1.123f, (int) index);
+    lfo_phase_increment_ = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1];
+    lfo_ticks_per_cycle_ = 0;
   } else {
-    modulation_increment_ = 0;
-    modulation_sync_ticks_ = lut_clock_ratio_ticks[modulation_rate - LUT_LFO_INCREMENTS_SIZE];
+    lfo_phase_increment_ = 0;
+    lfo_ticks_per_cycle_ = lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE];
   }
 }
 
@@ -183,8 +183,8 @@ void Voice::Refresh(uint8_t voice_index) {
   
   // Render modulation sources
   envelope_.ReadSample();
-  if (modulation_increment_) {
-    synced_lfo_.Increment(modulation_increment_);
+  if (lfo_phase_increment_) {
+    synced_lfo_.Increment(lfo_phase_increment_);
   } else {
     synced_lfo_.Refresh();
   }
@@ -195,34 +195,34 @@ void Voice::Refresh(uint8_t voice_index) {
   if (refresh_counter_ == 0) {
     uint16_t tremolo_lfo = 32767 - synced_lfo_.shape(tremolo_shape_);
     uint16_t scaled_tremolo_lfo = tremolo_lfo * tremolo_mod_current_ >> 16;
-    amplitude_lfo_.SetTarget((UINT16_MAX - scaled_tremolo_lfo) >> 1);
-    amplitude_lfo_.ComputeSlope();
+    amplitude_lfo_interpolator_.SetTarget((UINT16_MAX - scaled_tremolo_lfo) >> 1);
+    amplitude_lfo_interpolator_.ComputeSlope();
 
-    timbre_lfo_.SetTarget(triangle_lfo * timbre_mod_lfo_current_ >> (31 - 15));
-    timbre_lfo_.ComputeSlope();
+    timbre_lfo_interpolator_.SetTarget(triangle_lfo * timbre_mod_lfo_current_ >> (31 - 15));
+    timbre_lfo_interpolator_.ComputeSlope();
 
-    scaled_vibrato_lfo_.SetTarget(triangle_lfo * vibrato_mod_ >> 8);
-    scaled_vibrato_lfo_.ComputeSlope();
-    pitch_lfo_.SetTarget(scaled_vibrato_lfo_.target() * vibrato_range_ >> 8);
-    pitch_lfo_.ComputeSlope();
+    scaled_vibrato_lfo_interpolator_.SetTarget(triangle_lfo * vibrato_mod_ >> 8);
+    scaled_vibrato_lfo_interpolator_.ComputeSlope();
+    pitch_lfo_interpolator_.SetTarget(scaled_vibrato_lfo_interpolator_.target() * vibrato_range_ >> 8);
+    pitch_lfo_interpolator_.ComputeSlope();
   }
   refresh_counter_ = (refresh_counter_ + 1) % kLowFreqRefresh;
 
-  pitch_lfo_.Tick();
-  timbre_lfo_.Tick();
-  amplitude_lfo_.Tick();
-  scaled_vibrato_lfo_.Tick();
+  pitch_lfo_interpolator_.Tick();
+  timbre_lfo_interpolator_.Tick();
+  amplitude_lfo_interpolator_.Tick();
+  scaled_vibrato_lfo_interpolator_.Tick();
 
-  note += pitch_lfo_.value();
+  note += pitch_lfo_interpolator_.value();
 
   int32_t timbre_envelope_31 = envelope_.value() * timbre_mod_envelope_;
   int32_t timbre_15 =
     (timbre_init_current_ >> (16 - 15)) +
     (timbre_envelope_31 >> (31 - 15)) +
-    timbre_lfo_.value();
+    timbre_lfo_interpolator_.value();
   CONSTRAIN(timbre_15, 0, (1 << 15) - 1);
 
-  uint16_t tremolo_drone = amplitude_lfo_.value() << 1;
+  uint16_t tremolo_drone = amplitude_lfo_interpolator_.value() << 1;
   uint16_t tremolo_envelope = envelope_.value() * tremolo_drone >> 16;
   uint16_t gain = oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
     tremolo_envelope : tremolo_drone;
@@ -232,7 +232,7 @@ void Voice::Refresh(uint8_t voice_index) {
   mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
   mod_aux_[MOD_AUX_MODULATION] = vibrato_mod_ << 9;
   mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[MOD_AUX_VIBRATO_LFO] = (scaled_vibrato_lfo_.value() << 1) + 32768;
+  mod_aux_[MOD_AUX_VIBRATO_LFO] = (scaled_vibrato_lfo_interpolator_.value() << 1) + 32768;
   mod_aux_[MOD_AUX_FULL_LFO] = triangle_lfo + 32768;
   mod_aux_[MOD_AUX_ENVELOPE] = tremolo_envelope;
 
