@@ -49,7 +49,6 @@ class SyncedLFO {
   SyncedLFO() { }
   ~SyncedLFO() { }
   void Init() {
-    counter_ = 0;
     phase_ = 0;
   }
 
@@ -88,8 +87,8 @@ class SyncedLFO {
     } 
   }
 
-  void Tap(uint16_t period_ticks, uint32_t phase_offset = 0) {
-    uint16_t tick_phase = counter_ % period_ticks;
+  void Tap(uint32_t tick_counter, uint16_t period_ticks, uint32_t phase_offset = 0) {
+    uint16_t tick_phase = tick_counter % period_ticks;
     uint32_t target_phase = ((tick_phase << 16) / period_ticks) << 16;
     target_phase += phase_offset;
     uint32_t target_increment = UINT32_MAX / period_ticks;
@@ -110,12 +109,9 @@ class SyncedLFO {
 
     previous_phase_ = phase_;
     previous_target_phase_ = target_phase;
-    counter_++; // At 96 ticks/sec, this overflows after 517 days -- acceptable
   }
 
  private:
-
-  uint32_t counter_;
 
   uint32_t phase_;
   uint32_t phase_increment_;

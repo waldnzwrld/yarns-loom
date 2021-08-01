@@ -58,7 +58,6 @@ void Voice::Init() {
   ResetAllControllers();
   
   lfo_phase_increment_ = lut_lfo_increments[50];
-  lfo_ticks_per_cycle_ = 0;
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
 
@@ -146,7 +145,6 @@ void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index) {
     lfo_phase_increment_ = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1];
     uint32_t increment_detune = (lfo_phase_increment_ >> 16) * (lfo_detune_voices << (16 - 7));
     lfo_phase_increment_ += increment_detune * index;
-    lfo_ticks_per_cycle_ = 0;
   } else {
     /* TODO
     - general concept of slaved LFOs
@@ -167,7 +165,6 @@ void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index) {
           - Part can set base LFO freq on 
     */
     lfo_phase_increment_ = 0;
-    lfo_ticks_per_cycle_ = lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE];
   }
 }
 
