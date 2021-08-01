@@ -132,6 +132,17 @@ void Multi::Clock() {
   
   if (!clock_input_prescaler_) {
     midi_handler.OnClock();
+
+    // Sync LFOs
+    ++tick_counter_;
+    for (uint8_t p = 0; p < num_active_parts_; ++p) {
+      part_[p].mutable_looper().Clock(tick_counter_);
+      uint8_t lfo_rate = part_[p].voicing_settings().lfo_rate;
+      if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) continue;
+      for (uint8_t v = 0; v < part_[p].num_voices(); ++v) {
+        part_[p].voice(v)->lfo()->Tap(tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
+      }
+    }
     
     ++swing_counter_;
     if (swing_counter_ >= 12) {
@@ -203,6 +214,7 @@ void Multi::Start(bool started_by_keyboard) {
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;
   stop_count_down_ = 0;
+  tick_counter_ = -1;
   bar_position_ = -1;
   swing_counter_ = -1;
   previous_output_division_ = 0;

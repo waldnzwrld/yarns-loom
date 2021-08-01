@@ -58,7 +58,6 @@ void Voice::Init() {
   ResetAllControllers();
   
   lfo_phase_increment_ = lut_lfo_increments[50];
-  lfo_ticks_per_cycle_ = 0;
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
 
@@ -144,10 +143,8 @@ void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index) {
     lfo_phase_increment_ = lut_lfo_increments[lfo_rate];
     lfo_phase_increment_ *= pow(1.123f, (int) index);
     lfo_phase_increment_ = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1];
-    lfo_ticks_per_cycle_ = 0;
   } else {
     lfo_phase_increment_ = 0;
-    lfo_ticks_per_cycle_ = lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE];
   }
 }
 

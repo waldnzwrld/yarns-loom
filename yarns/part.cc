@@ -436,12 +436,6 @@ void Part::Clock() {
   if (arp_seq_prescaler_ >= lut_clock_ratio_ticks[seq_.clock_division]) {
     arp_seq_prescaler_ = 0;
   }
-  
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    voice_[i]->Clock();
-  }
-
-  looper_.Clock();
 }
 
 bool Part::new_beat() const {
