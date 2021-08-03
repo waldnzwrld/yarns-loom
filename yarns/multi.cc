@@ -685,6 +685,7 @@ void Multi::AfterDeserialize() {
   
   for (uint8_t i = 0; i < kNumParts; ++i) {
     part_[i].AfterDeserialize();
+    macro_record_last_value_[i] = 127;
   }
 }
 
@@ -795,8 +796,10 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
             : (ccw ? PLAY_MODE_ARPEGGIATOR : PLAY_MODE_SEQUENCER)
         );
         value >= MACRO_RECORD_NORMAL ? StartRecording(i) : StopRecording(i);
-        if (value >= MACRO_RECORD_DELETE) {
-          // TODO only on increasing value
+        if (
+          // Only on increasing value, so that leaving the knob in the delete zone doesn't doom any subsequent recordings
+          value >= MACRO_RECORD_DELETE && value > macro_record_last_value_[i])
+        {
           part_[i].DeleteRecording();
           ui.SetSplashPart(i);
           ui.SplashOn(SPLASH_DELETE_RECORDING);
@@ -804,6 +807,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
           part_[i].mutable_looper().set_overwrite_armed(value >= MACRO_RECORD_OVERWRITE);
           ui.SplashOn(SPLASH_ACTIVE_PART);
         }
+        macro_record_last_value_[i] = value;
       } else {
         thru = part_[i].ControlChange(channel, controller, value) && thru;
         SetFromCC(i, controller, value);

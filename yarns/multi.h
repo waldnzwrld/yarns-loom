@@ -520,6 +520,7 @@ class Multi {
   bool started_by_keyboard_;
   bool recording_;
   uint8_t recording_part_;
+  uint8_t macro_record_last_value_[kNumParts];
   
   InternalClock internal_clock_;
   uint8_t internal_clock_ticks_;
