@@ -342,19 +342,15 @@ void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
 
 const uint16_t kMasksNewLooperBeat[kDisplayWidth] = { 0x8000, 0x8000 };
 void Ui::PrintLooperRecordingStatus() {
-  if (
-    recording_part().looper().overwrite_armed() &&
-    system_clock.milliseconds() % 320 < 40
-  ) {
-    display_.set_brightness(UINT16_MAX);
-    display_.Print("//");
-    return;
-  }
   uint8_t note_index = recording_part().LooperCurrentNoteIndex();
   if (note_index == looper::kNullIndex) {
     if (recording_part().new_beat()) {
       display_.set_brightness(UINT16_MAX);
-      display_.PrintMasks(kMasksNewLooperBeat);
+      if (recording_part().looper().overwrite_armed()) {
+        display_.Print("//");
+      } else {
+        display_.PrintMasks(kMasksNewLooperBeat);
+      }
     } else {
       SetBrightnessFromSequencerPhase(recording_part());
       display_.Print("__");
