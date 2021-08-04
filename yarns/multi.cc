@@ -43,13 +43,12 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
-const uint8_t kCCMacroPlayRecordMode = 116;
-const uint8_t kMacroRange = 128 / (1 + 2 * 4);
+const uint8_t kCCMacroRecord = 116;
 enum MacroRecord {
-  MACRO_RECORD_OFF        = kMacroRange / 2 + kMacroRange * 0,
-  MACRO_RECORD_NORMAL     = kMacroRange / 2 + kMacroRange * 1,
-  MACRO_RECORD_OVERWRITE  = kMacroRange / 2 + kMacroRange * 2,
-  MACRO_RECORD_DELETE     = kMacroRange / 2 + kMacroRange * 3,
+  MACRO_RECORD_OFF        = 0,
+  MACRO_RECORD_NORMAL     = 32,
+  MACRO_RECORD_OVERWRITE  = 64,
+  MACRO_RECORD_DELETE     = 96,
 };
 
 void Multi::Init(bool reset_calibration) {
@@ -783,18 +782,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         part_[i].DeleteRecording();
         ui.SetSplashPart(i);
         ui.SplashOn(SPLASH_DELETE_RECORDING);
-      } else if (controller == kCCMacroPlayRecordMode) {
-        bool ccw = false;
-        if (value < 0) {
-          ccw = true;
-          value = (-value) - 1;
-        }
-        multi.ApplySetting(
-          setting_defs.get(SETTING_SEQUENCER_PLAY_MODE), i,
-          value < MACRO_RECORD_OFF
-            ? PLAY_MODE_MANUAL
-            : (ccw ? PLAY_MODE_ARPEGGIATOR : PLAY_MODE_SEQUENCER)
-        );
+      } else if (controller == kCCMacroRecord) {
         value >= MACRO_RECORD_NORMAL ? StartRecording(i) : StopRecording(i);
         if (
           // Only on increasing value, so that leaving the knob in the delete zone doesn't doom any subsequent recordings
