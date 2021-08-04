@@ -291,11 +291,6 @@ void Ui::PrintCalibrationNote() {
 
 void Ui::PrintActivePartAndPlayMode() {
   uint8_t play_mode = active_part().midi_settings().play_mode;
-  if (multi.running()) {
-    SetBrightnessFromSequencerPhase(active_part());
-  } else {
-    display_.set_brightness(UINT16_MAX);
-  }
   strcpy(buffer_, "1x");
   buffer_[0] += active_part_;
   buffer_[1] = setting_defs.get(SETTING_SEQUENCER_PLAY_MODE).values[play_mode][0];
@@ -907,9 +902,6 @@ void Ui::DoEvents() {
   }
 
   if (splash_) {
-    if (splash_ == SPLASH_ACTIVE_PART && multi.running()) {
-      SetBrightnessFromSequencerPhase(active_part());
-    }
     if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
       return; // Splash isn't over yet
     }
@@ -984,6 +976,11 @@ void Ui::DoEvents() {
     if (print_part) {
       display_.set_fade(0);
       PrintActivePartAndPlayMode();
+      if (multi.running()) {
+        SetBrightnessFromSequencerPhase(active_part());
+      } else {
+        display_.set_brightness(UINT16_MAX);
+      }
     } else if (print_latch) {
       PrintLatch();
     }
