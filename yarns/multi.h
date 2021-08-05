@@ -205,7 +205,7 @@ class Multi {
   inline bool part_accepts_note_on(
     uint8_t part, uint8_t channel, uint8_t note, uint8_t velocity
   ) const {
-    if (
+    if ( // Stop NoteOn, but NoteOff must go through for the latch to 'mature'
       midi(part).sustain_mode == SUSTAIN_MODE_FILTER &&
       part_[part].PressedKeysForLatchUI().ignore_note_off_messages
     ) {
