@@ -405,12 +405,7 @@ void Part::Clock() {
   }
 
   if (play) {
-    if (num_voices_ > 1) {
-      while (generated_notes_.size() > num_voices_) {
-        const NoteEntry note = generated_notes_.played_note(0);
-        generated_notes_.NoteOff(note.note);
-      }
-    } else if (gate_length_counter_) {
+    if (gate_length_counter_) {
       --gate_length_counter_;
     } else if (generated_notes_.most_recent_note_index()) {
       // Peek at next step to see if it's a continuation
