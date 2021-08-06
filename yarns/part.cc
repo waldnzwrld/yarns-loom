@@ -376,11 +376,7 @@ void Part::Clock() {
   SequencerStep step;
 
   bool clock = !arp_seq_prescaler_;
-  bool play = midi_.play_mode != PLAY_MODE_MANUAL && (
-    !looped() || (
-      midi_.play_mode == PLAY_MODE_ARPEGGIATOR && !seq_driven_arp()
-    )
-  );
+  bool play = midi_.play_mode != PLAY_MODE_MANUAL && !looper_in_use();
 
   if (clock && play) {
     step = BuildSeqStep();
@@ -603,7 +599,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   uint32_t pattern;
   uint8_t pattern_length;
   bool hit = false;
-  if (seq_driven_arp()) {
+  if (seq_.arp_pattern == 0) {
     pattern_length = seq_.num_steps;
     if (seq_step.has_note()) {
       hit = true;
