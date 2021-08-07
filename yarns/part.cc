@@ -372,12 +372,13 @@ void Part::Reset() {
   }
 }
 
-void Part::Clock(uint32_t tick_counter) {
+void Part::Clock() {
   SequencerStep step;
 
-  bool clock = tick_counter % lut_clock_ratio_ticks[seq_.clock_division] == 0;
+  uint16_t ticks_per_step = lut_clock_ratio_ticks[seq_.clock_division];
+  bool clock = multi.tick_counter() % ticks_per_step == 0;
   if (clock) {
-    uint32_t step_counter = tick_counter / lut_clock_ratio_ticks[seq_.clock_division];
+    uint32_t step_counter = multi.tick_counter() / ticks_per_step;
     seq_step_ = step_counter % seq_.num_steps;
   }
   bool play = midi_.play_mode != PLAY_MODE_MANUAL && !looper_in_use();
@@ -413,7 +414,7 @@ void Part::Clock(uint32_t tick_counter) {
       if (step.is_continuation()) {
         // The next step contains a "sustain" message; or a slid note. Extends
         // the duration of the current note.
-        gate_length_counter_ += lut_clock_ratio_ticks[seq_.clock_division];
+        gate_length_counter_ += ticks_per_step;
       } else {
         StopSequencerArpeggiatorNotes();
       }
