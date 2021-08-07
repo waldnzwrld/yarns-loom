@@ -376,6 +376,10 @@ void Part::Clock(uint32_t tick_counter) {
   SequencerStep step;
 
   bool clock = tick_counter % lut_clock_ratio_ticks[seq_.clock_division] == 0;
+  if (clock) {
+    uint32_t step_counter = tick_counter / lut_clock_ratio_ticks[seq_.clock_division];
+    seq_step_ = step_counter % seq_.num_steps;
+  }
   bool play = midi_.play_mode != PLAY_MODE_MANUAL && !looper_in_use();
 
   if (clock && play) {
@@ -394,13 +398,6 @@ void Part::Clock(uint32_t tick_counter) {
       }
       generated_notes_.NoteOn(step.note(), step.velocity());
       gate_length_counter_ = seq_.gate_length;
-    }
-  }
-
-  if (clock) {
-    ++seq_step_;
-    if (seq_step_ >= seq_.num_steps) {
-      seq_step_ = 0;
     }
   }
 
@@ -425,8 +422,6 @@ void Part::Clock(uint32_t tick_counter) {
 }
 
 void Part::Start() {
-  seq_step_ = 0;
-  
   arp_.ResetKey();
   arp_.step_index = 0;
   
@@ -504,7 +499,6 @@ void Part::DeleteSequence() {
     SequencerStep(SEQUENCER_STEP_REST, 0)
   );
   seq_rec_step_ = 0;
-  seq_step_ = 0;
   seq_.num_steps = 0;
   seq_overdubbing_ = false;
 }
