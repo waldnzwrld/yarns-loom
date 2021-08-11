@@ -376,7 +376,7 @@ void Part::Clock() {
   SequencerStep step;
 
   uint16_t ticks_per_step = lut_clock_ratio_ticks[seq_.clock_division];
-  bool clock = multi.tick_counter() % ticks_per_step == 0;
+  bool clock = multi.running() && multi.tick_counter() % ticks_per_step == 0;
   if (clock) {
     uint32_t step_counter = multi.tick_counter() / ticks_per_step;
     seq_step_ = step_counter % seq_.num_steps;
