@@ -60,6 +60,8 @@ class SyncedLFO {
     return phase_increment_;
   }
 
+  void set_phase_increment(uint32_t pi) { phase_increment_ = pi; }
+
   uint32_t Increment(uint32_t increment) {
     phase_ += increment;
     return GetPhase();
@@ -90,11 +92,21 @@ class SyncedLFO {
   void Tap(uint32_t tick_counter, uint16_t period_ticks, uint32_t phase_offset = 0) {
     uint16_t tick_phase = tick_counter % period_ticks;
     uint32_t target_phase = ((tick_phase << 16) / period_ticks) << 16;
-    target_phase += phase_offset;
     uint32_t target_increment = UINT32_MAX / period_ticks;
+    set_target(target_increment, target_phase + phase_offset);
+    correct_error();
+  }
 
-    int32_t d_error = target_increment - (phase_ - previous_phase_);
-    int32_t p_error = target_phase - phase_;
+  // void set_target(uint32_t increment) { set_target(increment, phase_); }
+  void set_target(uint32_t increment, uint32_t phase) {
+    target_increment_ = increment;
+    target_phase_ = phase;
+  }
+
+  void correct_error() {
+    // TODO delta of unsigneds can overflow signed
+    int32_t d_error = target_increment_ - (phase_ - previous_phase_);
+    int32_t p_error = target_phase_ - phase_;
     int32_t error = (d_error + (p_error >> 4)) >> 12;
 
     if (error < 0 && abs(error) > phase_increment_) {
@@ -108,14 +120,13 @@ class SyncedLFO {
     }
 
     previous_phase_ = phase_;
-    previous_target_phase_ = target_phase;
   }
 
  private:
 
   uint32_t phase_;
   uint32_t phase_increment_;
-  uint32_t previous_target_phase_;
+  uint32_t target_increment_, target_phase_;
   uint32_t previous_phase_;
 
   DISALLOW_COPY_AND_ASSIGN(SyncedLFO);

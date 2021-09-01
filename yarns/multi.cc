@@ -275,7 +275,7 @@ void Multi::Refresh() {
     Part& part = part_[j];
     part.mutable_looper().Refresh();
     for (uint8_t v = 0; v < part.num_voices(); ++v) {
-      part.voice(v)->Refresh(v);
+      part.voice(v)->Refresh(part.voicing_settings().lfo_rate);
     }
   }
 

@@ -372,7 +372,7 @@ void Part::Reset() {
   }
 }
 
-void Part::Clock() {
+void Part::Clock() { // From Multi::ClockFast
   if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
 
   SequencerStep step;

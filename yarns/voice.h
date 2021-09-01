@@ -93,7 +93,7 @@ class Voice {
   void Init();
   void ResetAllControllers();
 
-  void Refresh(uint8_t voice_index);
+  void Refresh(uint8_t lfo_rate);
   void SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento);
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
@@ -212,7 +212,6 @@ class Voice {
   uint8_t mod_velocity_;
   
   uint8_t pitch_bend_range_;
-  uint32_t lfo_phase_increment_;
   uint8_t vibrato_range_;
   uint8_t vibrato_mod_;
   
