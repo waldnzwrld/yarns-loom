@@ -205,7 +205,7 @@ class Multi {
   inline bool part_accepts_note_on(
     uint8_t part, uint8_t channel, uint8_t note, uint8_t velocity
   ) const {
-    if (
+    if ( // Stop NoteOn, but NoteOff must go through for the latch to 'mature'
       midi(part).sustain_mode == SUSTAIN_MODE_FILTER &&
       part_[part].PressedKeysForLatchUI().ignore_note_off_messages
     ) {
@@ -264,6 +264,9 @@ class Multi {
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
   void SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value);
   uint8_t GetSetting(const Setting& setting, uint8_t part) const;
+  void ApplySetting(SettingIndex setting, uint8_t part, int16_t raw_value) {
+    ApplySetting(setting_defs.get(setting), part, raw_value);
+  };
   void ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
   void ApplySettingAndSplash(const Setting& setting, uint8_t part, int16_t raw_value);
 
@@ -391,6 +394,7 @@ class Multi {
   
   inline Layout layout() const { return static_cast<Layout>(settings_.layout); }
   inline bool internal_clock() const { return settings_.clock_tempo > TEMPO_EXTERNAL; }
+  inline uint32_t tick_counter() { return tick_counter_; }
   inline uint8_t tempo() const { return settings_.clock_tempo; }
   inline bool running() const { return running_; }
   inline bool recording() const { return recording_; }
@@ -520,6 +524,7 @@ class Multi {
   bool started_by_keyboard_;
   bool recording_;
   uint8_t recording_part_;
+  uint8_t macro_record_last_value_[kNumParts];
   
   InternalClock internal_clock_;
   uint8_t internal_clock_ticks_;

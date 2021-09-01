@@ -373,16 +373,14 @@ void Part::Reset() {
 }
 
 void Part::Clock() {
+  if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
+
   SequencerStep step;
+  uint16_t ticks_per_step = lut_clock_ratio_ticks[seq_.clock_division];
 
-  bool clock = !arp_seq_prescaler_;
-  bool play = midi_.play_mode != PLAY_MODE_MANUAL && (
-    !looped() || (
-      midi_.play_mode == PLAY_MODE_ARPEGGIATOR && !seq_driven_arp()
-    )
-  );
-
-  if (clock && play) {
+  if (multi.tick_counter() % ticks_per_step == 0) { // New step
+    uint32_t step_counter = multi.tick_counter() / ticks_per_step;
+    seq_step_ = step_counter % seq_.num_steps;
     step = BuildSeqStep();
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       arp_ = BuildArpState(step);
@@ -401,53 +399,25 @@ void Part::Clock() {
     }
   }
 
-  if (clock) {
-    ++seq_step_;
-    if (seq_step_ >= seq_.num_steps) {
-      seq_step_ = 0;
+  if (gate_length_counter_) {
+    --gate_length_counter_;
+  } else if (generated_notes_.most_recent_note_index()) {
+    // Peek at next step to see if it's a continuation
+    step = BuildSeqStep();
+    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      step = BuildArpState(step).step;
+    }
+    if (step.is_continuation()) {
+      // The next step contains a "sustain" message; or a slid note. Extends
+      // the duration of the current note.
+      gate_length_counter_ += ticks_per_step;
+    } else {
+      StopSequencerArpeggiatorNotes();
     }
   }
-
-  if (play) {
-    if (num_voices_ > 1) {
-      while (generated_notes_.size() > num_voices_) {
-        const NoteEntry note = generated_notes_.played_note(0);
-        generated_notes_.NoteOff(note.note);
-      }
-    } else if (gate_length_counter_) {
-      --gate_length_counter_;
-    } else if (generated_notes_.most_recent_note_index()) {
-      // Peek at next step to see if it's a continuation
-      step = BuildSeqStep();
-      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-        step = BuildArpState(step).step;
-      }
-      if (step.is_continuation()) {
-        // The next step contains a "sustain" message; or a slid note. Extends
-        // the duration of the current note.
-        gate_length_counter_ += lut_clock_ratio_ticks[seq_.clock_division];
-      } else {
-        StopSequencerArpeggiatorNotes();
-      }
-    }
-  }
-  
-  ++arp_seq_prescaler_;
-  if (arp_seq_prescaler_ >= lut_clock_ratio_ticks[seq_.clock_division]) {
-    arp_seq_prescaler_ = 0;
-  }
-}
-
-bool Part::new_beat() const {
-  return arp_seq_prescaler_ > 0 &&
-    arp_seq_prescaler_ <= (lut_clock_ratio_ticks[seq_.clock_division] >> 3);
 }
 
 void Part::Start() {
-  arp_seq_prescaler_ = 0;
-
-  seq_step_ = 0;
-  
   arp_.ResetKey();
   arp_.step_index = 0;
   
@@ -525,7 +495,6 @@ void Part::DeleteSequence() {
     SequencerStep(SEQUENCER_STEP_REST, 0)
   );
   seq_rec_step_ = 0;
-  seq_step_ = 0;
   seq_.num_steps = 0;
   seq_overdubbing_ = false;
 }
@@ -543,7 +512,7 @@ void Part::StopSequencerArpeggiatorNotes() {
         pitch = output_pitch_for_looper_note_[looper_note_index];
       }
       if (!looper_can_control(pitch)) { continue; }
-    }
+    } else if (manual_keys_.stack.Find(pitch)) continue;
     InternalNoteOff(pitch);
   }
 }
@@ -603,7 +572,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   uint32_t pattern;
   uint8_t pattern_length;
   bool hit = false;
-  if (seq_driven_arp()) {
+  if (seq_.arp_pattern == 0) {
     pattern_length = seq_.num_steps;
     if (seq_step.has_note()) {
       hit = true;

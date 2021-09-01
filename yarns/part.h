@@ -744,12 +744,8 @@ class Part {
   inline bool looper_in_use() const {
     return looped() && (
       midi_.play_mode == PLAY_MODE_SEQUENCER ||
-      (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && seq_driven_arp())
+      midi_.play_mode == PLAY_MODE_ARPEGGIATOR
     );
-  }
-
-  inline bool seq_driven_arp() const {
-    return seq_.arp_pattern == 0;
   }
 
   inline bool uses_poly_allocator() const {
@@ -1030,8 +1026,6 @@ class Part {
   stmlib::VoiceAllocator<kNumMaxVoicesPerPart * 2> poly_allocator_;
   uint8_t active_note_[kNumMaxVoicesPerPart];
   uint8_t cyclic_allocation_note_counter_;
-  
-  uint16_t arp_seq_prescaler_;
   
   ArpeggiatorState arp_;
   

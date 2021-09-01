@@ -107,11 +107,9 @@ class Deck {
     }
   }
 
-  inline bool overwrite_enabled() const { return overwrite_; }
-  inline void ToggleOverwrite() {
-    if (overwrite_) { overwrite_ = false; }
-    else if (size_) { overwrite_ = true; }
-  }
+  inline bool overwrite_armed() const { return overwrite_; }
+  inline void toggle_overwrite_armed() { set_overwrite_armed(!overwrite_); }
+  inline void set_overwrite_armed(bool b) { overwrite_ = b && size_; }
 
   void RemoveOldestNote();
   void RemoveNewestNote();
