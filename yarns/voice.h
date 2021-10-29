@@ -85,6 +85,8 @@ enum DCRole {
   DC_LAST
 };
 
+class CVOutput;
+
 class Voice {
  public:
   Voice() { }
@@ -167,16 +169,16 @@ class Voice {
   }
   
   inline bool aux_1_envelope() const {
-    return aux_cv_source_ == MOD_AUX_ENVELOPE;
+    return aux_cv_source_ == MOD_AUX_ENVELOPE && dc_output(DC_AUX_1);
   }
   inline bool aux_2_envelope() const {
-    return aux_cv_source_2_ == MOD_AUX_ENVELOPE;
+    return aux_cv_source_2_ == MOD_AUX_ENVELOPE && dc_output(DC_AUX_2);
   }
-  inline void set_has_audio_listener(bool b) {
-    has_audio_listener_ = b;
-  }
+  inline void set_dc_output(DCRole r, CVOutput* cvo) { dc_outputs_[r] = cvo; }
+  inline CVOutput* dc_output(DCRole r) const { return dc_outputs_[r]; }
+  inline void set_audio_output(CVOutput* cvo) { audio_output_ = cvo; }
   inline bool uses_audio() const {
-    return has_audio_listener_ && oscillator_mode_ != OSCILLATOR_MODE_OFF;
+    return audio_output_ && oscillator_mode_ != OSCILLATOR_MODE_OFF;
   }
 
   inline Oscillator* oscillator() {
@@ -251,7 +253,8 @@ class Voice {
   uint16_t timbre_init_current_;
   int16_t timbre_mod_envelope_;
 
-  bool has_audio_listener_;
+  CVOutput* audio_output_;
+  CVOutput* dc_outputs_[DC_LAST];
 
   DISALLOW_COPY_AND_ASSIGN(Voice);
 };
@@ -272,6 +275,7 @@ class CVOutput {
   inline void assign(Voice* dc, DCRole dc_role, uint8_t num_audio) {
     dc_voice_ = dc;
     dc_role_ = dc_role;
+    dc_voice_->set_dc_output(dc_role, this);
 
     num_audio_voices_ = num_audio;
     uint16_t offset = volts_dac_code(0);
@@ -280,7 +284,7 @@ class CVOutput {
     for (uint8_t i = 0; i < num_audio_voices_; ++i) {
       Voice* audio_voice = audio_voices_[i] = dc_voice_ + i;
       audio_voice->oscillator()->Init(scale, offset);
-      audio_voice->set_has_audio_listener(true);
+      audio_voice->set_audio_output(this);
     }
   }
 

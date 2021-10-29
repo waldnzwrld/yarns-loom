@@ -50,6 +50,7 @@ const int32_t kQuadrature = 0x40000000;
 const uint8_t kLowFreqRefresh = 32; // 4 kHz / 32 = 125 Hz (the ~minimum that doesn't cause obvious LFO sampling error)
 
 void Voice::Init() {
+  audio_output_ = NULL;
   note_ = -1;
   note_source_ = note_target_ = note_portamento_ = 60 << 7;
   gate_ = false;
