@@ -1028,6 +1028,7 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_MIDI_INPUT_RESPONSE:
     case PART_MIDI_PLAY_MODE:
     case PART_MIDI_TRANSPOSE_OCTAVES:
+    case PART_VOICING_OSCILLATOR_MODE:
       // Shut all channels off when a MIDI parameter is changed to prevent
       // stuck notes.
       AllNotesOff();
@@ -1048,7 +1049,6 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_TRIGGER_SCALE:
     case PART_VOICING_AUX_CV:
     case PART_VOICING_AUX_CV_2:
-    case PART_VOICING_OSCILLATOR_MODE:
     case PART_VOICING_OSCILLATOR_SHAPE:
     case PART_VOICING_TIMBRE_INIT:
     case PART_VOICING_TIMBRE_MOD_LFO:
