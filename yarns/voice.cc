@@ -99,6 +99,7 @@ void CVOutput::Init(bool reset_calibration) {
   dirty_ = false;
 
   dac_interpolator_.Init(10); // 40 kHz / 4 kHz
+  dc_role_ = DC_PITCH;
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
