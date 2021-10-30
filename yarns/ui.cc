@@ -822,7 +822,7 @@ void Ui::DoLearnCommand() {
   multi.StartLearning();
 }
 
-const uint32_t kTapDeltaMax = 1500;
+const uint32_t kTapDeltaMax = 1500; // 40 BPM
 
 void Ui::TapTempo() {
   uint32_t tap_time = system_clock.milliseconds();
