@@ -50,6 +50,7 @@ const int32_t kQuadrature = 0x40000000;
 const uint8_t kLowFreqRefresh = 32; // 4 kHz / 32 = 125 Hz (the ~minimum that doesn't cause obvious LFO sampling error)
 
 void Voice::Init() {
+  audio_output_ = NULL;
   note_ = -1;
   note_source_ = note_target_ = note_portamento_ = 60 << 7;
   gate_ = false;
@@ -57,7 +58,7 @@ void Voice::Init() {
   mod_velocity_ = 0x7f;
   ResetAllControllers();
   
-  synced_lfo_.set_phase_increment(lut_lfo_increments[50]);
+  synced_lfo_.SetPhaseIncrement(lut_lfo_increments[50]);
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
 
@@ -98,6 +99,7 @@ void CVOutput::Init(bool reset_calibration) {
   dirty_ = false;
 
   dac_interpolator_.Init(10); // 40 kHz / 4 kHz
+  dc_role_ = DC_PITCH;
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
@@ -107,12 +109,7 @@ void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
       &calibrated_dac_code_[0]);
 }
 
-void CVOutput::NoteToDacCode() {
-  int32_t note = dc_voice_->note();
-  if (note_ == note && !dirty_) return;
-  dirty_ = false;
-  note_ = note;
-
+uint16_t CVOutput::NoteToDacCode(int32_t note) const {
   if (note <= 0) {
     note = 0;
   }
@@ -129,7 +126,7 @@ void CVOutput::NoteToDacCode() {
   // Octave indicates the octave. Look up in the DAC code table.
   int32_t a = calibrated_dac_code_[octave];
   int32_t b = calibrated_dac_code_[octave + 1];
-  note_dac_code_ = a + ((b - a) * note / kOctave);
+  return a + ((b - a) * note / kOctave);
 }
 
 void Voice::ResetAllControllers() {
@@ -172,7 +169,7 @@ void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index, uint8_t detune_voices)
     uint32_t garbage = lut_lfo_increments[lfo_rate];
     garbage *= pow(1.123f, (int) index);
 
-    synced_lfo_.set_phase_increment(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1]);
+    synced_lfo_.SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1]);
     // TODO voice index?
     synced_lfo_.detune_phase_increment(lfo_detune_voices << (16 - 7));
   }
@@ -283,7 +280,14 @@ void Voice::Refresh(uint8_t lfo_rate) {
 
 void CVOutput::Refresh() {
   if (is_audio()) return;
-  if (dc_role_ == DC_PITCH) NoteToDacCode();
+  if (dc_role_ == DC_PITCH) {
+    int32_t note = dc_voice_->note();
+    if (dirty_ || note_ != note) {
+      note_dac_code_ = NoteToDacCode(note);
+    }
+    dirty_ = false;
+    note_ = note;
+  }
   dac_interpolator_.SetTarget((this->*dc_fn_table_[dc_role_])() >> 1);
   if (is_envelope()) dac_interpolator_.ComputeSlope();
 }

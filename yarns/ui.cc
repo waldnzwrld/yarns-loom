@@ -95,7 +95,7 @@ Ui::Mode Ui::modes_[] = {
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectVoice,
     &Ui::PrintCalibrationVoiceNumber,
     UI_MODE_CALIBRATION_SELECT_VOICE,
-    NULL, 0, kNumSystemVoices },
+    NULL, 0, kNumCVOutputs },
   
   // UI_MODE_CALIBRATION_SELECT_NOTE
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectNote,
@@ -199,7 +199,7 @@ void Ui::Poll() {
   display_.RefreshSlow();
   
   // Read LED brightness from multi and copy to LEDs driver.
-  uint8_t leds_brightness[kNumSystemVoices];
+  uint8_t leds_brightness[kNumCVOutputs];
   multi.GetLedsBrightness(leds_brightness);
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     ++factory_testing_leds_counter_;
@@ -274,7 +274,7 @@ void Ui::PrintProgramNumber() {
 }
 
 void Ui::PrintCalibrationVoiceNumber() {
-  if (calibration_voice_ < kNumSystemVoices) {
+  if (calibration_voice_ < kNumCVOutputs) {
     strcpy(buffer_, "*1");
     buffer_[1] += calibration_voice_;
     display_.Print(buffer_);
@@ -569,7 +569,7 @@ void Ui::OnClickLoadSave(const Event& e) {
 }
 
 void Ui::OnClickCalibrationSelectVoice(const Event& e) {
-  if (calibration_voice_ == kNumSystemVoices) {
+  if (calibration_voice_ == kNumCVOutputs) {
     mode_ = UI_MODE_PARAMETER_SELECT;
     calibration_voice_ = 0;
     storage_manager.SaveCalibration();
@@ -822,7 +822,7 @@ void Ui::DoLearnCommand() {
   multi.StartLearning();
 }
 
-const uint32_t kTapDeltaMax = 1500;
+const uint32_t kTapDeltaMax = 1500; // 40 BPM
 
 void Ui::TapTempo() {
   uint32_t tap_time = system_clock.milliseconds();
@@ -986,7 +986,7 @@ void Ui::DoEvents() {
     if (print_part) {
       display_.set_fade(0);
       PrintPartAndPlayMode(active_part_);
-      if (multi.running()) {
+      if (multi.running() && active_part().sequencer_in_use()) {
         SetBrightnessFromSequencerPhase(active_part());
       } else {
         display_.set_brightness(UINT16_MAX);
