@@ -80,7 +80,7 @@ void Part::Init() {
   voicing_.pitch_bend_range = 2;
   voicing_.vibrato_range = 1;
   voicing_.vibrato_mod = 0;
-  voicing_.modulation_rate = 50;
+  voicing_.lfo_rate = 50;
   voicing_.trigger_duration = 2;
   voicing_.aux_cv = MOD_AUX_ENVELOPE;
   voicing_.aux_cv_2 = MOD_AUX_ENVELOPE;
@@ -373,16 +373,14 @@ void Part::Reset() {
 }
 
 void Part::Clock() {
+  if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
+
   SequencerStep step;
+  uint16_t ticks_per_step = lut_clock_ratio_ticks[seq_.clock_division];
 
-  bool clock = !arp_seq_prescaler_;
-  bool play = midi_.play_mode != PLAY_MODE_MANUAL && (
-    !looped() || (
-      midi_.play_mode == PLAY_MODE_ARPEGGIATOR && !seq_driven_arp()
-    )
-  );
-
-  if (clock && play) {
+  if (multi.tick_counter() % ticks_per_step == 0) { // New step
+    uint32_t step_counter = multi.tick_counter() / ticks_per_step;
+    seq_step_ = step_counter % seq_.num_steps;
     step = BuildSeqStep();
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       arp_ = BuildArpState(step);
@@ -401,59 +399,25 @@ void Part::Clock() {
     }
   }
 
-  if (clock) {
-    ++seq_step_;
-    if (seq_step_ >= seq_.num_steps) {
-      seq_step_ = 0;
+  if (gate_length_counter_) {
+    --gate_length_counter_;
+  } else if (generated_notes_.most_recent_note_index()) {
+    // Peek at next step to see if it's a continuation
+    step = BuildSeqStep();
+    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      step = BuildArpState(step).step;
+    }
+    if (step.is_continuation()) {
+      // The next step contains a "sustain" message; or a slid note. Extends
+      // the duration of the current note.
+      gate_length_counter_ += ticks_per_step;
+    } else {
+      StopSequencerArpeggiatorNotes();
     }
   }
-
-  if (play) {
-    if (num_voices_ > 1) {
-      while (generated_notes_.size() > num_voices_) {
-        const NoteEntry note = generated_notes_.played_note(0);
-        generated_notes_.NoteOff(note.note);
-      }
-    } else if (gate_length_counter_) {
-      --gate_length_counter_;
-    } else if (generated_notes_.most_recent_note_index()) {
-      // Peek at next step to see if it's a continuation
-      step = BuildSeqStep();
-      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-        step = BuildArpState(step).step;
-      }
-      if (step.is_continuation()) {
-        // The next step contains a "sustain" message; or a slid note. Extends
-        // the duration of the current note.
-        gate_length_counter_ += lut_clock_ratio_ticks[seq_.clock_division];
-      } else {
-        StopSequencerArpeggiatorNotes();
-      }
-    }
-  }
-  
-  ++arp_seq_prescaler_;
-  if (arp_seq_prescaler_ >= lut_clock_ratio_ticks[seq_.clock_division]) {
-    arp_seq_prescaler_ = 0;
-  }
-  
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    voice_[i]->Clock();
-  }
-
-  looper_.Clock();
-}
-
-bool Part::new_beat() const {
-  return arp_seq_prescaler_ > 0 &&
-    arp_seq_prescaler_ <= (lut_clock_ratio_ticks[seq_.clock_division] >> 3);
 }
 
 void Part::Start() {
-  arp_seq_prescaler_ = 0;
-
-  seq_step_ = 0;
-  
   arp_.ResetKey();
   arp_.step_index = 0;
   
@@ -531,7 +495,6 @@ void Part::DeleteSequence() {
     SequencerStep(SEQUENCER_STEP_REST, 0)
   );
   seq_rec_step_ = 0;
-  seq_step_ = 0;
   seq_.num_steps = 0;
   seq_overdubbing_ = false;
 }
@@ -549,7 +512,7 @@ void Part::StopSequencerArpeggiatorNotes() {
         pitch = output_pitch_for_looper_note_[looper_note_index];
       }
       if (!looper_can_control(pitch)) { continue; }
-    }
+    } else if (manual_keys_.stack.Find(pitch)) continue;
     InternalNoteOff(pitch);
   }
 }
@@ -1032,7 +995,7 @@ void Part::TouchVoices() {
   CONSTRAIN(voicing_.aux_cv_2, 0, MOD_AUX_LAST - 1);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
-    voice_[i]->set_modulation_rate(voicing_.modulation_rate, i);
+    voice_[i]->set_lfo_rate(voicing_.lfo_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_mod(voicing_.vibrato_mod);
     voice_[i]->set_tremolo_mod(voicing_.tremolo_mod);
@@ -1065,6 +1028,7 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_MIDI_INPUT_RESPONSE:
     case PART_MIDI_PLAY_MODE:
     case PART_MIDI_TRANSPOSE_OCTAVES:
+    case PART_VOICING_OSCILLATOR_MODE:
       // Shut all channels off when a MIDI parameter is changed to prevent
       // stuck notes.
       AllNotesOff();
@@ -1075,7 +1039,7 @@ bool Part::Set(uint8_t address, uint8_t value) {
       break;
       
     case PART_VOICING_PITCH_BEND_RANGE:
-    case PART_VOICING_MODULATION_RATE:
+    case PART_VOICING_LFO_RATE:
     case PART_VOICING_VIBRATO_RANGE:
     case PART_VOICING_VIBRATO_MOD:
     case PART_VOICING_TREMOLO_MOD:
@@ -1085,7 +1049,6 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_TRIGGER_SCALE:
     case PART_VOICING_AUX_CV:
     case PART_VOICING_AUX_CV_2:
-    case PART_VOICING_OSCILLATOR_MODE:
     case PART_VOICING_OSCILLATOR_SHAPE:
     case PART_VOICING_TIMBRE_INIT:
     case PART_VOICING_TIMBRE_MOD_LFO:

@@ -125,7 +125,7 @@ const char* const voicing_allocation_priority_values[] = {
   "LAST", "LOW", "HIGH", "FIRST"
 };
 
-const char* const trigger_shape_values[] = {
+const char* const trigger_shape_values[TRIGGER_SHAPE_LAST] = {
   "SQ", "LINEAR", "EXPO", "RING", "STEP", "BURST"
 };
 
@@ -381,7 +381,7 @@ const Setting Settings::settings_[] = {
   },
   {
     "VS", "VIBRATO SPEED",
-    SETTING_DOMAIN_PART, { PART_VOICING_MODULATION_RATE, 0 },
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_RATE, 0 },
     SETTING_UNIT_VIBRATO_SPEED, 0, kVibratoSpeedMax, NULL,
     23, 14,
   },
@@ -443,7 +443,7 @@ const Setting Settings::settings_[] = {
   {
     "T\x88", "TRIG SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_TRIGGER_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 5, trigger_shape_values,
+    SETTING_UNIT_ENUMERATION, 0, TRIGGER_SHAPE_LAST - 1, trigger_shape_values,
     30, 21,
   },
   {
@@ -732,22 +732,28 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
     
     case SETTING_UNIT_VIBRATO_SPEED:
       if (value < LUT_LFO_INCREMENTS_SIZE) {
-        PrintInteger(buffer, value);
+        PrintInteger(buffer, LUT_LFO_INCREMENTS_SIZE - value - 1);
       } else {
         Print(settings_[SETTING_SEQUENCER_CLOCK_DIVISION], value - LUT_LFO_INCREMENTS_SIZE, buffer);
+      }
+      if (buffer[0] == ' ') {
+        buffer[0] = value < LUT_LFO_INCREMENTS_SIZE ? 'F' : ' ';
       }
       break;
       
     case SETTING_UNIT_PORTAMENTO:
-      if (value < (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1)) {
-        PrintInteger(buffer, value);
+    {
+      uint8_t split_point = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
+      if (value < split_point) {
+        PrintInteger(buffer, split_point - value);
       } else {
-        PrintInteger(buffer, value - (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1));
+        PrintInteger(buffer, value - split_point);
       }
       if (buffer[0] == ' ') {
-        buffer[0] = (value < (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1)) ? 'T' : 'R';
+        buffer[0] = value < split_point ? 'T' : 'R';
       }
       break;
+    }
       
     case SETTING_UNIT_ENUMERATION:
       strcpy(buffer, setting.values[value]);

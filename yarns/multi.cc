@@ -43,6 +43,9 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
+const uint8_t kCCMacroRecord = 116;
+const uint8_t kCCMacroPlayMode = 117;
+
 void Multi::Init(bool reset_calibration) {
   just_intonation_processor.Init();
   
@@ -55,6 +58,7 @@ void Multi::Init(bool reset_calibration) {
     part_[i].Init();
     part_[i].set_custom_pitch_table(settings_.custom_pitch_table);
   }
+  fill(&swing_predelay_[0], &swing_predelay_[12], -1);
   for (uint8_t i = 0; i < kNumSystemVoices; ++i) {
     voice_[i].Init();
   }
@@ -132,6 +136,17 @@ void Multi::Clock() {
   
   if (!clock_input_prescaler_) {
     midi_handler.OnClock();
+
+    // Sync LFOs
+    ++tick_counter_;
+    for (uint8_t p = 0; p < num_active_parts_; ++p) {
+      part_[p].mutable_looper().Clock(tick_counter_);
+      uint8_t lfo_rate = part_[p].voicing_settings().lfo_rate;
+      if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) continue;
+      for (uint8_t v = 0; v < part_[p].num_voices(); ++v) {
+        part_[p].voice(v)->lfo()->Tap(tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
+      }
+    }
     
     ++swing_counter_;
     if (swing_counter_ >= 12) {
@@ -203,6 +218,7 @@ void Multi::Start(bool started_by_keyboard) {
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;
   stop_count_down_ = 0;
+  tick_counter_ = -1;
   bar_position_ = -1;
   swing_counter_ = -1;
   previous_output_division_ = 0;
@@ -288,7 +304,10 @@ bool Multi::Set(uint8_t address, uint8_t value) {
 
 void Multi::AssignVoicesToCVOutputs() {
   for (uint8_t v = 0; v < kNumSystemVoices; ++v) {
-    voice_[v].set_has_audio_listener(false);
+    voice_[v].set_audio_output(NULL);
+    for (int role = 0; role < DC_LAST; role++) {
+      voice_[v].set_dc_output(static_cast<DCRole>(role), NULL);
+    }
   }
   switch (settings_.layout) {
     case LAYOUT_MONO:
@@ -664,6 +683,7 @@ void Multi::AfterDeserialize() {
   
   for (uint8_t i = 0; i < kNumParts; ++i) {
     part_[i].AfterDeserialize();
+    macro_record_last_value_[i] = 127;
   }
 }
 
@@ -739,6 +759,7 @@ void Multi::StopRecording(uint8_t part) {
   if (recording_ && recording_part_ == part) {
     part_[part].StopRecording();
     recording_ = false;
+    part_[part].mutable_looper().set_overwrite_armed(false);
   }
 }
 
@@ -752,18 +773,49 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   } else {
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
       if (!part_accepts_channel(i, channel)) { continue; }
-      if (controller == kCCRecordOffOn) {
+      int8_t macro_zone;
+      switch (controller) {
+      case kCCRecordOffOn:
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);
-        ui.SplashOn(SPLASH_ACTIVE_PART);
-      } else if (controller == kCCDeleteRecording) {
-        // Splash needs part index
+        ui.SplashOn(SPLASH_ACTIVE_PART, i);
+        break;
+      case kCCDeleteRecording:
         part_[i].DeleteRecording();
-        ui.SetSplashPart(i);
-        ui.SplashOn(SPLASH_DELETE_RECORDING);
-      } else {
+        ui.SplashPartString("RX", i);
+        break;
+      case kCCMacroRecord:
+        // 0..3: record off, record on, overwrite, delete
+        macro_zone = value >> 5; // 0..3
+        macro_zone >= 1 ? StartRecording(i) : StopRecording(i);
+        if (
+          // Only on increasing value, so that leaving the knob in the delete zone doesn't doom any subsequent recordings
+          macro_zone == 3 && value > macro_record_last_value_[i])
+        {
+          part_[i].DeleteRecording();
+          ui.SplashPartString("RX", i);
+        } else {
+          part_[i].mutable_looper().set_overwrite_armed(macro_zone == 2);
+          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "--"), i);
+        }
+        macro_record_last_value_[i] = value;
+        break;
+      case kCCMacroPlayMode:
+        // -2..2: step seq, step arp, manual, loop arp, loop seq
+        macro_zone = (5 * value >> 7) - 2;
+        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, i, macro_zone < 0);
+        ApplySetting(SETTING_SEQUENCER_PLAY_MODE, i, abs(macro_zone));
+        char label[2];
+        if (macro_zone == 0) strcpy(label, "--"); else {
+          label[0] = macro_zone < 0 ? 'S' : 'L';
+          label[1] = abs(macro_zone) == 1 ? 'A' : 'S';
+        }
+        ui.SplashPartString(label, i);
+        break;
+      default:
         thru = part_[i].ControlChange(channel, controller, value) && thru;
         SetFromCC(i, controller, value);
+        break;
       }
     }
   }
