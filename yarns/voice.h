@@ -319,8 +319,8 @@ class CVOutput {
   }
   inline bool is_envelope() const {
     return
-      (dc_role_ == DC_AUX_1 && dc_voice_->aux_1_source() == MOD_AUX_ENVELOPE) ||
-      (dc_role_ == DC_AUX_2 && dc_voice_->aux_2_source() == MOD_AUX_ENVELOPE);
+      (dc_role_ == DC_AUX_1 && dc_voice_->aux_1_envelope()) ||
+      (dc_role_ == DC_AUX_2 && dc_voice_->aux_2_envelope());
   }
 
   inline uint16_t GetAudioSample() {
