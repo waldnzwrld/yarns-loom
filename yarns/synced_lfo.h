@@ -83,7 +83,6 @@ class SyncedLFO {
     SetTarget(target_phase + phase_offset, target_increment);
   }
 
-  // void set_target(uint32_t increment) { set_target(increment, phase_); }
   void SetTarget(uint32_t target_phase, uint32_t target_increment) {
     // TODO delta of unsigneds can overflow signed
     int32_t d_error = target_increment - (phase_ - previous_phase_);

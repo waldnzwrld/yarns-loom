@@ -1017,6 +1017,7 @@ void Part::TouchVoices() {
 }
 
 SyncedLFO* Part::base_lfo() { return voice_[0]->lfo(); }
+
 void Part::SpreadLFOs() {
   uint32_t phase = base_lfo()->GetPhase();
   uint32_t phase_increment = base_lfo()->GetPhaseIncrement();
