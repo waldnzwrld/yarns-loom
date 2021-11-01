@@ -135,47 +135,7 @@ void Voice::ResetAllControllers() {
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
-/* TODO
-- general concept of slaved LFOs
-  - if dephasing
-    - do not increment (regardless of whether base is free-running)
-    - dephase in Refresh
-  - else
-    - GetPhaseIncrement from base LFO and scale it
-    - always increment (regardless of whether base is synced)
-- Direct slave approach is not equipped for smoothly adapting to changes in dephase amt -- likely to click
-  - Mitigate this by using master/base signal as PLL inputs
-- Code paths
-  - How are these called?
-    - Easy: from Multi::Clock(), but requires running clock
-    - Possibly harder: in Refresh() ? Can it be made fast enough to run every time?  If not running at a much higher frequency than Clock(), beating effects are likely
-      - Beating between what???
-  - Base
-    - Free
-        PLL(settings.phase_increment)
-    - Synced
-        Tap { [calculate targets]; PLL([targets]) }
-  - Detune: target phase agnostic, target speed detuned from base
-      PLL(detune(base.get_phase_increment())) OR 
-      set_phase_increment(detune(base.get_phase_increment()))
-  - Dephase: target speed/phase from base + phase offset
-      PLL(base.get_phase_increment(), base.get_phase() + dephase)
-  - NB: need to convert a per-Refresh phase_increment to a per-Tap phase diff
-    - Divide by 96?
-
-*/
-void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index, uint8_t detune_voices) {
-  if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
-    uint32_t garbage = lut_lfo_increments[lfo_rate];
-    garbage *= pow(1.123f, (int) index);
-
-    synced_lfo_.SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1]);
-    // TODO voice index?
-    synced_lfo_.detune_phase_increment(lfo_detune_voices << (16 - 7));
-  }
-}
-
-void Voice::Refresh(uint8_t lfo_rate) {
+void Voice::Refresh() {
   // Slew coarse inputs to avoid clicks
   tremolo_mod_current_ = stmlib::slew(
     tremolo_mod_current_, tremolo_mod_target_);
@@ -204,11 +164,6 @@ void Voice::Refresh(uint8_t lfo_rate) {
   
   // Add transposition/fine tuning.
   note += tuning_;
-  
-  // if (refresh_counter_ == 0 && lfo_rate >= LUT_LFO_INCREMENTS) {
-  //   // TODO running this at a different frequency from Tap could be problematic -- in particular, for the timing of how phase gets incremented
-  //   synced_lfo_.correct_error();
-  // }
   
   // Render modulation sources
   envelope_.ReadSample();

@@ -55,8 +55,8 @@ class SyncedLFO {
   uint32_t GetPhase() const { return phase_; }
   uint32_t GetPhaseIncrement() const { return phase_increment_; }
   void SetPhaseIncrement(uint32_t i) { phase_increment_ = i; }
-  bool Increment(uint32_t increment) { phase_ += increment; }
-  uint32_t Refresh() { return Increment(phase_increment_); }
+  void Increment(uint32_t increment) { phase_ += increment; }
+  void Refresh() { return Increment(phase_increment_); }
 
   int16_t shape(LFOShape s) const { return shape(s, phase_); }
   int16_t shape(LFOShape shape, uint32_t phase) const {
@@ -80,20 +80,14 @@ class SyncedLFO {
     uint16_t tick_phase = tick_counter % period_ticks;
     uint32_t target_phase = ((tick_phase << 16) / period_ticks) << 16;
     uint32_t target_increment = UINT32_MAX / period_ticks;
-    set_target(target_increment, target_phase + phase_offset);
-    correct_error();
+    SetTarget(target_phase + phase_offset, target_increment);
   }
 
   // void set_target(uint32_t increment) { set_target(increment, phase_); }
-  void set_target(uint32_t increment, uint32_t phase) {
-    target_increment_ = increment;
-    target_phase_ = phase;
-  }
-
-  void correct_error() {
+  void SetTarget(uint32_t target_phase, uint32_t target_increment) {
     // TODO delta of unsigneds can overflow signed
-    int32_t d_error = target_increment_ - (phase_ - previous_phase_);
-    int32_t p_error = target_phase_ - phase_;
+    int32_t d_error = target_increment - (phase_ - previous_phase_);
+    int32_t p_error = target_phase - phase_;
     int32_t error = (d_error + (p_error >> 4)) >> 12;
 
     if (error < 0 && abs(error) > phase_increment_) {
@@ -113,7 +107,6 @@ class SyncedLFO {
 
   uint32_t phase_;
   uint32_t phase_increment_;
-  uint32_t target_increment_, target_phase_;
   uint32_t previous_phase_;
 
   DISALLOW_COPY_AND_ASSIGN(SyncedLFO);

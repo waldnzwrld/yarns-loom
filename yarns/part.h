@@ -166,8 +166,9 @@ struct PackedPart {
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
-    lfo_detune_types : kTimbreBits,
-    lfo_detune_voices : kTimbreBits,
+    // TODO in-memory only for now!
+    // lfo_spread_types : kTimbreBits,
+    // lfo_spread_voices : kTimbreBits,
     amplitude_mod_velocity : kTimbreBits,
     timbre_mod_envelope : kTimbreBits,
     timbre_mod_velocity : kTimbreBits,
@@ -290,8 +291,8 @@ struct VoicingSettings {
   uint8_t tremolo_mod;
   uint8_t tremolo_shape;
   uint8_t lfo_rate;
-  int8_t lfo_detune_types;
-  int8_t lfo_detune_voices;
+  int8_t lfo_spread_types;
+  int8_t lfo_spread_voices;
   int8_t tuning_transpose;
   int8_t tuning_fine;
   int8_t tuning_root;
@@ -330,8 +331,8 @@ struct VoicingSettings {
     packed.tremolo_mod = tremolo_mod;
     packed.tremolo_shape = tremolo_shape;
     packed.lfo_rate = lfo_rate;
-    packed.lfo_detune_types = lfo_detune_types;
-    packed.lfo_detune_voices = lfo_detune_voices;
+    // packed.lfo_spread_types = lfo_spread_types;
+    // packed.lfo_spread_voices = lfo_spread_voices;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
     packed.tuning_root = tuning_root;
@@ -370,8 +371,8 @@ struct VoicingSettings {
     tremolo_mod = packed.tremolo_mod;
     tremolo_shape = packed.tremolo_shape;
     lfo_rate = packed.lfo_rate;
-    lfo_detune_types = packed.lfo_detune_types;
-    lfo_detune_voices = packed.lfo_detune_voices;
+    // lfo_spread_types = packed.lfo_spread_types;
+    // lfo_spread_voices = packed.lfo_spread_voices;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
     tuning_root = packed.tuning_root;
@@ -425,8 +426,8 @@ enum PartSetting {
   PART_VOICING_TREMOLO_MOD,
   PART_VOICING_TREMOLO_SHAPE,
   PART_VOICING_LFO_RATE,
-  PART_VOICING_LFO_DETUNE_TYPES,
-  PART_VOICING_LFO_DETUNE_VOICES,
+  PART_VOICING_LFO_SPREAD_TYPES,
+  PART_VOICING_LFO_SPREAD_VOICES,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
   PART_VOICING_TUNING_ROOT,
@@ -715,6 +716,10 @@ class Part {
     voicing_.portamento = 0;
     voicing_.legato_mode = LEGATO_MODE_OFF;
   }
+
+  SyncedLFO* base_lfo();
+  // Update phase and increment on non-base LFOs
+  void SpreadLFOs();
 
   inline const looper::Deck& looper() const { return looper_; }
   inline looper::Deck& mutable_looper() { return looper_; }

@@ -102,7 +102,7 @@ class Voice {
   void Init();
   void ResetAllControllers();
 
-  void Refresh(uint8_t lfo_rate);
+  void Refresh();
   void SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento);
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
@@ -114,7 +114,6 @@ class Voice {
     mod_aux_[MOD_AUX_AFTERTOUCH] = velocity << 9;
   }
 
-  void set_lfo_rate(uint8_t lfo_rate, uint8_t index);
   inline void set_pitch_bend_range(uint8_t pitch_bend_range) {
     pitch_bend_range_ = pitch_bend_range;
   }

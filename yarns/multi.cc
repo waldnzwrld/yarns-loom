@@ -274,14 +274,15 @@ void Multi::Refresh() {
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
     Part& part = part_[j];
     part.mutable_looper().Refresh();
-    for (uint8_t v = 0; v < part.num_voices(); ++v) {
-      part.voice(v)->Refresh(part.voicing_settings().lfo_rate);
+    if (new_tick) {
+      uint8_t lfo_rate = part.voicing_settings().lfo_rate;
+      if (lfo_rate >= LUT_LFO_INCREMENTS_SIZE) {
+        part.base_lfo()->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
+      }
+      part.SpreadLFOs();
     }
-    if (!new_tick) continue;
-    uint8_t lfo_rate = part.voicing_settings().lfo_rate;
-    if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) continue;
     for (uint8_t v = 0; v < part.num_voices(); ++v) {
-      part.voice(v)->lfo()->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
+      part.voice(v)->Refresh();
     }
   }
 

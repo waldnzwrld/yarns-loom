@@ -995,7 +995,6 @@ void Part::TouchVoices() {
   CONSTRAIN(voicing_.aux_cv_2, 0, MOD_AUX_LAST - 1);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
-    voice_[i]->set_lfo_rate(voicing_.lfo_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_mod(voicing_.vibrato_mod);
     voice_[i]->set_tremolo_mod(voicing_.tremolo_mod);
@@ -1010,6 +1009,28 @@ void Part::TouchVoices() {
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
     voice_[i]->set_timbre_init(voicing_.timbre_initial);
     voice_[i]->set_timbre_mod_lfo(voicing_.timbre_mod_lfo);
+  }
+  if (voicing_.lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
+    base_lfo()->SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - voicing_.lfo_rate - 1]);
+    // TODO spread LFOs immediately here? only matters if at 0 detune?
+  }
+}
+
+SyncedLFO* Part::base_lfo() { return voice_[0]->lfo(); }
+void Part::SpreadLFOs() {
+  uint32_t phase = base_lfo()->GetPhase();
+  uint32_t phase_increment = base_lfo()->GetPhaseIncrement();
+  uint32_t phase_offset = 0, phase_increment_offset = 0;
+  if (voicing_.lfo_spread_voices < 0) { // Detune
+    // TODO expo mod curve ?
+    phase_increment_offset = (phase_increment * (-voicing_.lfo_spread_voices - 1)) >> 6;
+  } else { // Dephase
+    phase_offset = voicing_.lfo_spread_voices << (32 - 6);
+  }
+  for (uint8_t v = 1; v < num_voices_; ++v) {
+    phase_offset += phase_offset;
+    phase_increment += phase_increment_offset;
+    voice_[v]->lfo()->SetTarget(phase, phase_increment);
   }
 }
 
