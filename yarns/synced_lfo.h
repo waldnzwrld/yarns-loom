@@ -55,8 +55,8 @@ class SyncedLFO {
   uint32_t GetPhase() const { return phase_; }
   uint32_t GetPhaseIncrement() const { return phase_increment_; }
   void SetPhaseIncrement(uint32_t i) { phase_increment_ = i; }
-  bool Increment(uint32_t increment) { phase_ += increment; }
-  uint32_t Refresh() { return Increment(phase_increment_); }
+  void Increment(uint32_t increment) { phase_ += increment; }
+  void Refresh() { return Increment(phase_increment_); }
 
   int16_t shape(LFOShape s) const { return shape(s, phase_); }
   int16_t shape(LFOShape shape, uint32_t phase) const {
