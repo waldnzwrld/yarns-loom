@@ -388,13 +388,13 @@ const Setting Settings::settings_[] = {
   {
     "LT", "LFO SPREAD TYPES",
     SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_TYPES, 0 },
-    SETTING_UNIT_INT8, -64, 63, NULL,
+    SETTING_UNIT_LFO_SPREAD, -64, 63, NULL,
     118, 0xff,
   },
   {
     "LV", "LFO SPREAD VOICES",
     SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_VOICES, 0 },
-    SETTING_UNIT_INT8, -64, 63, NULL,
+    SETTING_UNIT_LFO_SPREAD, -64, 63, NULL,
     119, 0xff,
   },
   {
@@ -788,6 +788,13 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
         strcpy(buffer, lut_fm_ratio_names[value - OSC_SHAPE_FM]);
       } else {
         strcpy(buffer, voicing_oscillator_shape_values[value]);
+      }
+      break;
+
+    case SETTING_UNIT_LFO_SPREAD:
+      PrintInteger(buffer, abs((int8_t) value));
+      if (buffer[0] == ' ') {
+        buffer[0] = ((int8_t) value) < 0 ? 'F' : 'P';
       }
       break;
       
