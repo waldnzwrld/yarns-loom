@@ -1022,20 +1022,20 @@ void Part::SpreadLFOs(int8_t spread) {
   uint32_t phase_increment = base_lfo()->GetPhaseIncrement();
   uint32_t phase_offset = 0, phase_increment_offset = 0;
   if (spread < 0) { // Detune
-    // TODO expo mod curve?
-    // TODO is 0 increment offset useful?
-    phase_increment_offset = (phase_increment * -spread) >> 6;
+    uint8_t spread_8 = (-spread - 1) << 1;
+    uint16_t spread_expo_16 = UINT16_MAX - lut_env_expo[((127 - spread_8) << 1)];
+    phase_increment_offset = ((phase_increment >> 4) * (spread_expo_16 >> 4)) >> 8;
   } else { // Dephase
     phase_offset = spread << (32 - 6);
   }
   for (uint8_t v = 1; v < num_voices_; ++v) {
     if (phase_increment_offset) {
-      phase = voice_[v]->lfo()->GetPhase(); // Don't force a phase change if detuning
       phase_increment += phase_increment_offset;
+      voice_[v]->lfo()->SetPhaseIncrement(phase_increment);
     } else {
       phase += phase_offset;
+      voice_[v]->lfo()->SetTargetPhase(phase);
     }
-    voice_[v]->lfo()->SetTarget(phase, phase_increment);
   }
 }
 

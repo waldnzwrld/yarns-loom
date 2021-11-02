@@ -277,15 +277,9 @@ void Multi::Refresh() {
     if (new_tick) {
       uint8_t lfo_rate = part.voicing_settings().lfo_rate;
       if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
-        // uint32_t old_increment = part.base_lfo()->GetPhaseIncrement();
-        uint32_t new_increment = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1];
-        // if (old_increment != new_increment) {
-          part.base_lfo()->SetPhaseIncrement(new_increment);
-          // part.SpreadLFOs(part.voicing_settings().lfo_spread_voices);
-        // }
+        part.base_lfo()->SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1]);
       } else {
         part.base_lfo()->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
-        // part.SpreadLFOs(part.voicing_settings().lfo_spread_voices);
       }
       part.SpreadLFOs(part.voicing_settings().lfo_spread_voices);
     }

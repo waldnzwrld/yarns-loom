@@ -79,12 +79,12 @@ class SyncedLFO {
   void Tap(uint32_t tick_counter, uint16_t period_ticks, uint32_t phase_offset = 0) {
     uint16_t tick_phase = tick_counter % period_ticks;
     uint32_t target_phase = ((tick_phase << 16) / period_ticks) << 16;
-    uint32_t target_increment = UINT32_MAX / period_ticks;
-    SetTarget(target_phase + phase_offset, target_increment);
+    SetTargetPhase(target_phase + phase_offset);
   }
 
-  void SetTarget(uint32_t target_phase, uint32_t target_increment) {
+  void SetTargetPhase(uint32_t target_phase) {
     // TODO delta of unsigneds can overflow signed
+    uint32_t target_increment = target_phase - previous_target_phase_;
     int32_t d_error = target_increment - (phase_ - previous_phase_);
     int32_t p_error = target_phase - phase_;
     int32_t error = (d_error + (p_error >> 4)) >> 12;
@@ -100,13 +100,14 @@ class SyncedLFO {
     }
 
     previous_phase_ = phase_;
+    previous_target_phase_ = target_phase;
   }
 
  private:
 
   uint32_t phase_;
   uint32_t phase_increment_;
-  uint32_t previous_phase_;
+  uint32_t previous_phase_, previous_target_phase_;
 
   DISALLOW_COPY_AND_ASSIGN(SyncedLFO);
 };
