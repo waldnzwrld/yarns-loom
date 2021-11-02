@@ -719,7 +719,7 @@ class Part {
 
   SyncedLFO* base_lfo();
   // Update phase and increment on non-base LFOs
-  void SpreadLFOs();
+  void SpreadLFOs(int8_t spread);
 
   inline const looper::Deck& looper() const { return looper_; }
   inline looper::Deck& mutable_looper() { return looper_; }

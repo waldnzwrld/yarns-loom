@@ -1017,19 +1017,24 @@ void Part::TouchVoices() {
 
 SyncedLFO* Part::base_lfo() { return voice_[0]->lfo(); }
 
-void Part::SpreadLFOs() {
+void Part::SpreadLFOs(int8_t spread) {
   uint32_t phase = base_lfo()->GetPhase();
   uint32_t phase_increment = base_lfo()->GetPhaseIncrement();
   uint32_t phase_offset = 0, phase_increment_offset = 0;
-  if (voicing_.lfo_spread_voices < 0) { // Detune
-    // TODO expo mod curve ?
-    phase_increment_offset = (phase_increment * (-voicing_.lfo_spread_voices - 1)) >> 6;
+  if (spread < 0) { // Detune
+    // TODO expo mod curve?
+    // TODO is 0 increment offset useful?
+    phase_increment_offset = (phase_increment * -spread) >> 6;
   } else { // Dephase
-    phase_offset = voicing_.lfo_spread_voices << (32 - 6);
+    phase_offset = spread << (32 - 6);
   }
   for (uint8_t v = 1; v < num_voices_; ++v) {
-    phase_offset += phase_offset;
-    phase_increment += phase_increment_offset;
+    if (phase_increment_offset) {
+      phase = voice_[v]->lfo()->GetPhase(); // Don't force a phase change if detuning
+      phase_increment += phase_increment_offset;
+    } else {
+      phase += phase_offset;
+    }
     voice_[v]->lfo()->SetTarget(phase, phase_increment);
   }
 }

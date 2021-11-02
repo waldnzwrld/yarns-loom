@@ -271,22 +271,23 @@ void Multi::Refresh() {
   master_lfo_.Refresh();
   bool new_tick = (master_lfo_.GetPhase() << 4) < (master_lfo_.GetPhaseIncrement() << 4);
   if (new_tick) master_lfo_tick_counter_++;
-  for (uint8_t j = 0; j < num_active_parts_; ++j) {
-    Part& part = part_[j];
+  for (uint8_t p = 0; p < num_active_parts_; ++p) {
+    Part& part = part_[p];
     part.mutable_looper().Refresh();
     if (new_tick) {
       uint8_t lfo_rate = part.voicing_settings().lfo_rate;
       if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
-        uint32_t old_increment = part.base_lfo()->GetPhaseIncrement();
+        // uint32_t old_increment = part.base_lfo()->GetPhaseIncrement();
         uint32_t new_increment = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1];
-        if (old_increment != new_increment) {
+        // if (old_increment != new_increment) {
           part.base_lfo()->SetPhaseIncrement(new_increment);
-          part.SpreadLFOs();
-        }
+          // part.SpreadLFOs(part.voicing_settings().lfo_spread_voices);
+        // }
       } else {
         part.base_lfo()->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
-        part.SpreadLFOs();
+        // part.SpreadLFOs(part.voicing_settings().lfo_spread_voices);
       }
+      part.SpreadLFOs(part.voicing_settings().lfo_spread_voices);
     }
     for (uint8_t v = 0; v < part.num_voices(); ++v) {
       part.voice(v)->Refresh();
