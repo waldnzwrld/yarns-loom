@@ -29,7 +29,6 @@
 
 #include "yarns/voice.h"
 
-#include <algorithm>
 #include <cmath>
 
 #include "stmlib/midi/midi.h"
@@ -133,6 +132,11 @@ void Voice::ResetAllControllers() {
   mod_pitch_bend_ = 8192;
   vibrato_mod_ = 0;
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
+}
+
+void Voice::garbage(uint8_t x) {
+  uint32_t foo = pow(1.123f, (int) x);
+  (void) foo;
 }
 
 void Voice::Refresh() {
