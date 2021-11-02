@@ -389,13 +389,13 @@ const Setting Settings::settings_[] = {
     "LT", "LFO SPREAD TYPES",
     SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_TYPES, 0 },
     SETTING_UNIT_INT8, -64, 63, NULL,
-    118, 0,
+    118, 0xff,
   },
   {
     "LV", "LFO SPREAD VOICES",
     SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_VOICES, 0 },
     SETTING_UNIT_INT8, -64, 63, NULL,
-    119, 0,
+    119, 0xff,
   },
   {
     "VB", "VIBRATO AMOUNT",

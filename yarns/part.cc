@@ -81,6 +81,8 @@ void Part::Init() {
   voicing_.vibrato_range = 1;
   voicing_.vibrato_mod = 0;
   voicing_.lfo_rate = 50;
+  voicing_.lfo_spread_types = 0;
+  voicing_.lfo_spread_voices = 0;
   voicing_.trigger_duration = 2;
   voicing_.aux_cv = MOD_AUX_ENVELOPE;
   voicing_.aux_cv_2 = MOD_AUX_ENVELOPE;
@@ -1010,10 +1012,6 @@ void Part::TouchVoices() {
     voice_[i]->set_tuning(voicing_.tuning_transpose, voicing_.tuning_fine);
     voice_[i]->set_timbre_init(voicing_.timbre_initial);
     voice_[i]->set_timbre_mod_lfo(voicing_.timbre_mod_lfo);
-  }
-  if (voicing_.lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
-    base_lfo()->SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - voicing_.lfo_rate - 1]);
-    // TODO spread LFOs immediately here? only matters if at 0 detune?
   }
 }
 
