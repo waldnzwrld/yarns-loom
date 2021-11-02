@@ -1015,30 +1015,6 @@ void Part::TouchVoices() {
   }
 }
 
-SyncedLFO* Part::base_lfo() { return voice_[0]->lfo(); }
-
-void Part::SpreadLFOs(int8_t spread) {
-  uint32_t phase = base_lfo()->GetPhase();
-  uint32_t phase_increment = base_lfo()->GetPhaseIncrement();
-  uint32_t phase_offset = 0, phase_increment_offset = 0;
-  if (spread < 0) { // Detune
-    uint8_t spread_8 = (-spread - 1) << 1;
-    uint16_t spread_expo_16 = UINT16_MAX - lut_env_expo[((127 - spread_8) << 1)];
-    phase_increment_offset = ((phase_increment >> 4) * (spread_expo_16 >> 4)) >> 8;
-  } else { // Dephase
-    phase_offset = spread << (32 - 6);
-  }
-  for (uint8_t v = 1; v < num_voices_; ++v) {
-    if (phase_increment_offset) {
-      phase_increment += phase_increment_offset;
-      voice_[v]->lfo()->SetPhaseIncrement(phase_increment);
-    } else {
-      phase += phase_offset;
-      voice_[v]->lfo()->SetTargetPhase(phase);
-    }
-  }
-}
-
 bool Part::Set(uint8_t address, uint8_t value) {
   uint8_t* bytes;
   bytes = static_cast<uint8_t*>(static_cast<void*>(&midi_));
