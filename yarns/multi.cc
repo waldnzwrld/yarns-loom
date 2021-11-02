@@ -296,17 +296,23 @@ void Multi::Refresh() {
     part.mutable_looper().Refresh();
     if (new_tick) {
       uint8_t lfo_rate = part.voicing_settings().lfo_rate;
-      SyncedLFO* voice_lfos[part.num_voices()];
+      SyncedLFO* part_lfos[part.num_voices()];
       for (uint8_t v = 0; v < part.num_voices(); ++v) {
-        voice_lfos[v] = part.voice(v)->lfo();
+        part_lfos[v] = part.voice(v)->lfo(static_cast<LFORole>(0));
       }
-      SyncedLFO* base_lfo = voice_lfos[0];
       if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
-        base_lfo->SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1]);
+        part_lfos[0]->SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1]);
       } else {
-        base_lfo->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
+        part_lfos[0]->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
       }
-      SpreadLFOs(part.voicing_settings().lfo_spread_voices, &voice_lfos[0], part.num_voices());
+      SpreadLFOs(part.voicing_settings().lfo_spread_voices, &part_lfos[0], part.num_voices());
+      for (uint8_t v = 0; v < part.num_voices(); ++v) {
+        SyncedLFO* voice_lfos[LFO_ROLE_LAST];
+        for (uint8_t l = 0; l < LFO_ROLE_LAST; ++l) {
+          voice_lfos[l] = part.voice(v)->lfo(static_cast<LFORole>(l));
+        }
+        SpreadLFOs(part.voicing_settings().lfo_spread_types, &voice_lfos[0], LFO_ROLE_LAST);
+      }
     }
     for (uint8_t v = 0; v < part.num_voices(); ++v) {
       part.voice(v)->Refresh();

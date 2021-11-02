@@ -92,6 +92,13 @@ enum DCRole {
   DC_LAST
 };
 
+enum LFORole {
+  LFO_ROLE_PITCH,
+  LFO_ROLE_TIMBRE,
+  LFO_ROLE_AMPLITUDE,
+  LFO_ROLE_LAST
+};
+
 class CVOutput;
 
 class Voice {
@@ -198,7 +205,7 @@ class Voice {
   inline Oscillator* oscillator() {
     return &oscillator_;
   }
-  inline SyncedLFO* lfo() { return &synced_lfo_; }
+  inline SyncedLFO* lfo(LFORole l) { return &lfos_[l]; }
   inline Envelope* envelope() {
     return &envelope_;
   }
@@ -212,7 +219,7 @@ class Voice {
   }
   
  private:
-  SyncedLFO synced_lfo_;
+  SyncedLFO lfos_[LFO_ROLE_LAST];
   Envelope envelope_;
   Oscillator oscillator_;
 
