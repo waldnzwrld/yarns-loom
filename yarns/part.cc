@@ -486,6 +486,7 @@ void Part::DeleteRecording() {
   if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
   StopSequencerArpeggiatorNotes();
   looped() ? looper_.RemoveAll() : DeleteSequence();
+  seq_overwrite_ = false;
 }
 
 void Part::DeleteSequence() {
