@@ -70,9 +70,9 @@
   
 # Sequencer
 
-### Recording interface changes
+### Recording interface
 - Hold `REC` to clear sequence
-- Hold `TAP` to toggle overwrite mode, which will clear the sequence as soon as a new note is recorded
+- Hold `TAP` to toggle triggered-erase mode, which will clear the sequence as soon as a new note is recorded
 - First `REC` press switches the display to show the pitch instead of the step number (press again to exit recording)
 - Flash note (or RS/TI) for the selected step
 - Brighten display while the selected step is being played
