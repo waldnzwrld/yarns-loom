@@ -268,8 +268,8 @@ void Multi::ClockFast() {
 }
 
 void Multi::SpreadLFOs(int8_t spread, SyncedLFO** base_lfo, uint8_t num_lfos) {
-  if (spread < 0) { // Detune
-    uint8_t spread_8 = (-spread - 1) << 1;
+  if (spread >= 0) { // Detune
+    uint8_t spread_8 = spread << 1;
     uint16_t spread_expo_16 = UINT16_MAX - lut_env_expo[((127 - spread_8) << 1)];
     uint32_t phase_increment = (*base_lfo)->GetPhaseIncrement();
     uint32_t phase_increment_offset = ((phase_increment >> 4) * (spread_expo_16 >> 4)) >> 8;
@@ -279,7 +279,7 @@ void Multi::SpreadLFOs(int8_t spread, SyncedLFO** base_lfo, uint8_t num_lfos) {
     }
   } else { // Dephase
     uint32_t phase = (*base_lfo)->GetPhase();
-    uint32_t phase_offset = spread << (32 - 6);
+    uint32_t phase_offset = (spread + 1) << (32 - 6);
     for (uint8_t i = 1; i < num_lfos; ++i) {
       phase += phase_offset;
       (*(base_lfo + i))->SetTargetPhase(phase);

@@ -787,12 +787,14 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       }
       break;
 
-    case SETTING_UNIT_LFO_SPREAD:
-      PrintInteger(buffer, abs((int8_t) value));
-      if (buffer[0] == ' ') {
-        buffer[0] = ((int8_t) value) < 0 ? 'F' : 'P';
-      }
+    case SETTING_UNIT_LFO_SPREAD: {
+      int8_t spread = value;
+      bool dephase = spread < 0;
+      if (dephase) spread++;
+      PrintInteger(buffer, abs(spread));
+      if (buffer[0] == ' ') buffer[0] = dephase ? 'P' : 'F';
       break;
+    }
       
     default:
       strcpy(buffer, "??");
