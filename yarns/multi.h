@@ -205,7 +205,7 @@ class Multi {
   inline bool part_accepts_note_on(
     uint8_t part, uint8_t channel, uint8_t note, uint8_t velocity
   ) const {
-    if (
+    if ( // Stop NoteOn, but NoteOff must go through for the latch to 'mature'
       midi(part).sustain_mode == SUSTAIN_MODE_FILTER &&
       part_[part].PressedKeysForLatchUI().ignore_note_off_messages
     ) {
@@ -248,24 +248,10 @@ class Multi {
   bool NoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     bool thru = true;
     bool has_notes = false;
-
-    if (
-      recording_ && part_accepts_note(recording_part_, channel, note) &&
-      // Recording part currently has the resulting note
-      part_[recording_part_].PressedKeysForLatchUI().stack.Find(
-        part_[recording_part_].TransposeInputPitch(note)
-      )
-    ) {
-      thru = part_[recording_part_].NoteOff(channel, part_[recording_part_].TransposeInputPitch(note)) && thru;
-      for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        has_notes = has_notes || part_[i].has_notes();
-      }
-    } else {
-      for (uint8_t i = 0; i < num_active_parts_; ++i) {
-        has_notes = has_notes || part_[i].has_notes();
-        if (!part_accepts_note(i, channel, note)) { continue; }
-        thru = part_[i].NoteOff(channel, part_[i].TransposeInputPitch(note)) && thru;
-      }
+    for (uint8_t i = 0; i < num_active_parts_; ++i) {
+      has_notes = has_notes || part_[i].has_notes();
+      if (!part_accepts_note(i, channel, note)) continue;
+      thru = part_[i].NoteOff(channel, part_[i].TransposeInputPitch(note)) && thru;
     }
     
     if (!has_notes && CanAutoStop()) {
@@ -278,6 +264,9 @@ class Multi {
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
   void SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value);
   uint8_t GetSetting(const Setting& setting, uint8_t part) const;
+  void ApplySetting(SettingIndex setting, uint8_t part, int16_t raw_value) {
+    ApplySetting(setting_defs.get(setting), part, raw_value);
+  };
   void ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value);
   void ApplySettingAndSplash(const Setting& setting, uint8_t part, int16_t raw_value);
 
@@ -387,8 +376,8 @@ class Multi {
     }
 
     for (uint8_t p = 0; p < num_active_parts_; ++p) {
-      if (running() && part_[p].looper_in_use()) {
-        part_[p].mutable_looper().AdvanceToPresent();
+      if (running()) {
+        part_[p].mutable_looper().AdvanceToPresent(part_[p].looper_in_use());
       }
       for (uint8_t v = 0; v < part_[p].num_voices(); ++v) {
         part_[p].voice(v)->RenderSamples();
@@ -405,6 +394,7 @@ class Multi {
   
   inline Layout layout() const { return static_cast<Layout>(settings_.layout); }
   inline bool internal_clock() const { return settings_.clock_tempo > TEMPO_EXTERNAL; }
+  inline uint32_t tick_counter() { return tick_counter_; }
   inline uint8_t tempo() const { return settings_.clock_tempo; }
   inline bool running() const { return running_; }
   inline bool recording() const { return recording_; }
@@ -525,6 +515,7 @@ class Multi {
 
  private:
   void ChangeLayout(Layout old_layout, Layout new_layout);
+  void UpdateTempo();
   void AllocateParts();
   void ClockSong();
   
@@ -534,6 +525,7 @@ class Multi {
   bool started_by_keyboard_;
   bool recording_;
   uint8_t recording_part_;
+  uint8_t macro_record_last_value_[kNumParts];
   
   InternalClock internal_clock_;
   uint8_t internal_clock_ticks_;
@@ -542,6 +534,13 @@ class Multi {
   int16_t swing_predelay_[12];
   uint8_t swing_counter_;
   
+  // Ticks since Start. At 240 BPM * 24 PPQN = 96 Hz, this overflows after 517 days -- acceptable
+  uint32_t tick_counter_;
+
+  // Runs at 16 PPQN
+  SyncedLFO master_lfo_;
+  uint32_t master_lfo_tick_counter_;
+
   uint8_t clock_input_prescaler_;
   uint16_t clock_output_prescaler_;
   uint16_t bar_position_;

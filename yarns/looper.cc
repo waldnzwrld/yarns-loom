@@ -55,7 +55,6 @@ void Deck::RemoveAll() {
   head_.off = kNullIndex;
   oldest_index_ = 0;
   size_ = 0;
-  overwrite_ = false;
 
   std::fill(
     &next_link_[0],
@@ -107,10 +106,10 @@ void Deck::Pack(PackedPart& storage) const {
   }
 }
 
-void Deck::Clock() {
+void Deck::Clock(uint32_t tick_counter) {
   SequencerSettings seq = part_->sequencer_settings();
   uint16_t num_ticks = lut_clock_ratio_ticks[seq.clock_division];
-  lfo_.Tap(num_ticks * (1 << seq.loop_length), pos_offset << 16);
+  lfo_.Tap(tick_counter, num_ticks << seq.loop_length, pos_offset << 16);
 }
 
 void Deck::RemoveOldestNote() {
@@ -194,8 +193,6 @@ void Deck::Advance(uint16_t new_pos, bool play) {
 }
 
 uint8_t Deck::RecordNoteOn(uint8_t pitch, uint8_t velocity) {
-  if (overwrite_) { RemoveAll(); }
-
   if (size_ == kMaxNotes) {
     RemoveOldestNote();
   }

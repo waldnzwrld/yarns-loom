@@ -49,27 +49,14 @@ class SyncedLFO {
   SyncedLFO() { }
   ~SyncedLFO() { }
   void Init() {
-    counter_ = 0;
-    period_ticks_ = 0;
     phase_ = 0;
   }
 
-  uint32_t GetPhase() const {
-    return phase_;
-  }
-
-  uint32_t GetPhaseIncrement() const {
-    return phase_increment_;
-  }
-
-  uint32_t Increment(uint32_t increment) {
-    phase_ += increment;
-    return GetPhase();
-  }
-
-  uint32_t Refresh() {
-    return Increment(phase_increment_);
-  }
+  uint32_t GetPhase() const { return phase_; }
+  uint32_t GetPhaseIncrement() const { return phase_increment_; }
+  void SetPhaseIncrement(uint32_t i) { phase_increment_ = i; }
+  void Increment(uint32_t increment) { phase_ += increment; }
+  void Refresh() { return Increment(phase_increment_); }
 
   int16_t shape(LFOShape s) const { return shape(s, phase_); }
   int16_t shape(LFOShape shape, uint32_t phase) const {
@@ -89,22 +76,15 @@ class SyncedLFO {
     } 
   }
 
-  void Tap(uint16_t num_ticks, uint32_t phase_offset = 0) {
-    if (num_ticks != period_ticks_) {
-      if (period_ticks_) {
-        counter_ = (counter_ * num_ticks + period_ticks_ - 1) / period_ticks_;
-      }
-      period_ticks_ = num_ticks;
-      counter_ %= period_ticks_;
-    }
-
-    uint32_t target_phase = (counter_ * 65536 / period_ticks_) << 16;
+  void Tap(uint32_t tick_counter, uint16_t period_ticks, uint32_t phase_offset = 0) {
+    uint16_t tick_phase = tick_counter % period_ticks;
+    uint32_t target_phase = ((tick_phase << 16) / period_ticks) << 16;
     target_phase += phase_offset;
-    uint32_t target_increment = target_phase - previous_target_phase_;
+    uint32_t target_increment = UINT32_MAX / period_ticks;
 
     int32_t d_error = target_increment - (phase_ - previous_phase_);
     int32_t p_error = target_phase - phase_;
-    int32_t error = (d_error + (p_error >> 1)) >> 11;
+    int32_t error = (d_error + (p_error >> 4)) >> 12;
 
     if (error < 0 && abs(error) > phase_increment_) {
       // underflow
@@ -118,13 +98,9 @@ class SyncedLFO {
 
     previous_phase_ = phase_;
     previous_target_phase_ = target_phase;
-    counter_ = (counter_ + 1) % period_ticks_;
   }
 
  private:
-
-  uint16_t counter_;
-  uint16_t period_ticks_;
 
   uint32_t phase_;
   uint32_t phase_increment_;

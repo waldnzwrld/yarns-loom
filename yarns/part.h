@@ -197,7 +197,7 @@ struct PackedPart {
     vibrato_shape: 3,
     vibrato_range : 4,
     vibrato_mod : 7,
-    modulation_rate : 7,
+    lfo_rate : 7,
     tuning_root : 4,
     tuning_system : 6,
     trigger_duration : 7, // probably excessive
@@ -287,7 +287,7 @@ struct VoicingSettings {
   uint8_t vibrato_mod;
   uint8_t tremolo_mod;
   uint8_t tremolo_shape;
-  uint8_t modulation_rate;
+  uint8_t lfo_rate;
   int8_t tuning_transpose;
   int8_t tuning_fine;
   int8_t tuning_root;
@@ -325,7 +325,7 @@ struct VoicingSettings {
     packed.vibrato_mod = vibrato_mod;
     packed.tremolo_mod = tremolo_mod;
     packed.tremolo_shape = tremolo_shape;
-    packed.modulation_rate = modulation_rate;
+    packed.lfo_rate = lfo_rate;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
     packed.tuning_root = tuning_root;
@@ -363,7 +363,7 @@ struct VoicingSettings {
     vibrato_mod = packed.vibrato_mod;
     tremolo_mod = packed.tremolo_mod;
     tremolo_shape = packed.tremolo_shape;
-    modulation_rate = packed.modulation_rate;
+    lfo_rate = packed.lfo_rate;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
     tuning_root = packed.tuning_root;
@@ -416,7 +416,7 @@ enum PartSetting {
   PART_VOICING_VIBRATO_MOD,
   PART_VOICING_TREMOLO_MOD,
   PART_VOICING_TREMOLO_SHAPE,
-  PART_VOICING_MODULATION_RATE,
+  PART_VOICING_LFO_RATE,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
   PART_VOICING_TUNING_ROOT,
@@ -692,6 +692,7 @@ class Part {
   void StopRecording();
   void StartRecording();
   void DeleteSequence();
+  bool new_beat() const;
 
   inline void NewLayout() {
     midi_.min_note = 0;
@@ -703,6 +704,12 @@ class Part {
     voicing_.allocation_priority = stmlib::NOTE_STACK_PRIORITY_LAST;
     voicing_.portamento = 0;
     voicing_.legato_mode = LEGATO_MODE_OFF;
+  }
+
+  inline bool seq_overwrite() const { return seq_overwrite_; }
+  inline void toggle_seq_overwrite() { set_seq_overwrite(!seq_overwrite_); }
+  inline void set_seq_overwrite(bool b) {
+    seq_overwrite_ = b && (looped() ? looper_.num_notes() : seq_.num_steps);
   }
 
   inline const looper::Deck& looper() const { return looper_; }
@@ -731,10 +738,12 @@ class Part {
   }
 
   inline bool looper_in_use() const {
-    return looped() && (
-      midi_.play_mode == PLAY_MODE_SEQUENCER ||
-      seq_driven_arp()
-    );
+    return looped() && sequencer_in_use();
+  }
+
+  inline bool sequencer_in_use() const {
+    return midi_.play_mode == PLAY_MODE_SEQUENCER ||
+      (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && seq_driven_arp());
   }
 
   inline bool seq_driven_arp() const {
@@ -800,6 +809,7 @@ class Part {
   }
 
   inline void LooperRecordNoteOn(uint8_t pressed_key_index) {
+    if (seq_overwrite_) { DeleteRecording(); }
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
     uint8_t looper_note_index = looper_.RecordNoteOn(e.note, e.velocity & 0x7f);
     looper_note_recording_pressed_key_[pressed_key_index] = looper_note_index;
@@ -849,6 +859,7 @@ class Part {
 
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
+      if (seq_overwrite_) { DeleteRecording(); }
       SequencerStep* target = &seq_.step[seq_rec_step_];
       target->data[0] = step.data[0];
       target->data[1] |= step.data[1];
@@ -1020,14 +1031,13 @@ class Part {
   uint8_t active_note_[kNumMaxVoicesPerPart];
   uint8_t cyclic_allocation_note_counter_;
   
-  uint16_t arp_seq_prescaler_;
-  
   ArpeggiatorState arp_;
   
   bool seq_recording_;
   bool seq_overdubbing_;
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
+  bool seq_overwrite_;
   
   looper::Deck looper_;
 

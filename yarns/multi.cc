@@ -43,8 +43,12 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
+const uint8_t kCCMacroRecord = 116;
+const uint8_t kCCMacroPlayMode = 117;
+
 void Multi::Init(bool reset_calibration) {
   just_intonation_processor.Init();
+  master_lfo_.Init();
   
   fill(
       &settings_.custom_pitch_table[0],
@@ -55,6 +59,7 @@ void Multi::Init(bool reset_calibration) {
     part_[i].Init();
     part_[i].set_custom_pitch_table(settings_.custom_pitch_table);
   }
+  fill(&swing_predelay_[0], &swing_predelay_[12], -1);
   for (uint8_t i = 0; i < kNumSystemVoices; ++i) {
     voice_[i].Init();
   }
@@ -132,6 +137,13 @@ void Multi::Clock() {
   
   if (!clock_input_prescaler_) {
     midi_handler.OnClock();
+
+    // Sync LFOs
+    ++tick_counter_;
+    master_lfo_.Tap(tick_counter_, 16);
+    for (uint8_t p = 0; p < num_active_parts_; ++p) {
+      part_[p].mutable_looper().Clock(tick_counter_);
+    }
     
     ++swing_counter_;
     if (swing_counter_ >= 12) {
@@ -203,6 +215,7 @@ void Multi::Start(bool started_by_keyboard) {
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;
   stop_count_down_ = 0;
+  tick_counter_ = master_lfo_tick_counter_ = -1;
   bar_position_ = -1;
   swing_counter_ = -1;
   previous_output_division_ = 0;
@@ -255,11 +268,20 @@ void Multi::ClockFast() {
 }
 
 void Multi::Refresh() {
+  master_lfo_.Refresh();
+  bool new_tick = (master_lfo_.GetPhase() << 4) < (master_lfo_.GetPhaseIncrement() << 4);
+  if (new_tick) master_lfo_tick_counter_++;
   for (uint8_t j = 0; j < num_active_parts_; ++j) {
     Part& part = part_[j];
     part.mutable_looper().Refresh();
     for (uint8_t v = 0; v < part.num_voices(); ++v) {
       part.voice(v)->Refresh(v);
+    }
+    if (!new_tick) continue;
+    uint8_t lfo_rate = part.voicing_settings().lfo_rate;
+    if (lfo_rate >= 64) continue;
+    for (uint8_t v = 0; v < part.num_voices(); ++v) {
+      part.voice(v)->lfo()->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[(64 - lfo_rate - 1) >> 1]);
     }
   }
 
@@ -279,7 +301,7 @@ bool Multi::Set(uint8_t address, uint8_t value) {
         static_cast<Layout>(previous_value),
         static_cast<Layout>(value));
   } else if (address == MULTI_CLOCK_TEMPO) {
-    internal_clock_.set_tempo(settings_.clock_tempo);
+    UpdateTempo();
   } else if (address == MULTI_CLOCK_SWING) {
     internal_clock_.set_swing(settings_.clock_swing);
   }
@@ -288,7 +310,10 @@ bool Multi::Set(uint8_t address, uint8_t value) {
 
 void Multi::AssignVoicesToCVOutputs() {
   for (uint8_t v = 0; v < kNumSystemVoices; ++v) {
-    voice_[v].set_has_audio_listener(false);
+    voice_[v].set_audio_output(NULL);
+    for (int role = 0; role < DC_LAST; role++) {
+      voice_[v].set_dc_output(static_cast<DCRole>(role), NULL);
+    }
   }
   switch (settings_.layout) {
     case LAYOUT_MONO:
@@ -413,9 +438,9 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       break;
 
     case LAYOUT_PARAPHONIC_PLUS_TWO:
-      gate[0] = cv_outputs_[0].gate();
+      gate[0] = cv_outputs_[0].trigger();
       gate[1] = cv_outputs_[1].gate();
-      gate[2] = settings_.clock_override ? clock() : voice_[kNumParaphonicVoices].trigger();
+      gate[2] = settings_.clock_override ? clock() : cv_outputs_[2].trigger();
       gate[3] = cv_outputs_[3].gate();
       break;
 
@@ -495,9 +520,11 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
     case LAYOUT_PARAPHONIC_PLUS_TWO:
       {
         const NoteEntry& last_note = part_[0].priority_note(NOTE_STACK_PRIORITY_LAST);
-        const uint8_t last_voice_index = part_[0].FindVoiceForNote(last_note.note);
-        brightness[0] = (last_voice_index == VOICE_ALLOCATION_NOT_FOUND) ? 0 :
-          (part_[0].voice(last_voice_index)->mod_aux(MOD_AUX_ENVELOPE) >> 8);
+        const uint8_t last_voice = part_[0].FindVoiceForNote(last_note.note);
+        brightness[0] = (
+          last_note.note == NOTE_STACK_FREE_SLOT ||
+          last_voice == VOICE_ALLOCATION_NOT_FOUND
+        ) ? 0 : part_[0].voice(last_voice)->velocity() << 1;
         brightness[1] = voice_[kNumParaphonicVoices].gate() ? (voice_[kNumParaphonicVoices].velocity() << 1) : 0;
         brightness[2] = voice_[kNumParaphonicVoices].aux_cv();
         brightness[3] = voice_[kNumParaphonicVoices + 1].gate() ? (voice_[kNumParaphonicVoices + 1].velocity() << 1) : 0;
@@ -654,14 +681,22 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
   }
 }
 
+const uint32_t kTempoToRefreshPhaseIncrement = (UINT32_MAX / 4000) * 24 / 60;
+void Multi::UpdateTempo() {
+  internal_clock_.set_tempo(settings_.clock_tempo);
+  if (running_) return;
+  master_lfo_.SetPhaseIncrement((settings_.clock_tempo * kTempoToRefreshPhaseIncrement) >> 4);
+}
+
 void Multi::AfterDeserialize() {
   Stop();
 
-  internal_clock_.set_tempo(settings_.clock_tempo);
+  UpdateTempo();
   AllocateParts();
   
   for (uint8_t i = 0; i < kNumParts; ++i) {
     part_[i].AfterDeserialize();
+    macro_record_last_value_[i] = 127;
   }
 }
 
@@ -737,6 +772,7 @@ void Multi::StopRecording(uint8_t part) {
   if (recording_ && recording_part_ == part) {
     part_[part].StopRecording();
     recording_ = false;
+    part_[part].set_seq_overwrite(false);
   }
 }
 
@@ -750,18 +786,49 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   } else {
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
       if (!part_accepts_channel(i, channel)) { continue; }
-      if (controller == kCCRecordOffOn) {
+      int8_t macro_zone;
+      switch (controller) {
+      case kCCRecordOffOn:
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);
-        ui.SplashOn(SPLASH_ACTIVE_PART);
-      } else if (controller == kCCDeleteRecording) {
-        // Splash needs part index
+        ui.SplashOn(SPLASH_ACTIVE_PART, i);
+        break;
+      case kCCDeleteRecording:
         part_[i].DeleteRecording();
-        ui.SetSplashPart(i);
-        ui.SplashOn(SPLASH_DELETE_RECORDING);
-      } else {
+        ui.SplashPartString("RX", i);
+        break;
+      case kCCMacroRecord:
+        // 0..3: record off, record on, overwrite, delete
+        macro_zone = value >> 5; // 0..3
+        macro_zone >= 1 ? StartRecording(i) : StopRecording(i);
+        if (
+          // Only on increasing value, so that leaving the knob in the delete zone doesn't doom any subsequent recordings
+          macro_zone == 3 && value > macro_record_last_value_[i])
+        {
+          part_[i].DeleteRecording();
+          ui.SplashPartString("RX", i);
+        } else {
+          part_[i].set_seq_overwrite(macro_zone == 2);
+          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "--"), i);
+        }
+        macro_record_last_value_[i] = value;
+        break;
+      case kCCMacroPlayMode:
+        // -2..2: step seq, step arp, manual, loop arp, loop seq
+        macro_zone = (5 * value >> 7) - 2;
+        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, i, macro_zone < 0);
+        ApplySetting(SETTING_SEQUENCER_PLAY_MODE, i, abs(macro_zone));
+        char label[2];
+        if (macro_zone == 0) strcpy(label, "--"); else {
+          label[0] = macro_zone < 0 ? 'S' : 'L';
+          label[1] = abs(macro_zone) == 1 ? 'A' : 'S';
+        }
+        ui.SplashPartString(label, i);
+        break;
+      default:
         thru = part_[i].ControlChange(channel, controller, value) && thru;
         SetFromCC(i, controller, value);
+        break;
       }
     }
   }

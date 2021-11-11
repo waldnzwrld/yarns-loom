@@ -29,7 +29,6 @@
 
 #include "yarns/voice.h"
 
-#include <algorithm>
 #include <cmath>
 
 #include "stmlib/midi/midi.h"
@@ -47,7 +46,10 @@ const int32_t kOctave = 12 << 7;
 const int32_t kMaxNote = 120 << 7;
 const int32_t kQuadrature = 0x40000000;
 
+const uint8_t kLowFreqRefresh = 32; // 4 kHz / 32 = 125 Hz (the ~minimum that doesn't cause obvious LFO sampling error)
+
 void Voice::Init() {
+  audio_output_ = NULL;
   note_ = -1;
   note_source_ = note_target_ = note_portamento_ = 60 << 7;
   gate_ = false;
@@ -55,15 +57,19 @@ void Voice::Init() {
   mod_velocity_ = 0x7f;
   ResetAllControllers();
   
-  modulation_increment_ = lut_lfo_increments[50];
-  modulation_sync_ticks_ = 0;
+  lfo_phase_increment_ = lut_lfo_increments[50];
   pitch_bend_range_ = 2;
   vibrato_range_ = 0;
 
   tremolo_mod_current_ = 0;
   timbre_mod_lfo_current_ = 0;
-  timbre_mod_envelope_current_ = 0;
   timbre_init_current_ = 0;
+
+  refresh_counter_ = 0;
+  pitch_lfo_interpolator_.Init(kLowFreqRefresh);
+  timbre_lfo_interpolator_.Init(kLowFreqRefresh);
+  amplitude_lfo_interpolator_.Init(kLowFreqRefresh);
+  scaled_vibrato_lfo_interpolator_.Init(kLowFreqRefresh);
   
   synced_lfo_.Init();
   envelope_.Init();
@@ -91,7 +97,8 @@ void CVOutput::Init(bool reset_calibration) {
   }
   dirty_ = false;
 
-  dac_interpolator_.Init(24);
+  dac_interpolator_.Init(10); // 40 kHz / 4 kHz
+  dc_role_ = DC_PITCH;
 }
 
 void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
@@ -101,12 +108,7 @@ void CVOutput::Calibrate(uint16_t* calibrated_dac_code) {
       &calibrated_dac_code_[0]);
 }
 
-void CVOutput::NoteToDacCode() {
-  int32_t note = dc_voice_->note();
-  if (note_ == note && !dirty_) return;
-  dirty_ = false;
-  note_ = note;
-
+uint16_t CVOutput::NoteToDacCode(int32_t note) const {
   if (note <= 0) {
     note = 0;
   }
@@ -123,7 +125,7 @@ void CVOutput::NoteToDacCode() {
   // Octave indicates the octave. Look up in the DAC code table.
   int32_t a = calibrated_dac_code_[octave];
   int32_t b = calibrated_dac_code_[octave + 1];
-  note_dac_code_ = a + ((b - a) * note / kOctave);
+  return a + ((b - a) * note / kOctave);
 }
 
 void Voice::ResetAllControllers() {
@@ -132,15 +134,16 @@ void Voice::ResetAllControllers() {
   std::fill(&mod_aux_[0], &mod_aux_[MOD_AUX_LAST - 1], 0);
 }
 
-void Voice::set_modulation_rate(uint8_t modulation_rate, uint8_t index) {
-  if (modulation_rate < LUT_LFO_INCREMENTS_SIZE) {
-    modulation_increment_ = lut_lfo_increments[modulation_rate];
-    modulation_increment_ *= pow(1.123f, (int) index);
-    modulation_increment_ = lut_lfo_increments[modulation_rate];
-    modulation_sync_ticks_ = 0;
+void Voice::garbage(uint8_t x) {
+  uint32_t foo = pow(1.123f, (int) x);
+  (void) foo;
+}
+
+void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index) {
+  if (lfo_rate < 64) {
+    lfo_phase_increment_ = 0;
   } else {
-    modulation_increment_ = 0;
-    modulation_sync_ticks_ = lut_clock_ratio_ticks[modulation_rate - LUT_LFO_INCREMENTS_SIZE];
+    lfo_phase_increment_ = lut_lfo_increments[lfo_rate - 64];
   }
 }
 
@@ -152,8 +155,6 @@ void Voice::Refresh(uint8_t voice_index) {
     timbre_init_current_, timbre_init_target_);
   timbre_mod_lfo_current_ = stmlib::slew(
     timbre_mod_lfo_current_, timbre_mod_lfo_target_);
-  timbre_mod_envelope_current_ = stmlib::slew(
-    timbre_mod_envelope_current_, timbre_mod_envelope_target_);
 
   // Compute base pitch with portamento.
   portamento_phase_ += portamento_phase_increment_;
@@ -178,31 +179,46 @@ void Voice::Refresh(uint8_t voice_index) {
   
   // Render modulation sources
   envelope_.ReadSample();
-  if (modulation_increment_) {
-    synced_lfo_.Increment(modulation_increment_);
+  if (lfo_phase_increment_) {
+    synced_lfo_.Increment(lfo_phase_increment_);
   } else {
     synced_lfo_.Refresh();
   }
   // Use voice index to put voice LFOs in quadrature
   uint32_t lfo_phase = synced_lfo_.GetPhase();// + (voice_index << 30);
+  int32_t triangle_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
 
-  // Add vibrato.
-  int32_t vibrato_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
-  int32_t scaled_vibrato_lfo = vibrato_lfo * vibrato_mod_;
-  note += scaled_vibrato_lfo * vibrato_range_ >> 15;
+  if (refresh_counter_ == 0) {
+    uint16_t tremolo_lfo = 32767 - synced_lfo_.shape(tremolo_shape_);
+    uint16_t scaled_tremolo_lfo = tremolo_lfo * tremolo_mod_current_ >> 16;
+    amplitude_lfo_interpolator_.SetTarget((UINT16_MAX - scaled_tremolo_lfo) >> 1);
+    amplitude_lfo_interpolator_.ComputeSlope();
 
-  // Use quadrature phase for timbre modulation
-  int32_t timbre_lfo = synced_lfo_.shape(LFO_SHAPE_TRIANGLE, lfo_phase);
-  int32_t timbre_envelope_31 = envelope_.value() * timbre_mod_envelope_current_;
+    timbre_lfo_interpolator_.SetTarget(triangle_lfo * timbre_mod_lfo_current_ >> (31 - 15));
+    timbre_lfo_interpolator_.ComputeSlope();
+
+    scaled_vibrato_lfo_interpolator_.SetTarget(triangle_lfo * vibrato_mod_ >> 8);
+    scaled_vibrato_lfo_interpolator_.ComputeSlope();
+    pitch_lfo_interpolator_.SetTarget(scaled_vibrato_lfo_interpolator_.target() * vibrato_range_ >> 8);
+    pitch_lfo_interpolator_.ComputeSlope();
+  }
+  refresh_counter_ = (refresh_counter_ + 1) % kLowFreqRefresh;
+
+  pitch_lfo_interpolator_.Tick();
+  timbre_lfo_interpolator_.Tick();
+  amplitude_lfo_interpolator_.Tick();
+  scaled_vibrato_lfo_interpolator_.Tick();
+
+  note += pitch_lfo_interpolator_.value();
+
+  int32_t timbre_envelope_31 = envelope_.value() * timbre_mod_envelope_;
   int32_t timbre_15 =
     (timbre_init_current_ >> (16 - 15)) +
     (timbre_envelope_31 >> (31 - 15)) +
-    (timbre_lfo * timbre_mod_lfo_current_ >> (31 - 15));
+    timbre_lfo_interpolator_.value();
   CONSTRAIN(timbre_15, 0, (1 << 15) - 1);
 
-  uint16_t tremolo_lfo = 32767 - synced_lfo_.shape(tremolo_shape_, lfo_phase);
-  uint16_t scaled_tremolo_lfo = tremolo_lfo * tremolo_mod_current_ >> 16;
-  uint16_t tremolo_drone = UINT16_MAX - scaled_tremolo_lfo;
+  uint16_t tremolo_drone = amplitude_lfo_interpolator_.value() << 1;
   uint16_t tremolo_envelope = envelope_.value() * tremolo_drone >> 16;
   uint16_t gain = oscillator_mode_ == OSCILLATOR_MODE_ENVELOPED ?
     tremolo_envelope : tremolo_drone;
@@ -212,8 +228,8 @@ void Voice::Refresh(uint8_t voice_index) {
   mod_aux_[MOD_AUX_VELOCITY] = mod_velocity_ << 9;
   mod_aux_[MOD_AUX_MODULATION] = vibrato_mod_ << 9;
   mod_aux_[MOD_AUX_BEND] = static_cast<uint16_t>(mod_pitch_bend_) << 2;
-  mod_aux_[MOD_AUX_VIBRATO_LFO] = (scaled_vibrato_lfo >> 7) + 32768;
-  mod_aux_[MOD_AUX_FULL_LFO] = vibrato_lfo + 32768;
+  mod_aux_[MOD_AUX_VIBRATO_LFO] = (scaled_vibrato_lfo_interpolator_.value() << 1) + 32768;
+  mod_aux_[MOD_AUX_FULL_LFO] = triangle_lfo + 32768;
   mod_aux_[MOD_AUX_ENVELOPE] = tremolo_envelope;
 
   if (retrigger_delay_) {
@@ -237,9 +253,24 @@ void Voice::Refresh(uint8_t voice_index) {
 
 void CVOutput::Refresh() {
   if (is_audio()) return;
-  if (dc_role_ == DC_PITCH) NoteToDacCode();
+  if (dc_role_ == DC_PITCH) {
+    int32_t note = dc_voice_->note();
+    if (dirty_ || note_ != note) {
+      note_dac_code_ = NoteToDacCode(note);
+    }
+    dirty_ = false;
+    note_ = note;
+  }
   dac_interpolator_.SetTarget((this->*dc_fn_table_[dc_role_])() >> 1);
-  dac_interpolator_.ComputeSlope();
+  if (is_envelope()) dac_interpolator_.ComputeSlope();
+}
+
+void Voice::SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento) {
+  note_source_ = note_portamento_;  
+  note_target_ = note;
+  if (!portamento) {
+    note_source_ = note_target_;
+  }
 }
 
 void Voice::NoteOn(
@@ -247,18 +278,14 @@ void Voice::NoteOn(
     uint8_t velocity,
     uint8_t portamento,
     bool trigger) {
-  note_source_ = note_portamento_;  
-  note_target_ = note;
-  if (!portamento) {
-    note_source_ = note_target_;
-  }
+  SetPortamento(note, velocity, portamento);
   portamento_phase_ = 0;
-  uint32_t num_portamento_increments_per_shape = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
-  if (portamento < num_portamento_increments_per_shape) {
-    portamento_phase_increment_ = lut_portamento_increments[portamento << 1];
+  uint32_t split_point = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
+  if (portamento < split_point) {
+    portamento_phase_increment_ = lut_portamento_increments[(split_point - portamento) << 1];
     portamento_exponential_shape_ = true;
   } else {
-    uint32_t base_increment = lut_portamento_increments[(portamento - num_portamento_increments_per_shape) << 1];
+    uint32_t base_increment = lut_portamento_increments[(portamento - split_point) << 1];
     uint32_t delta = abs(note_target_ - note_source_) + 1;
     portamento_phase_increment_ = (1536 * (base_increment >> 11) / delta) << 11;
     CONSTRAIN(portamento_phase_increment_, 1, 0x7FFFFFFF);

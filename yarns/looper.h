@@ -93,9 +93,10 @@ class Deck {
   inline uint16_t phase() const {
     return pos_;
   }
-  void Clock();
+  void Clock(uint32_t tick_counter);
   inline void Refresh() {
-    uint16_t new_phase = lfo_.Refresh() >> 16;
+    lfo_.Refresh();
+    uint16_t new_phase = lfo_.GetPhase() >> 16;
     if (
       // phase has definitely changed, or
       pos_ != new_phase ||
@@ -107,18 +108,14 @@ class Deck {
     }
   }
 
-  inline bool overwrite_enabled() const { return overwrite_; }
-  inline void ToggleOverwrite() {
-    if (overwrite_) { overwrite_ = false; }
-    else if (size_) { overwrite_ = true; }
-  }
+  inline bool num_notes() const { return size_; }
 
   void RemoveOldestNote();
   void RemoveNewestNote();
-  inline void AdvanceToPresent() {
+  inline void AdvanceToPresent(bool play) {
     if (!needs_advance_) { return; }
     uint16_t new_pos = lfo_.GetPhase() >> 16;
-    Advance(new_pos, true);
+    Advance(new_pos, play);
   }
   uint8_t RecordNoteOn(uint8_t pitch, uint8_t velocity);
   bool RecordNoteOff(uint8_t index);
@@ -155,7 +152,6 @@ class Deck {
   // Linked lists track current and upcoming notes
   Link head_; // Points to the latest on/off
   Link next_link_[kMaxNotes];
-  bool overwrite_;
 
   // Phase tracking
   SyncedLFO lfo_;

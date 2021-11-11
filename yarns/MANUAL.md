@@ -70,12 +70,13 @@
   
 # Sequencer
 
-### Recording interface changes
+### Recording interface
 - Hold `REC` to clear sequence
+- Hold `TAP` to toggle triggered-erase mode, which will clear the sequence as soon as a new note is recorded
 - First `REC` press switches the display to show the pitch instead of the step number (press again to exit recording)
 - Flash note (or RS/TI) for the selected step
 - Brighten display while the selected step is being played
-- Wrap around around when using encoder to scroll through steps
+- Wrap around when using encoder to scroll through steps
 
 ### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
@@ -83,7 +84,6 @@
   - Play notes to record them into the loop
   - Press `START` to delete the oldest note, or `TAP` for the newest
   - Scroll the encoder to shift the loop phase by 1/128: clockwise shifts notes earlier, counter-clockwise shits notes later
-  - Hold `TAP` to toggle overwrite mode, which will clear the loop as soon as a new note is recorded
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
 - Holds 30 notes max -- past this limit, overwrites oldest note
@@ -152,16 +152,20 @@
 - `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
   
 ### Expanded support for Control Change events
-- The result of a received CC is briefly displayed
+- The result of a received CC is briefly displayed (value, setting abbreviation, and receiving part)
 - Recording control: start/stop recording mode, delete a recording
 - CC support for all new settings
+- Macro CC for controlling recording state: off, on, triggered erase, immediate erase
+- Macro CC for controlling sequencer mode: step sequencer, step arpeggiator, manual, loop arpeggiator, loop sequencer
 - Fixed settings to accept a negative value via CC
 - [Implementation Chart](https://docs.google.com/spreadsheets/d/1V6CRqf_3FGTrNIjcU1ixBtzRRwqjIa1PaiqOFgf6olE/edit#gid=0)
 
-### Clock ratios
+### Clocking
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
-- Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
+  - Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
+- Sequencers' phases are based on a master clock, to allow returning to predictable phase relationships between sequences even after a stint in disparate time signatures
   
 ### Other tweaks
 - Broadened portamento setting range from 51 to 64 values per curve shape
 - Allow an explicit clock start (from panel switch or MIDI) to supersede an implicit clock start (from keyboard)
+- Change 'split' controls (portamento and vibrato speed) to have a common zero at the split point, increasing both CCW and CW of this point
