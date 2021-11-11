@@ -140,10 +140,10 @@ void Voice::garbage(uint8_t x) {
 }
 
 void Voice::set_lfo_rate(uint8_t lfo_rate, uint8_t index) {
-  if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
-    lfo_phase_increment_ = lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1];
-  } else {
+  if (lfo_rate < 64) {
     lfo_phase_increment_ = 0;
+  } else {
+    lfo_phase_increment_ = lut_lfo_increments[lfo_rate - 64];
   }
 }
 

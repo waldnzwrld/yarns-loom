@@ -279,9 +279,9 @@ void Multi::Refresh() {
     }
     if (!new_tick) continue;
     uint8_t lfo_rate = part.voicing_settings().lfo_rate;
-    if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) continue;
+    if (lfo_rate >= 64) continue;
     for (uint8_t v = 0; v < part.num_voices(); ++v) {
-      part.voice(v)->lfo()->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
+      part.voice(v)->lfo()->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[(64 - lfo_rate - 1) >> 1]);
     }
   }
 
