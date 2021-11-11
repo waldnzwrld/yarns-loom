@@ -377,7 +377,7 @@ const Setting Settings::settings_[] = {
     22, 13,
   },
   {
-    "VS", "VIBRATO SPEED",
+    "LF", "LFO RATE",
     SETTING_DOMAIN_PART, { PART_VOICING_LFO_RATE, 0 },
     SETTING_UNIT_LFO_RATE, 0, 127, NULL,
     23, 14,
