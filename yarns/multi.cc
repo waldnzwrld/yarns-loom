@@ -300,10 +300,10 @@ void Multi::Refresh() {
       for (uint8_t v = 0; v < part.num_voices(); ++v) {
         part_lfos[v] = part.voice(v)->lfo(static_cast<LFORole>(0));
       }
-      if (lfo_rate < LUT_LFO_INCREMENTS_SIZE) {
-        part_lfos[0]->SetPhaseIncrement(lut_lfo_increments[LUT_LFO_INCREMENTS_SIZE - lfo_rate - 1]);
+      if (lfo_rate < 64) {
+        part_lfos[0]->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[(64 - lfo_rate - 1) >> 1]);
       } else {
-        part_lfos[0]->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[lfo_rate - LUT_LFO_INCREMENTS_SIZE]);
+        part_lfos[0]->SetPhaseIncrement(lut_lfo_increments[lfo_rate - 64]);
       }
       SpreadLFOs(part.voicing_settings().lfo_spread_voices, &part_lfos[0], part.num_voices());
       for (uint8_t v = 0; v < part.num_voices(); ++v) {
@@ -806,7 +806,7 @@ void Multi::StopRecording(uint8_t part) {
   if (recording_ && recording_part_ == part) {
     part_[part].StopRecording();
     recording_ = false;
-    part_[part].mutable_looper().set_overwrite_armed(false);
+    part_[part].set_seq_overwrite(false);
   }
 }
 
@@ -842,7 +842,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
           part_[i].DeleteRecording();
           ui.SplashPartString("RX", i);
         } else {
-          part_[i].mutable_looper().set_overwrite_armed(macro_zone == 2);
+          part_[i].set_seq_overwrite(macro_zone == 2);
           ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "--"), i);
         }
         macro_record_last_value_[i] = value;
