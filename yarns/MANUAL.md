@@ -1,3 +1,25 @@
+#### Table of contents
+- [Interface](#interface)
+    - [Global control and display of the active part and its play mode](#global-control-and-display-of-the-active-part-and-its-play-mode)
+    - [Tap tempo changes](#tap-tempo-changes)
+    - [Other changes](#other-changes)
+- [Synth voice](#synth-voice)
+    - [Oscillator controls](#oscillator-controls)
+    - [Oscillator synthesis models](#oscillator-synthesis-models)
+    - [Amplitude dynamics: envelope and tremolo](#amplitude-dynamics-envelope-and-tremolo)
+- [Sequencer](#sequencer)
+    - [Recording interface](#recording-interface)
+    - [Looper-style sequencing mode with real-time recording](#looper-style-sequencing-mode-with-real-time-recording)
+    - [Sequencer-driven arpeggiator](#sequencer-driven-arpeggiator)
+- [MIDI](#midi)
+    - [Layouts](#layouts)
+    - [Hold pedal](#hold-pedal)
+    - [Event routing, filtering, and transformation](#event-routing-filtering-and-transformation)
+    - [`VOICING` allocation methods](#voicing-allocation-methods)
+    - [Expanded support for Control Change events](#expanded-support-for-control-change-events)
+    - [Clocking](#clocking)
+    - [Other tweaks](#other-tweaks)
+
 # Interface
 
 ### Global control and display of the active part and its play mode
