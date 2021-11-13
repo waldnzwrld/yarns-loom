@@ -105,7 +105,7 @@
 - To use, press `REC` to enter real-time recording mode
   - Play notes to record them into the loop
   - Press `START` to delete the oldest note, or `TAP` for the newest
-  - Scroll the encoder to shift the loop phase by 1/128: clockwise shifts notes earlier, counter-clockwise shits notes later
+  - Scroll the encoder to shift the loop phase by 1/128: clockwise shifts notes earlier, counter-clockwise shifts notes later
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
 - Holds 30 notes max -- past this limit, overwrites oldest note
