@@ -102,9 +102,9 @@
 # MIDI
 
 ### Layouts
-- `2+2` 3-part layout: one two-voice polyphonic part, two monophonic parts
-- `2+1` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
-- `*2` 3-part layout: 3-voice paraphonic part, 1 monophonic part with modulation, 1 monophonic part without modulation
+- `2+2` 3-part layout: 2-voice polyphonic part + two monophonic parts
+- `2+1` 2-part layout: 2-voice polyphonic part + monophonic part with aux CV
+- `*2` 3-part layout: 3-voice paraphonic part + monophonic part with aux CV + monophonic part without aux CV
   - Paraphonic part can use the new [envelopes](#adsr-envelopes-modulated-by-velocity)
   - Audio mode is always on for the paraphonic part
   - Output channels:
@@ -112,6 +112,7 @@
     2. Part 2, monophonic CV/gate
     3. Part 2, modulation configurable via `3>`
     4. Part 3, monophonic CV/gate
+- `3M` 3-part layout: 3 monophonic parts, plus clock on gate 4 and bar/reset on CV 4
     
 ### Hold pedal
 - Screen flashes the active part's hold status
