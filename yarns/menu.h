@@ -72,7 +72,10 @@ namespace yarns {
 
 #define MENU_MODULATION \
   SETTING_VOICING_PITCH_BEND_RANGE, \
+  SETTING_VOICING_LFO_SPREAD_TYPES, \
+  SETTING_VOICING_LFO_SPREAD_VOICES, \
   SETTING_VOICING_VIBRATO_MOD, \
+  SETTING_VOICING_VIBRATO_SHAPE, \
   SETTING_VOICING_VIBRATO_RANGE
 
 #define MENU_EUCLIDEAN \
@@ -117,6 +120,7 @@ static const SettingIndex menu_oscillator[] = {
   SETTING_VOICING_OSCILLATOR_SHAPE,
   SETTING_VOICING_TIMBRE_INIT,
   SETTING_VOICING_TIMBRE_MOD_LFO,
+  SETTING_VOICING_TIMBRE_LFO_SHAPE,
   SETTING_VOICING_TIMBRE_MOD_ENVELOPE,
   SETTING_VOICING_TIMBRE_MOD_VELOCITY,
 
@@ -281,6 +285,15 @@ static const SettingIndex two_one[] = {
   MENU_END
 };
 
+static const SettingIndex tri_mono[] = {
+  MENU_LAYOUT_CLOCK,
+  MENU_MIDI,
+  MENU_VOICING_ALLOCATION_MONO,
+  MENU_MODULATION,
+  MENU_TUNING,
+  MENU_END
+};
+
 static const SettingIndex quad_voltages[] = {
   MENU_LAYOUT_CLOCK,
   SETTING_CLOCK_OVERRIDE,
@@ -289,7 +302,7 @@ static const SettingIndex quad_voltages[] = {
   MENU_END
 };
 
-static const SettingIndex* setup_setting_list_for_layout[] = {
+static const SettingIndex* setup_setting_list_for_layout[LAYOUT_LAST] = {
   mono,
   dual_mono,
   quad_mono,
@@ -304,6 +317,7 @@ static const SettingIndex* setup_setting_list_for_layout[] = {
   two_two,
   two_one,
   paraphonic_plus_two,
+  tri_mono,
 };
 
 class Menu {

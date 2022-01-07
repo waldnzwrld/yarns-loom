@@ -92,6 +92,13 @@ enum DCRole {
   DC_LAST
 };
 
+enum LFORole {
+  LFO_ROLE_PITCH,
+  LFO_ROLE_TIMBRE,
+  LFO_ROLE_AMPLITUDE,
+  LFO_ROLE_LAST
+};
+
 class CVOutput;
 
 class Voice {
@@ -102,7 +109,7 @@ class Voice {
   void Init();
   void ResetAllControllers();
 
-  void Refresh(uint8_t voice_index);
+  void Refresh();
   void SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento);
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
@@ -114,7 +121,6 @@ class Voice {
     mod_aux_[MOD_AUX_AFTERTOUCH] = velocity << 9;
   }
 
-  void set_lfo_rate(uint8_t lfo_rate, uint8_t index);
   void garbage(uint8_t x);
   inline void set_pitch_bend_range(uint8_t pitch_bend_range) {
     pitch_bend_range_ = pitch_bend_range;
@@ -125,8 +131,13 @@ class Voice {
   inline void set_vibrato_mod(uint8_t n) { vibrato_mod_ = n; }
   inline void set_tremolo_mod(uint8_t n) {
     tremolo_mod_target_ = n << (16 - 7); }
-  inline void set_tremolo_shape(uint8_t n) {
-    tremolo_shape_ = static_cast<LFOShape>(n); }
+
+  inline void set_lfo_shape(LFORole role, uint8_t shape) {
+    lfo_shapes_[role] = static_cast<LFOShape>(shape);
+  }
+  inline int16_t lfo_value(LFORole role) const {
+    return lfos_[role].shape(lfo_shapes_[role]);
+  }
 
   inline void set_trigger_duration(uint8_t trigger_duration) {
     trigger_duration_ = trigger_duration;
@@ -199,7 +210,7 @@ class Voice {
   inline Oscillator* oscillator() {
     return &oscillator_;
   }
-  inline SyncedLFO* lfo() { return &synced_lfo_; }
+  inline SyncedLFO* lfo(LFORole l) { return &lfos_[l]; }
   inline Envelope* envelope() {
     return &envelope_;
   }
@@ -213,7 +224,7 @@ class Voice {
   }
   
  private:
-  SyncedLFO synced_lfo_;
+  SyncedLFO lfos_[LFO_ROLE_LAST];
   Envelope envelope_;
   Oscillator oscillator_;
 
@@ -229,7 +240,6 @@ class Voice {
   uint8_t mod_velocity_;
   
   uint8_t pitch_bend_range_;
-  uint32_t lfo_phase_increment_;
   uint8_t vibrato_range_;
   uint8_t vibrato_mod_;
   
@@ -238,7 +248,7 @@ class Voice {
   bool trigger_scale_;
 
   uint8_t oscillator_mode_;
-  LFOShape tremolo_shape_;
+  LFOShape lfo_shapes_[LFO_ROLE_LAST];
   uint8_t aux_cv_source_;
   uint8_t aux_cv_source_2_;
   

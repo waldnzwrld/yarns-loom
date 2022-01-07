@@ -46,7 +46,7 @@ const uint16_t kRefreshTwoThirds = 600;
 const uint32_t kEncoderLongPressTime = kRefreshPeriod * 2 / 3;
 const uint32_t kDefaultFade = (1 << 15) / kRefreshPeriod; // 1/2 frequency
 
-const char* const kVersion = "Loom 2_3_0";
+const char* const kVersion = "Loom 2_4_0";
 
 /* static */
 const Ui::Command Ui::commands_[] = {
@@ -329,6 +329,8 @@ void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
   uint16_t phase;
   if (part.looped()) {
     phase = UINT16_MAX - part.looper().phase();
+  } else if (!part.sequencer_settings().num_steps) {
+    phase = UINT16_MAX;
   } else {
     phase = ((1 + part.playing_step()) << 16) / part.sequencer_settings().num_steps;
   }
@@ -368,7 +370,10 @@ void Ui::PrintRecordingStatus() {
   if (push_it_) {
     PrintPushItNote();
   } else {
-    if (recording_part().recording_step() == recording_part().playing_step()) {
+    if (
+      recording_part().num_steps() == 0 ||
+      recording_part().recording_step() == recording_part().playing_step()
+    ) {
       display_.set_brightness(UINT16_MAX);
     } else {
       // If playing a sequencer step other than the selected one, 2/3 brightness
@@ -624,7 +629,10 @@ void Ui::OnIncrementParameterSelect(const Event& e) {
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
   int16_t value = multi.GetSetting(setting(), active_part_);
-  if (setting().unit == SETTING_UNIT_INT8) {
+  if (
+    setting().unit == SETTING_UNIT_INT8 ||
+    setting().unit == SETTING_UNIT_LFO_SPREAD
+  ) {
     value = static_cast<int8_t>(value);
   }
   value += e.data;

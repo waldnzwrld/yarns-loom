@@ -56,6 +56,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - Each wave shape has a timbral parameter that can be modulated by several sources
   - `TI (TIMBRE INITIAL)` sets initial timbre
   - `TL (TIMBRE LFO MOD)` sets the depth of timbre modulation by the voice's bipolar LFO
+  - `LS (TIMBRE LFO SHAPE)` sets the shape of the timbre LFO (triangle, down saw, up saw, square)
   - `TE (TIMBRE ENV MOD)` sets the initial bipolar depth of modulation of timbre by envelope
   - `TV (TIMBRE VEL MOD)` sets the bipolar modulation by velocity of the envelope modulation of timbre (e.g. velocity can polarize the timbre envelope)
 
@@ -85,7 +86,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - Tremolo can be applied to envelope and oscillator
   - Tremolo uses the same LFO frequency as vibrato
   - `TR (TREMOLO DEPTH)` sets the amount of tremolo
-  - `TS (TREMOLO SHAPE)` applies a waveshaper to the LFO (triangle, down saw, up saw, square)
+  - `TS (TREMOLO SHAPE)` sets the shape of the tremolo LFO (triangle, down saw, up saw, square)
 - ADSR envelope with velocity modulation
   - Envelope controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
   - Envelope is available as an assignable CV output (`ENVELOPE`) in all layouts
@@ -128,9 +129,9 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 # MIDI
 
 ### Layouts
-- `2+2` 3-part layout: one two-voice polyphonic part, two monophonic parts
-- `2+1` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
-- `*2` 3-part layout: 3-voice paraphonic part, 1 monophonic part with modulation, 1 monophonic part without modulation
+- `2+2` 3-part layout: 2-voice polyphonic part + two monophonic parts
+- `2+1` 2-part layout: 2-voice polyphonic part + monophonic part with aux CV
+- `*2` 3-part layout: 3-voice paraphonic part + monophonic part with aux CV + monophonic part without aux CV
   - Paraphonic part can use the new [envelopes](#adsr-envelopes-modulated-by-velocity)
   - Audio mode is always on for the paraphonic part
   - Output channels:
@@ -138,6 +139,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
     2. Part 2, monophonic CV/gate
     3. Part 2, modulation configurable via `3>`
     4. Part 3, monophonic CV/gate
+- `3M` 3-part layout: 3 monophonic parts, plus clock on gate 4 and bar/reset on CV 4
     
 ### Hold pedal
 - Screen flashes the active part's hold status
@@ -190,6 +192,19 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
   - Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
 - Sequencers' phases are based on a master clock, to allow returning to predictable phase relationships between sequences even after a stint in disparate time signatures
+
+### LFOs
+- `VS (VIBRATO SHAPE)` (in `▽S (SETUP MENU)`) sets the shape of the vibrato LFO (triangle, down saw, up saw, square)
+- LFO "spreading" (dephasing or detuning)
+  - `LV (LFO SPREAD VOICES)` sets the spread among the voices for the selected part
+  - `LT (LFO SPREAD TYPES)` sets the spread among the vibrato, timbre, and tremolo LFOs for each voice in the part
+  - Turning these settings counter-clockwise from center progressively dephases the LFOs
+    - Each LFO's phase is progressively more offset, by an amount ranging from 0° to 360° depending on the setting
+    - Ideal for quadrature and three-phase modulation
+    - When dephasing, the LFOs always share a common frequency
+  - Turning clockwise from center detunes the LFOs
+    - Each LFO's frequency is a multiple of the last, with that multiple being between 1x and 2x depending on the setting
+    - Facilitates unstable, meandering modulation
   
 ### Other tweaks
 - Broadened portamento setting range from 51 to 64 values per curve shape

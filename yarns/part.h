@@ -144,7 +144,7 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 struct PackedPart {
-  // Currently has 36 bits to spare
+  // Currently has 7 bits to spare
 
   struct PackedSequencerStep {
     unsigned int
@@ -159,6 +159,7 @@ struct PackedPart {
     looper_size         : looper::kBitsNoteIndex;
 
   static const uint8_t kTimbreBits = 7;
+  static const uint8_t kLFOShapeBits = 2;
 
   signed int
     // MidiSettings
@@ -166,6 +167,8 @@ struct PackedPart {
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
+    lfo_spread_types : kTimbreBits,
+    lfo_spread_voices : kTimbreBits,
     amplitude_mod_velocity : kTimbreBits,
     timbre_mod_envelope : kTimbreBits,
     timbre_mod_velocity : kTimbreBits,
@@ -194,7 +197,6 @@ struct PackedPart {
     portamento : 7,
     legato_mode : 2,
     pitch_bend_range : 5,
-    vibrato_shape: 3,
     vibrato_range : 4,
     vibrato_mod : 7,
     lfo_rate : 7,
@@ -203,13 +205,15 @@ struct PackedPart {
     trigger_duration : 7, // probably excessive
     trigger_scale : 1,
     trigger_shape : 3,
-    aux_cv : 4, // barely
-    aux_cv_2 : 4, // barely
+    aux_cv : 4,
+    aux_cv_2 : 4,
     tuning_factor : 4,
     oscillator_mode : 2,
-    oscillator_shape : 7,
+    oscillator_shape : 7, // 1 bit unused
     tremolo_mod : kTimbreBits,
-    tremolo_shape : 3,
+    vibrato_shape : kLFOShapeBits,
+    timbre_lfo_shape : kLFOShapeBits,
+    tremolo_shape : kLFOShapeBits,
     timbre_initial : kTimbreBits,
     timbre_mod_lfo : kTimbreBits,
     env_init_attack : kTimbreBits,
@@ -286,8 +290,12 @@ struct VoicingSettings {
   uint8_t vibrato_range;
   uint8_t vibrato_mod;
   uint8_t tremolo_mod;
+  uint8_t vibrato_shape;
+  uint8_t timbre_lfo_shape;
   uint8_t tremolo_shape;
   uint8_t lfo_rate;
+  int8_t lfo_spread_types;
+  int8_t lfo_spread_voices;
   int8_t tuning_transpose;
   int8_t tuning_fine;
   int8_t tuning_root;
@@ -324,8 +332,12 @@ struct VoicingSettings {
     packed.vibrato_range = vibrato_range;
     packed.vibrato_mod = vibrato_mod;
     packed.tremolo_mod = tremolo_mod;
+    packed.vibrato_shape = vibrato_shape;
+    packed.timbre_lfo_shape = timbre_lfo_shape;
     packed.tremolo_shape = tremolo_shape;
     packed.lfo_rate = lfo_rate;
+    packed.lfo_spread_types = lfo_spread_types;
+    packed.lfo_spread_voices = lfo_spread_voices;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
     packed.tuning_root = tuning_root;
@@ -362,8 +374,12 @@ struct VoicingSettings {
     vibrato_range = packed.vibrato_range;
     vibrato_mod = packed.vibrato_mod;
     tremolo_mod = packed.tremolo_mod;
+    vibrato_shape = packed.vibrato_shape;
+    timbre_lfo_shape = packed.timbre_lfo_shape;
     tremolo_shape = packed.tremolo_shape;
     lfo_rate = packed.lfo_rate;
+    lfo_spread_types = packed.lfo_spread_types;
+    lfo_spread_voices = packed.lfo_spread_voices;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
     tuning_root = packed.tuning_root;
@@ -415,8 +431,12 @@ enum PartSetting {
   PART_VOICING_VIBRATO_RANGE,
   PART_VOICING_VIBRATO_MOD,
   PART_VOICING_TREMOLO_MOD,
+  PART_VOICING_VIBRATO_SHAPE,
+  PART_VOICING_TIMBRE_LFO_SHAPE,
   PART_VOICING_TREMOLO_SHAPE,
   PART_VOICING_LFO_RATE,
+  PART_VOICING_LFO_SPREAD_TYPES,
+  PART_VOICING_LFO_SPREAD_VOICES,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
   PART_VOICING_TUNING_ROOT,
@@ -770,7 +790,8 @@ class Part {
     pitch = ApplySequencerInputResponse(pitch);
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Advance arp
-      arp_ = BuildArpState(SequencerStep(pitch, velocity));
+      SequencerStep step = SequencerStep(pitch, velocity);
+      arp_ = BuildArpState(&step);
       pitch = arp_.step.note();
       if (arp_.step.has_note()) {
         InternalNoteOn(pitch, arp_.step.velocity());
@@ -796,7 +817,7 @@ class Part {
       uint8_t next_on_index = looper_.PeekNextOn();
       const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
-      next_step = BuildArpState(next_step).step;
+      next_step = BuildArpState(&next_step).step;
       if (next_step.is_continuation()) {
         // Leave this pitch in the care of the next looper note
         output_pitch_for_looper_note_[next_on_index] = pitch;
@@ -988,6 +1009,7 @@ class Part {
     CONSTRAIN(seq_.loop_length, 0, 7);
     CONSTRAIN(seq_.arp_range, 0, 3);
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
+    AllNotesOff();
     TouchVoices();
     TouchVoiceAllocation();
     ResetLatch();
@@ -1009,8 +1031,8 @@ class Part {
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
-  const SequencerStep BuildSeqStep() const;
-  const ArpeggiatorState BuildArpState(SequencerStep seq_step) const;
+  const SequencerStep BuildSeqStep(uint8_t step_index) const;
+  const ArpeggiatorState BuildArpState(SequencerStep* seq_step_ptr) const;
 
   MidiSettings midi_;
   VoicingSettings voicing_;
