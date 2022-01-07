@@ -114,7 +114,7 @@ const char* const voicing_oscillator_shape_values[OSC_SHAPE_FM] = {
   "\x8E\x8E DIRAC COMB",
 };
 
-const char* const tremolo_shape_values[LFO_SHAPE_LAST] = {
+const char* const lfo_shape_values[LFO_SHAPE_LAST] = {
   "/\\",
   "|\\",
   "/|",
@@ -383,6 +383,18 @@ const Setting Settings::settings_[] = {
     23, 14,
   },
   {
+    "LT", "LFO SPREAD TYPES",
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_TYPES, 0 },
+    SETTING_UNIT_LFO_SPREAD, -64, 63, NULL,
+    118, 0xff,
+  },
+  {
+    "LV", "LFO SPREAD VOICES",
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_VOICES, 0 },
+    SETTING_UNIT_LFO_SPREAD, -64, 63, NULL,
+    119, 0xff,
+  },
+  {
     "VB", "VIBRATO AMOUNT",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_MOD, 0 },
     SETTING_UNIT_UINT8, 0, 127, NULL,
@@ -395,9 +407,21 @@ const Setting Settings::settings_[] = {
     93, 0xff,
   },
   {
+    "VS", "VIBRATO SHAPE",
+    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
+    125, 0xff,
+  },
+  {
+    "LS", "TIMBRE LFO SHAPE",
+    SETTING_DOMAIN_PART, { PART_VOICING_TIMBRE_LFO_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
+    126, 0xff,
+  },
+  {
     "TS", "TREMOLO SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, tremolo_shape_values,
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
     94, 0xff,
   },
   {
@@ -774,6 +798,15 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
         strcpy(buffer, voicing_oscillator_shape_values[value]);
       }
       break;
+
+    case SETTING_UNIT_LFO_SPREAD: {
+      int8_t spread = value;
+      bool dephase = spread < 0;
+      if (dephase) spread++;
+      PrintInteger(buffer, abs(spread));
+      if (buffer[0] == ' ') buffer[0] = dephase ? 'P' : 'F';
+      break;
+    }
       
     default:
       strcpy(buffer, "??");

@@ -81,6 +81,8 @@ void Part::Init() {
   voicing_.vibrato_range = 1;
   voicing_.vibrato_mod = 0;
   voicing_.lfo_rate = 70;
+  voicing_.lfo_spread_types = 0;
+  voicing_.lfo_spread_voices = 0;
   voicing_.trigger_duration = 2;
   voicing_.aux_cv = MOD_AUX_ENVELOPE;
   voicing_.aux_cv_2 = MOD_AUX_ENVELOPE;
@@ -373,7 +375,7 @@ void Part::Reset() {
   }
 }
 
-void Part::Clock() {
+void Part::Clock() { // From Multi::ClockFast
   if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
 
   uint16_t ticks_per_step = lut_clock_ratio_ticks[seq_.clock_division];
@@ -1011,11 +1013,12 @@ void Part::TouchVoices() {
   voice_[0]->garbage(0);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
-    voice_[i]->set_lfo_rate(voicing_.lfo_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_mod(voicing_.vibrato_mod);
     voice_[i]->set_tremolo_mod(voicing_.tremolo_mod);
-    voice_[i]->set_tremolo_shape(voicing_.tremolo_shape);
+    voice_[i]->set_lfo_shape(LFO_ROLE_PITCH, voicing_.vibrato_shape);
+    voice_[i]->set_lfo_shape(LFO_ROLE_TIMBRE, voicing_.timbre_lfo_shape);
+    voice_[i]->set_lfo_shape(LFO_ROLE_AMPLITUDE, voicing_.tremolo_shape);
     voice_[i]->set_trigger_duration(voicing_.trigger_duration);
     voice_[i]->set_trigger_scale(voicing_.trigger_scale);
     voice_[i]->set_trigger_shape(voicing_.trigger_shape);
@@ -1058,6 +1061,8 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_VOICING_VIBRATO_RANGE:
     case PART_VOICING_VIBRATO_MOD:
     case PART_VOICING_TREMOLO_MOD:
+    case PART_VOICING_VIBRATO_SHAPE:
+    case PART_VOICING_TIMBRE_LFO_SHAPE:
     case PART_VOICING_TREMOLO_SHAPE:
     case PART_VOICING_TRIGGER_DURATION:
     case PART_VOICING_TRIGGER_SHAPE:
