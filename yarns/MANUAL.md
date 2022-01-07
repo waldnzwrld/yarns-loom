@@ -22,6 +22,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
     - [`VOICING` allocation methods](#voicing-allocation-methods)
     - [Expanded support for Control Change events](#expanded-support-for-control-change-events)
     - [Clocking](#clocking)
+    - [LFOs](#lfos)
     - [Other tweaks](#other-tweaks)
 
 # Interface
