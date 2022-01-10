@@ -90,7 +90,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - `TS (TREMOLO SHAPE)` sets the shape of the tremolo LFO (triangle, down saw, up saw, square)
 - ADSR envelope with velocity modulation
   - Envelope controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
-  - Envelope is available as an assignable CV output (`ENVELOPE`) in all layouts
+  - Envelope is available as an aux CV output (`ENVELOPE`) in all layouts
   - Peak attack amplitude can be velocity-scaled via `PV (PEAK VEL MOD)`
     - Positive values = damp on low velocity, negative values = damp on high velocity
   - The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
