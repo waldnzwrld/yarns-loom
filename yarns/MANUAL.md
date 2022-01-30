@@ -143,6 +143,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - `3M` 3-part layout: 3 monophonic parts, plus clock on gate 4 and bar/reset on CV 4
     
 ### Hold pedal
+- Instead of a global latch state, each part can respond to the hold pedal in its own way
 - Screen flashes the active part's hold status
   - Tick marks show the number of keys that are held, sustainable, sustained, and/or about to be released
   - Limited to the 6 most recent keys due to display size
