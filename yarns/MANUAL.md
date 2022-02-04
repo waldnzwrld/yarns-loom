@@ -119,12 +119,14 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 
 ### Sequencer-driven arpeggiator
 - Activated by setting the `ARP PATTERN` to `SEQUENCER`
-- Arpeggiator is driven by looper/sequencer notes instead of by clock pulses -- a sequence must exist to produce arpeggiator output
-- The arpeggiator respects rests/ties in the sequence
-- The velocity of the arpeggiator output is the product of the velocities of the sequencer step and the held key
-- New arpeggiator directions that use the note pitch as movement instructions:
-  - Notes are interpreted based on key color (black/white) and distance above/below middle C
-  - `ROTATE` treats white keys as relative movement through the chord, and black keys as offsets from the current position
+- As in the normal arpeggiator, the arp chord is controlled by holding keys on the keyboard
+- Unlike the normal arpeggiator, the sequencer-driven arpeggiator advances when the loop/step sequencer encounters a new note, instead of advancing on every clock pulse
+- A sequence must exist to produce arpeggiator output
+- The arpeggiator respects rests/ties in a step sequence
+- The velocity of the arpeggiator output is calculated by multiplying the velocities of the sequencer step and the held key
+- New arpeggiator directions use the note pitch as instructions to move through the arp chord in non-linear fashion:
+  - Notes are interpreted based on key color (black/white) and distance above/below C4 (middle C)
+  - `ROTATE` treats white keys as relative movement through the chord, and black keys as offsets from the current position in the chord
   - `SUBROTATE` generates quasi-cartesian patterns
 
 # MIDI
