@@ -620,7 +620,7 @@ struct HeldKeys {
   }
 
   // Returns true if result is NoteOff
-  bool NoteOff(uint8_t pitch, bool respect_sustain = true) {
+  bool NoteOff(uint8_t pitch, bool respect_sustain) {
     if (respect_sustain) {
       SetSustain(pitch);
       if (IsSustained(pitch)) return false;
