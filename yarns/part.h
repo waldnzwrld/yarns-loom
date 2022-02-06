@@ -599,22 +599,22 @@ struct ArpeggiatorState {
   }
 };
 
-struct PressedKeys {
+struct HeldKeys {
 
   static const uint8_t VELOCITY_SUSTAIN_MASK = 0x80;
 
   stmlib::NoteStack<kNoteStackSize> stack;
-  bool all_sustainable;
+  bool universally_sustainable; // Includes keys not yet pressed
   bool stop_sustained_notes_on_next_note_on;
-  bool sustainable[kNoteStackMapping];
+  bool individually_sustainable[kNoteStackMapping]; // Only keys already held
 
   void Init() {
     stack.Init();
-    all_sustainable = false;
+    universally_sustainable = false;
     stop_sustained_notes_on_next_note_on = false;
     std::fill(
-      &sustainable[0],
-      &sustainable[kNoteStackMapping],
+      &individually_sustainable[0],
+      &individually_sustainable[kNoteStackMapping],
       false
     );
   }
@@ -634,20 +634,20 @@ struct PressedKeys {
     stack.mutable_note(i)->velocity |= VELOCITY_SUSTAIN_MASK;
   }
 
-  void SetSustainable(bool value) {
+  void SetIndividuallySustainable(bool value) {
     for (uint8_t i = 1; i <= stack.max_size(); ++i) {
       if (stack.note(i).note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
-      sustainable[i - 1] = value;
+      individually_sustainable[i - 1] = value;
     }
   }
 
-  void Clutch(bool on) {
-    stop_sustained_notes_on_next_note_on = on;
-    SetSustainable(!on);
+  void Clutch(bool not_pedal_engaged) {
+    stop_sustained_notes_on_next_note_on = not_pedal_engaged;
+    SetIndividuallySustainable(!not_pedal_engaged);
   }
 
   bool IsSustainable(uint8_t index) const {
-    return all_sustainable || sustainable[index - 1];
+    return universally_sustainable || individually_sustainable[index - 1];
   }
 
   bool IsSustained(const stmlib::NoteEntry &note_entry) const {
@@ -676,7 +676,7 @@ class Part {
   // Also, note that channel / keyrange / velocity range filtering is not
   // applied here. It is up to the caller to call accepts() first to check
   // whether the message should be sent to the part.
-  uint8_t PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t velocity);
+  uint8_t HeldKeysNoteOn(HeldKeys &keys, uint8_t pitch, uint8_t velocity);
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
   bool NoteOff(uint8_t channel, uint8_t note);
   uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) const {
@@ -838,26 +838,26 @@ class Part {
   void DeleteRecording();
 
   inline void SustainOn() {
-    PressedKeysSustainOn(manual_keys_);
-    PressedKeysSustainOn(arp_keys_);
+    HeldKeysSustainOn(manual_keys_);
+    HeldKeysSustainOn(arp_keys_);
   }
   inline void SustainOff() {
-    PressedKeysSustainOff(manual_keys_);
-    PressedKeysSustainOff(arp_keys_);
+    HeldKeysSustainOff(manual_keys_);
+    HeldKeysSustainOff(arp_keys_);
   }
-  void PressedKeysSustainOn(PressedKeys &keys);
-  void PressedKeysSustainOff(PressedKeys &keys);
-  inline const PressedKeys& PressedKeysForLatchUI() const {
+  void HeldKeysSustainOn(HeldKeys &keys);
+  void HeldKeysSustainOff(HeldKeys &keys);
+  inline const HeldKeys& HeldKeysForUI() const {
     return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
   }
-  inline PressedKeys& MutablePressedKeysForLatchUI() {
+  inline HeldKeys& MutableHeldKeysForUI() {
     return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
   }
-  inline void PressedKeysResetLatch(PressedKeys &keys) {
+  inline void ResetKeys(HeldKeys &keys) {
     StopSustainedNotes(keys);
     keys.Init();
   }
-  void ResetLatch();
+  void ResetAllKeys();
 
   inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
@@ -1001,7 +1001,7 @@ class Part {
     AllNotesOff();
     TouchVoices();
     TouchVoiceAllocation();
-    ResetLatch();
+    ResetAllKeys();
   }
 
   void set_siblings(bool has_siblings) {
@@ -1014,8 +1014,8 @@ class Part {
   void TouchVoiceAllocation();
   void TouchVoices();
   
-  void StopNotesBySustainStatus(PressedKeys &keys, bool where_sustained);
-  void StopSustainedNotes(PressedKeys &keys) {
+  void StopNotesBySustainStatus(HeldKeys &keys, bool where_sustained);
+  void StopSustainedNotes(HeldKeys &keys) {
     StopNotesBySustainStatus(keys, true);
   }
   void DispatchSortedNotes(bool legato);
@@ -1035,8 +1035,8 @@ class Part {
   uint8_t num_voices_;
   bool polychained_;
 
-  PressedKeys manual_keys_;
-  PressedKeys arp_keys_;
+  HeldKeys manual_keys_;
+  HeldKeys arp_keys_;
   bool hold_pedal_engaged_;
 
   stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
