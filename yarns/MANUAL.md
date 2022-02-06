@@ -151,7 +151,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - Full-height tick: key is manually held, will be sustained when released
   - Steady top-half tick: key is sustained, will continue after the next key-press
   - Blinking top-half tick: key is sustained, will be stopped by the next key-press
-- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse the pedal's up/down behavior
+- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative (default) and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse the pedal's up/down behavior
 - New `HM (HOLD PEDAL MODE)` setting to change the part's response to the hold pedal
   - `OFF`: pedal has no effect
   - `SUSTAIN`: sustains key-releases after pedal-down, and stops sustained notes on pedal-up
