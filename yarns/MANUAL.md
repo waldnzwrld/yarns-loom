@@ -162,7 +162,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - `MOMENTARY LATCH`: like `LATCH`, but stop sustained notes on pedal-up, instead of on key-press
   - `CLUTCH`: while pedal is down, sustains key-releases on only the keys pressed before pedal-down (similar to `SOSTENUTO`); while pedal is up, stops sustained notes on key-press (similar to `LATCH`)
     - Notes triggered while the pedal is down are not sustained and do not cause sustained notes to be stopped, which allows temporarily augmenting a sustained chord
-  - `FILTER`: while pedal is up, ignores key-presses and sustains key-releases; while pedal is down, stops sustained notes on key-press
+  - `FILTER`: while pedal is down, ignores key-presses and sustains key-releases; while pedal is up, stops sustained notes on key-press
     - In combination with setting an opposite `HOLD PEDAL POLARITY` on two different parts, this allows the use of the pedal to select which part is controlled by the keyboard, while also supporting latching
 
 ### Event routing, filtering, and transformation
