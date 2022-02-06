@@ -135,7 +135,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - `2+2` 3-part layout: 2-voice polyphonic part + two monophonic parts
 - `2+1` 2-part layout: 2-voice polyphonic part + monophonic part with aux CV
 - `*2` 3-part layout: 3-voice paraphonic part + monophonic part with aux CV + monophonic part without aux CV
-  - Paraphonic part can use the new [envelopes](#adsr-envelopes-modulated-by-velocity)
+  - Paraphonic part can use the new [envelopes](#amplitude-dynamics-envelope-and-tremolo)
   - Audio mode is always on for the paraphonic part
   - Output channels:
     1. Part 1, 3 voices mixed to 1 audio output
