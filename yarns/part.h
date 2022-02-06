@@ -620,9 +620,11 @@ struct HeldKeys {
   }
 
   // Returns true if result is NoteOff
-  bool SustainableNoteOff(uint8_t pitch) {
-    SetSustain(pitch);
-    if (IsSustained(pitch)) { return false; }
+  bool NoteOff(uint8_t pitch, bool respect_sustain = true) {
+    if (respect_sustain) {
+      SetSustain(pitch);
+      if (IsSustained(pitch)) return false;
+    }
     stack.NoteOff(pitch);
     return true;
   }
@@ -641,9 +643,14 @@ struct HeldKeys {
     }
   }
 
-  void Clutch(bool not_pedal_engaged) {
-    stop_sustained_notes_on_next_note_on = not_pedal_engaged;
-    SetIndividuallySustainable(!not_pedal_engaged);
+  void Clutch(bool sustain_on) {
+    stop_sustained_notes_on_next_note_on = !sustain_on;
+    SetIndividuallySustainable(sustain_on);
+  }
+
+  void Latch(bool sustain_on) {
+    universally_sustainable = sustain_on;
+    stop_sustained_notes_on_next_note_on = true;
   }
 
   bool IsSustainable(uint8_t index) const {
@@ -678,7 +685,7 @@ class Part {
   // whether the message should be sent to the part.
   uint8_t HeldKeysNoteOn(HeldKeys &keys, uint8_t pitch, uint8_t velocity);
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
-  bool NoteOff(uint8_t channel, uint8_t note);
+  bool NoteOff(uint8_t channel, uint8_t note, bool respect_sustain = true);
   uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) const {
     CONSTRAIN(transpose_octaves, (0 - pitch) / 12, (127 - pitch) / 12);
     return pitch + 12 * transpose_octaves;

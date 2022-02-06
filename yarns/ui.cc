@@ -1046,7 +1046,7 @@ void Ui::PrintLatch() {
     bool sustained = keys.IsSustained(note_entry);
     bool top;
     if (sustained) {
-      top = (keys.stop_sustained_notes_on_next_note_on && !keys.universally_sustainable) ? blink : true;
+      top = keys.stop_sustained_notes_on_next_note_on ? blink : true;
     } else {
       top = keys.IsSustainable(note_index);
     }
