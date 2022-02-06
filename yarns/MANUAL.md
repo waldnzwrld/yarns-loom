@@ -146,18 +146,24 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
     
 ### Hold pedal
 - Instead of a global latch state, each part can respond to the hold pedal in its own way
-- Screen flashes the active part's hold status
-  - Tick marks show the number of keys that are held, sustainable, sustained, and/or about to be released
-  - Limited to the 6 most recent keys due to display size
+- Screen periodically shows tick marks to show the sustain state of the 6 most recent keys (limited due to display size)
+  - Bottom-half tick: key is manually held, will stop when released
+  - Full-height tick: key is manually held, will be sustained when released
+  - Steady top-half tick: key is sustained, will continue after the next key-press
+  - Blinking top-half tick: key is sustained, will be stopped by the next key-press
+- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse the pedal's up/down behavior
 - New `HM (HOLD PEDAL MODE)` setting to change the part's response to the hold pedal
-  - `OFF` ignores the pedal
-  - `SUSTAIN` is the stock firmware behavior (no notes are released as long as the pedal is down)
-  - `SOSTENUTO` sustains only the notes held at the time the pedal goes down
-  - `LATCH` uses the semantics of the front-panel latching in stock Yarns
-  - `MOMENTARY LATCH` resembles `LATCH`, but releases latched notes as soon as the pedal is released, instead of on the next note
-  - `CLUTCH` is a hybrid of `SOSTENUTO` and `LATCH` -- when the pedal goes down, sustains any held notes; while the pedal is up, pressing any note will release held notes
-  - `FILTER` causes the part to only receive notes while the pedal is in a given state, and latches any notes that are "silently" released
-- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse pedal semantics
+  - `OFF`: pedal has no effect
+  - `SUSTAIN`: sustains key-releases after pedal-down, and stops sustained notes on pedal-up
+    - Matches the behavior of the pedal in the stock firmware
+  - `SOSTENUTO`: while pedal is down, sustains key-releases on only the keys pressed before pedal-down; stops sustained notes on pedal-up
+  - `LATCH`: uses the semantics of the button-controlled latching in stock Yarns -- sustains key-releases after pedal-down; stops sustained notes on key-press regardless of pedal state
+    - Matches the behavior of the front-panel latching (triggered by holding `REC`)
+  - `MOMENTARY LATCH`: like `LATCH`, but stop sustained notes on pedal-up, instead of on key-press
+  - `CLUTCH`: while pedal is down, sustains key-releases on only the keys pressed before pedal-down (similar to `SOSTENUTO`); while pedal is up, stops sustained notes on key-press (similar to `LATCH`)
+    - Notes triggered while the pedal is down are not sustained and do not cause sustained notes to be stopped, which allows temporarily augmenting a sustained chord
+  - `FILTER`: while pedal is up, ignores key-presses and sustains key-releases; while pedal is down, stops sustained notes on key-press
+    - In combination with setting an opposite `HOLD PEDAL POLARITY` on two different parts, this allows the use of the pedal to select which part is controlled by the keyboard, while also supporting latching
 
 ### Event routing, filtering, and transformation
 - New `SI (SEQ INPUT RESPONSE)` setting changes how a playing sequence responds to manual input
