@@ -604,14 +604,14 @@ struct PressedKeys {
   static const uint8_t VELOCITY_SUSTAIN_MASK = 0x80;
 
   stmlib::NoteStack<kNoteStackSize> stack;
-  bool ignore_note_off_messages;
-  bool release_latched_keys_on_next_note_on;
+  bool all_sustainable;
+  bool stop_sustained_notes_on_next_note_on;
   bool sustainable[kNoteStackMapping];
 
   void Init() {
     stack.Init();
-    ignore_note_off_messages = false;
-    release_latched_keys_on_next_note_on = false;
+    all_sustainable = false;
+    stop_sustained_notes_on_next_note_on = false;
     std::fill(
       &sustainable[0],
       &sustainable[kNoteStackMapping],
@@ -642,16 +642,16 @@ struct PressedKeys {
   }
 
   void Clutch(bool on) {
-    release_latched_keys_on_next_note_on = on;
+    stop_sustained_notes_on_next_note_on = on;
     SetSustainable(!on);
   }
 
   bool IsSustainable(uint8_t index) const {
-    return ignore_note_off_messages || sustainable[index - 1];
+    return all_sustainable || sustainable[index - 1];
   }
 
   bool IsSustained(const stmlib::NoteEntry &note_entry) const {
-    // If the note is flagged, it can only be released by ReleaseLatchedNotes
+    // If the note is flagged, it can only be released by StopSustainedNotes
     return note_entry.velocity & VELOCITY_SUSTAIN_MASK;
   }
   bool IsSustained(uint8_t pitch) const {
@@ -854,7 +854,7 @@ class Part {
     return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
   }
   inline void PressedKeysResetLatch(PressedKeys &keys) {
-    ReleaseLatchedNotes(keys);
+    StopSustainedNotes(keys);
     keys.Init();
   }
   void ResetLatch();
@@ -1014,9 +1014,9 @@ class Part {
   void TouchVoiceAllocation();
   void TouchVoices();
   
-  void ReleaseNotesBySustainStatus(PressedKeys &keys, bool where_sustained);
-  void ReleaseLatchedNotes(PressedKeys &keys) {
-    ReleaseNotesBySustainStatus(keys, true);
+  void StopNotesBySustainStatus(PressedKeys &keys, bool where_sustained);
+  void StopSustainedNotes(PressedKeys &keys) {
+    StopNotesBySustainStatus(keys, true);
   }
   void DispatchSortedNotes(bool legato);
   void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato);

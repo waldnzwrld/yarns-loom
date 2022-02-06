@@ -766,7 +766,7 @@ void Ui::OnSwitchHeld(const Event& e) {
         SplashOn(SPLASH_DELETE_RECORDING, active_part_);
       } else {
         PressedKeys &keys = LatchableKeys();
-        if (keys.ignore_note_off_messages) {
+        if (keys.all_sustainable) {
           mutable_active_part()->PressedKeysSustainOff(keys);
         } else if (multi.running() && keys.stack.most_recent_note_index()) {
           mutable_active_part()->PressedKeysSustainOn(keys);
@@ -1046,7 +1046,7 @@ void Ui::PrintLatch() {
     bool sustained = keys.IsSustained(note_entry);
     bool top;
     if (sustained) {
-      top = (keys.release_latched_keys_on_next_note_on && !keys.ignore_note_off_messages) ? blink : true;
+      top = (keys.stop_sustained_notes_on_next_note_on && !keys.all_sustainable) ? blink : true;
     } else {
       top = keys.IsSustainable(note_index);
     }

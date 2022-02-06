@@ -137,16 +137,16 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
 }
 
 uint8_t Part::PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t velocity) {
-  if (keys.release_latched_keys_on_next_note_on) {
-    bool still_latched = keys.ignore_note_off_messages;
+  if (keys.stop_sustained_notes_on_next_note_on) {
+    bool still_latched = keys.all_sustainable;
 
     // Releasing all latched key will generate "fake" NoteOff messages. We
     // should not ignore them.
-    keys.ignore_note_off_messages = false;
-    ReleaseLatchedNotes(keys);
+    keys.all_sustainable = false;
+    StopSustainedNotes(keys);
 
-    keys.release_latched_keys_on_next_note_on = still_latched;
-    keys.ignore_note_off_messages = still_latched;
+    keys.stop_sustained_notes_on_next_note_on = still_latched;
+    keys.all_sustainable = still_latched;
   }
   bool sustained = keys.IsSustained(pitch); // Capture existing sustain status
   uint8_t index = keys.stack.NoteOn(pitch, velocity);
@@ -208,7 +208,7 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
 void Part::PressedKeysSustainOn(PressedKeys &keys) {
   switch (midi_.sustain_mode) {
     case SUSTAIN_MODE_NORMAL:
-      keys.ignore_note_off_messages = true;
+      keys.all_sustainable = true;
       break;
     case SUSTAIN_MODE_SOSTENUTO:
       keys.SetSustainable(true);
@@ -216,8 +216,8 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
     case SUSTAIN_MODE_LATCH:
     case SUSTAIN_MODE_MOMENTARY_LATCH:
     case SUSTAIN_MODE_FILTER:
-      keys.ignore_note_off_messages = true;
-      keys.release_latched_keys_on_next_note_on = true;
+      keys.all_sustainable = true;
+      keys.stop_sustained_notes_on_next_note_on = true;
       break;
     case SUSTAIN_MODE_CLUTCH:
       keys.Clutch(false);
@@ -231,17 +231,17 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
 void Part::PressedKeysSustainOff(PressedKeys &keys) {
   switch (midi_.sustain_mode) {
     case SUSTAIN_MODE_NORMAL:
-      keys.ignore_note_off_messages = false;
-      ReleaseLatchedNotes(keys);
+      keys.all_sustainable = false;
+      StopSustainedNotes(keys);
       break;
     case SUSTAIN_MODE_SOSTENUTO:
       keys.SetSustainable(false);
-      ReleaseLatchedNotes(keys);
+      StopSustainedNotes(keys);
       break;
     case SUSTAIN_MODE_LATCH:
     case SUSTAIN_MODE_FILTER:
-      keys.ignore_note_off_messages = false;
-      keys.release_latched_keys_on_next_note_on = true;
+      keys.all_sustainable = false;
+      keys.stop_sustained_notes_on_next_note_on = true;
       break;
     case SUSTAIN_MODE_MOMENTARY_LATCH:
       PressedKeysResetLatch(keys);
@@ -765,7 +765,7 @@ void Part::AllNotesOff() {
       VOICE_ALLOCATION_NOT_FOUND);
 }
 
-void Part::ReleaseNotesBySustainStatus(PressedKeys &keys, bool sustain_status) {
+void Part::StopNotesBySustainStatus(PressedKeys &keys, bool sustain_status) {
   for (uint8_t i = 1; i <= keys.stack.max_size(); ++i) {
     NoteEntry* e = keys.stack.mutable_note(i);
     if (keys.IsSustained(*e) != sustain_status) continue;
@@ -1054,8 +1054,8 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_MIDI_TRANSPOSE_OCTAVES:
       // Release notes that are currently under direct manual control, sparing
       // notes that are controlled by sustain or the sequencer
-      ReleaseNotesBySustainStatus(manual_keys_, false);
-      ReleaseNotesBySustainStatus(arp_keys_, false);
+      StopNotesBySustainStatus(manual_keys_, false);
+      StopNotesBySustainStatus(arp_keys_, false);
       break;
 
     case PART_VOICING_ALLOCATION_MODE:

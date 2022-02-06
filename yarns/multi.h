@@ -208,7 +208,7 @@ class Multi {
   ) const {
     if ( // Stop NoteOn, but NoteOff must go through for the latch to 'mature'
       midi(part).sustain_mode == SUSTAIN_MODE_FILTER &&
-      part_[part].PressedKeysForLatchUI().ignore_note_off_messages
+      part_[part].PressedKeysForLatchUI().all_sustainable
     ) {
       return false;
     }
