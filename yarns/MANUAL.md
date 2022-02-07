@@ -101,10 +101,9 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 ### Recording interface
 - Hold `REC` to clear sequence
 - Hold `TAP` to toggle triggered-erase mode, which will clear the sequence as soon as a new note is recorded
-- First `REC` press switches the display to show the pitch instead of the step number (press again to exit recording)
-- Flash note (or RS/TI) for the selected step
-- Brighten display while the selected step is being played
-- Wrap around when using encoder to scroll through steps
+- First `REC` press switches the display to show the pitch (or `RS`/`TI`) instead of the step number (press again to exit recording)
+- Display brightens while the selected step is being played
+- Wraps around when using encoder to scroll through steps
 
 ### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
