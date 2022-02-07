@@ -154,13 +154,13 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative (default) and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse the pedal's up/down behavior
 - New `HM (HOLD PEDAL MODE)` setting to change the part's response to the hold pedal
   - `OFF`: pedal has no effect
-  - `SUSTAIN`: sustains key-releases after pedal-down, and stops sustained notes on pedal-up
+  - `SUSTAIN`: sustains all key-releases after pedal-down, and stops sustained notes on pedal-up
     - Matches the behavior of the pedal in the stock firmware
-  - `SOSTENUTO`: while pedal is down, sustains key-releases on only the keys pressed before pedal-down; stops sustained notes on pedal-up
-  - `LATCH`: uses the semantics of the button-controlled latching in stock Yarns -- sustains key-releases after pedal-down; stops sustained notes on key-press regardless of pedal state
+  - `SOSTENUTO`: while pedal is down, sustains key-releases only on keys that were pressed before pedal-down; stops sustained notes on pedal-up
+  - `LATCH`: uses the semantics of the button-controlled latching in stock Yarns -- sustains key-releases while pedal is down; stops sustained notes on key-press regardless of pedal state
     - Matches the behavior of the front-panel latching (triggered by holding `REC`)
   - `MOMENTARY LATCH`: like `LATCH`, but stop sustained notes on pedal-up, instead of on key-press
-  - `CLUTCH`: while pedal is down, sustains key-releases on only the keys pressed before pedal-down (similar to `SOSTENUTO`); while pedal is up, stops sustained notes on key-press (similar to `LATCH`)
+  - `CLUTCH`: while pedal is down, sustains key-releases only on keys that were pressed before pedal-down (like `SOSTENUTO`); while pedal is up, stops sustained notes on key-press (like `LATCH`)
     - Notes triggered while the pedal is down are not sustained and do not cause sustained notes to be stopped, which allows temporarily augmenting a sustained chord
   - `FILTER`: while pedal is down, ignores key-presses and sustains key-releases; while pedal is up, stops sustained notes on key-press
     - In combination with setting an opposite `HOLD PEDAL POLARITY` on two different parts, this allows the use of the pedal to select which part is controlled by the keyboard, while also supporting latching
