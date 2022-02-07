@@ -23,7 +23,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
     - [Expanded support for Control Change events](#expanded-support-for-control-change-events)
     - [Clocking](#clocking)
     - [LFOs](#lfos)
-    - [Other tweaks](#other-tweaks)
+    - [Portamento](#portamento)
 
 # Interface
 
@@ -199,11 +199,14 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - [Implementation Chart](https://docs.google.com/spreadsheets/d/1V6CRqf_3FGTrNIjcU1ixBtzRRwqjIa1PaiqOFgf6olE/edit#gid=0)
 
 ### Clocking
-- Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
+- Added a variety of integer ratios for `O/` and `C/`, as well as for `LFO RATE` when clock-synced
   - Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
 - Sequencers' phases are based on a master clock, to allow returning to predictable phase relationships between sequences even after a stint in disparate time signatures
+- An explicit clock start (from panel switch or MIDI) can supersede an implicit clock start (from keyboard)
 
 ### LFOs
+- `LFO RATE` (formerly `VIBRATO SPEED`) has a shared zero at center
+  - Increases clock sync ratio when turning counter-clockwise of center, and increases frequency when turning clockwise
 - `VS (VIBRATO SHAPE)` (in `▽S (SETUP MENU)`) sets the shape of the vibrato LFO (triangle, down saw, up saw, square)
 - LFO "spreading" (dephasing or detuning)
   - `LV (LFO SPREAD VOICES)` sets the spread among the voices for the selected part
@@ -217,7 +220,8 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
     - Each LFO's frequency is a multiple of the last, with that multiple being between 1x and 2x depending on the setting
     - Facilitates unstable, meandering modulation
   
-### Other tweaks
-- Broadened portamento setting range from 51 to 64 values per curve shape
-- Allow an explicit clock start (from panel switch or MIDI) to supersede an implicit clock start (from keyboard)
-- Change 'split' controls (portamento and vibrato speed) to have a common zero at the split point, increasing both CCW and CW of this point
+### Portamento
+- `PORTAMENTO` setting has a shared zero at center
+  - Increases constant-time portamento when turning counter-clockwise of center, and increases constant-rate when turning clockwise
+- Broadened setting range from 51 to 64 values per curve shape
+  
