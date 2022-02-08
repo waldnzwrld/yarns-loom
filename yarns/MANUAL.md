@@ -153,7 +153,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative (default) and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse the pedal's up/down behavior
 - New `HM (HOLD PEDAL MODE)` setting to change the part's response to the hold pedal
   - `OFF`: pedal has no effect
-  - `SUSTAIN`: sustains all key-releases after pedal-down, and stops sustained notes on pedal-up
+  - `SUSTAIN`: sustains key-releases while pedal is down, and stops sustained notes on pedal-up
     - Matches the behavior of the pedal in the stock firmware
   - `SOSTENUTO`: while pedal is down, sustains key-releases only on keys that were pressed before pedal-down; stops sustained notes on pedal-up
   - `LATCH`: uses the semantics of the button-controlled latching in stock Yarns -- sustains key-releases while pedal is down; stops sustained notes on key-press regardless of pedal state
