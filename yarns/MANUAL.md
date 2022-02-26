@@ -1,3 +1,30 @@
+#### Introduction
+
+This manual explains how Loom differs from a stock Yarns.  For documentation about Yarns' native capabilities (which Loom largely retains), [check the manufacturer's manual!](https://mutable-instruments.net/modules/yarns/manual/)
+
+#### Table of contents
+- [Interface](#interface)
+    - [Global control and display of the active part and its play mode](#global-control-and-display-of-the-active-part-and-its-play-mode)
+    - [Tap tempo changes](#tap-tempo-changes)
+    - [Other changes](#other-changes)
+- [Synth voice](#synth-voice)
+    - [Oscillator controls](#oscillator-controls)
+    - [Oscillator synthesis models](#oscillator-synthesis-models)
+    - [Amplitude dynamics: envelope and tremolo](#amplitude-dynamics-envelope-and-tremolo)
+- [Sequencer](#sequencer)
+    - [Recording interface](#recording-interface)
+    - [Looper-style sequencing mode with real-time recording](#looper-style-sequencing-mode-with-real-time-recording)
+    - [Sequencer-driven arpeggiator](#sequencer-driven-arpeggiator)
+- [MIDI](#midi)
+    - [Layouts](#layouts)
+    - [Hold pedal](#hold-pedal)
+    - [Event routing, filtering, and transformation](#event-routing-filtering-and-transformation)
+    - [`VOICING` allocation methods](#voicing-allocation-methods)
+    - [Expanded support for Control Change events](#expanded-support-for-control-change-events)
+    - [Clocking](#clocking)
+    - [LFOs](#lfos)
+    - [Other tweaks](#other-tweaks)
+
 # Interface
 
 ### Global control and display of the active part and its play mode
@@ -30,6 +57,7 @@
 - Each wave shape has a timbral parameter that can be modulated by several sources
   - `TI (TIMBRE INITIAL)` sets initial timbre
   - `TL (TIMBRE LFO MOD)` sets the depth of timbre modulation by the voice's bipolar LFO
+  - `LS (TIMBRE LFO SHAPE)` sets the shape of the timbre LFO (triangle, down saw, up saw, square)
   - `TE (TIMBRE ENV MOD)` sets the initial bipolar depth of modulation of timbre by envelope
   - `TV (TIMBRE VEL MOD)` sets the bipolar modulation by velocity of the envelope modulation of timbre (e.g. velocity can polarize the timbre envelope)
 
@@ -59,10 +87,10 @@
 - Tremolo can be applied to envelope and oscillator
   - Tremolo uses the same LFO frequency as vibrato
   - `TR (TREMOLO DEPTH)` sets the amount of tremolo
-  - `TS (TREMOLO SHAPE)` applies a waveshaper to the LFO (triangle, down saw, up saw, square)
+  - `TS (TREMOLO SHAPE)` sets the shape of the tremolo LFO (triangle, down saw, up saw, square)
 - ADSR envelope with velocity modulation
   - Envelope controls voice amplitude when the `OSCILLATOR MODE` is `ENVELOPED`
-  - Envelope is available as an assignable CV output (`ENVELOPE`) in all layouts
+  - Envelope is available as an aux CV output (`ENVELOPE`) in all layouts
   - Peak attack amplitude can be velocity-scaled via `PV (PEAK VEL MOD)`
     - Positive values = damp on low velocity, negative values = damp on high velocity
   - The envelope's segments and their sensitivity to velocity are set by `ATTACK TIME INIT`, `ATTACK TIME MOD`, etc.
@@ -70,20 +98,20 @@
   
 # Sequencer
 
-### Recording interface changes
+### Recording interface
 - Hold `REC` to clear sequence
+- Hold `TAP` to toggle triggered-erase mode, which will clear the sequence as soon as a new note is recorded
 - First `REC` press switches the display to show the pitch instead of the step number (press again to exit recording)
 - Flash note (or RS/TI) for the selected step
 - Brighten display while the selected step is being played
-- Wrap around around when using encoder to scroll through steps
+- Wrap around when using encoder to scroll through steps
 
 ### Looper-style sequencing mode with real-time recording
 - To enable, ensure `SM (SEQ MODE)` is set to `LOOP`
 - To use, press `REC` to enter real-time recording mode
   - Play notes to record them into the loop
   - Press `START` to delete the oldest note, or `TAP` for the newest
-  - Scroll the encoder to shift the loop phase by 1/128: clockwise shifts notes earlier, counter-clockwise shits notes later
-  - Hold `TAP` to toggle overwrite mode, which will clear the loop as soon as a new note is recorded
+  - Scroll the encoder to shift the loop phase by 1/128: clockwise shifts notes earlier, counter-clockwise shifts notes later
 - Loop length is set by the `L- (LOOP LENGTH)` in quarter notes, combined with the part's clock settings
 - Note start/end times are recorded at 13-bit resolution (1/8192 of the loop length)
 - Holds 30 notes max -- past this limit, overwrites oldest note
@@ -91,41 +119,51 @@
 
 ### Sequencer-driven arpeggiator
 - Activated by setting the `ARP PATTERN` to `SEQUENCER`
-- Arpeggiator is driven by looper/sequencer notes instead of by clock pulses -- a sequence must exist to produce arpeggiator output
-- The arpeggiator respects rests/ties in the sequence
-- The velocity of the arpeggiator output is the product of the velocities of the sequencer step and the held key
-- New arpeggiator directions that use the note pitch as movement instructions:
-  - Notes are interpreted based on key color (black/white) and distance above/below middle C
-  - `ROTATE` treats white keys as relative movement through the chord, and black keys as offsets from the current position
+- As in the normal arpeggiator, the arp chord is controlled by holding keys on the keyboard
+- Unlike the normal arpeggiator, the sequencer-driven arpeggiator advances when the loop/step sequencer encounters a new note, instead of advancing on every clock pulse
+- A sequence must exist to produce arpeggiator output
+- The arpeggiator respects rests/ties in a step sequence
+- The velocity of the arpeggiator output is calculated by multiplying the velocities of the sequencer step and the held key
+- New arpeggiator directions use the note pitch as instructions to move through the arp chord in non-linear fashion:
+  - Notes are interpreted based on key color (black/white) and distance above/below C4 (middle C)
+  - `ROTATE` treats white keys as relative movement through the chord, and black keys as offsets from the current position in the chord
   - `SUBROTATE` generates quasi-cartesian patterns
 
 # MIDI
 
 ### Layouts
-- `2+2` 3-part layout: one two-voice polyphonic part, two monophonic parts
-- `2+1` 2-part layout: 2-voice polyphonic part, monophonic part with modulation output
-- `*2` 3-part layout: 3-voice paraphonic part, 1 monophonic part with modulation, 1 monophonic part without modulation
-  - Paraphonic part can use the new [envelopes](#adsr-envelopes-modulated-by-velocity)
+- `2+2` 3-part layout: 2-voice polyphonic part + two monophonic parts
+- `2+1` 2-part layout: 2-voice polyphonic part + monophonic part with aux CV
+- `*2` 3-part layout: 3-voice paraphonic part + monophonic part with aux CV + monophonic part without aux CV
+  - Paraphonic part can use the new [envelopes](#amplitude-dynamics-envelope-and-tremolo)
   - Audio mode is always on for the paraphonic part
   - Output channels:
     1. Part 1, 3 voices mixed to 1 audio output
     2. Part 2, monophonic CV/gate
     3. Part 2, modulation configurable via `3>`
     4. Part 3, monophonic CV/gate
+- `3M` 3-part layout: 3 monophonic parts, plus clock on gate 4 and bar/reset on CV 4
     
 ### Hold pedal
-- Screen flashes the active part's hold status
-  - Tick marks show the number of keys that are held, sustainable, sustained, and/or about to be released
-  - Limited to the 6 most recent keys due to display size
+- Instead of a global latch state, each part can respond to the hold pedal in its own way
+- Screen periodically shows tick marks to show the sustain state of the 6 most recent keys (limited due to display size)
+  - Bottom-half tick: key is manually held, will stop when released
+  - Full-height tick: key is manually held, will be sustained when released
+  - Steady top-half tick: key is sustained, will continue after the next key-press
+  - Blinking top-half tick: key is sustained, will be stopped by the next key-press
+- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse the pedal's up/down behavior
 - New `HM (HOLD PEDAL MODE)` setting to change the part's response to the hold pedal
-  - `OFF` ignores the pedal
-  - `SUSTAIN` is the stock firmware behavior (no notes are released as long as the pedal is down)
-  - `SOSTENUTO` sustains only the notes held at the time the pedal goes down
-  - `LATCH` uses the semantics of the front-panel latching in stock Yarns
-  - `MOMENTARY LATCH` resembles `LATCH`, but releases latched notes as soon as the pedal is released, instead of on the next note
-  - `CLUTCH` is a hybrid of `SOSTENUTO` and `LATCH` -- when the pedal goes down, sustains any held notes; while the pedal is up, pressing any note will release held notes
-  - `FILTER` causes the part to only receive notes while the pedal is in a given state, and latches any notes that are "silently" released
-- New `HP (HOLD PEDAL POLARITY)` setting to switch between [negative and positive pedal polarity](http://www.haydockmusic.com/reviews/sustain_pedal_polarity.html), or otherwise reverse pedal semantics
+  - `OFF`: pedal has no effect
+  - `SUSTAIN`: sustains key-releases after pedal-down, and stops sustained notes on pedal-up
+    - Matches the behavior of the pedal in the stock firmware
+  - `SOSTENUTO`: while pedal is down, sustains key-releases on only the keys pressed before pedal-down; stops sustained notes on pedal-up
+  - `LATCH`: uses the semantics of the button-controlled latching in stock Yarns -- sustains key-releases after pedal-down; stops sustained notes on key-press regardless of pedal state
+    - Matches the behavior of the front-panel latching (triggered by holding `REC`)
+  - `MOMENTARY LATCH`: like `LATCH`, but stop sustained notes on pedal-up, instead of on key-press
+  - `CLUTCH`: while pedal is down, sustains key-releases on only the keys pressed before pedal-down (similar to `SOSTENUTO`); while pedal is up, stops sustained notes on key-press (similar to `LATCH`)
+    - Notes triggered while the pedal is down are not sustained and do not cause sustained notes to be stopped, which allows temporarily augmenting a sustained chord
+  - `FILTER`: while pedal is up, ignores key-presses and sustains key-releases; while pedal is down, stops sustained notes on key-press
+    - In combination with setting an opposite `HOLD PEDAL POLARITY` on two different parts, this allows the use of the pedal to select which part is controlled by the keyboard, while also supporting latching
 
 ### Event routing, filtering, and transformation
 - New `SI (SEQ INPUT RESPONSE)` setting changes how a playing sequence responds to manual input
@@ -152,16 +190,34 @@
 - `UNISON 2` and `SORTED` reassign voices on `NoteOff` if there are held notes that don't yet have a voice
   
 ### Expanded support for Control Change events
-- The result of a received CC is briefly displayed
+- The result of a received CC is briefly displayed (value, setting abbreviation, and receiving part)
 - Recording control: start/stop recording mode, delete a recording
 - CC support for all new settings
+- Macro CC for controlling recording state: off, on, triggered erase, immediate erase
+- Macro CC for controlling sequencer mode: step sequencer, step arpeggiator, manual, loop arpeggiator, loop sequencer
 - Fixed settings to accept a negative value via CC
 - [Implementation Chart](https://docs.google.com/spreadsheets/d/1V6CRqf_3FGTrNIjcU1ixBtzRRwqjIa1PaiqOFgf6olE/edit#gid=0)
 
-### Clock ratios
+### Clocking
 - Added a variety of integer ratios for `O/` and `C/` (and for clock-synced `VS (VIBRATO SPEED)`)
-- Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
+  - Includes 1/8, 3/7, 2/3, 6/5, 4/3, and more
+- Sequencers' phases are based on a master clock, to allow returning to predictable phase relationships between sequences even after a stint in disparate time signatures
+
+### LFOs
+- `VS (VIBRATO SHAPE)` (in `▽S (SETUP MENU)`) sets the shape of the vibrato LFO (triangle, down saw, up saw, square)
+- LFO "spreading" (dephasing or detuning)
+  - `LV (LFO SPREAD VOICES)` sets the spread among the voices for the selected part
+    - Only available in polyphonic/paraphonic layouts
+  - `LT (LFO SPREAD TYPES)` sets the spread among the vibrato, timbre, and tremolo LFOs for each voice in the part
+  - Turning these settings counter-clockwise from center progressively dephases the LFOs
+    - Each LFO's phase is progressively more offset, by an amount ranging from 0° to 360° depending on the setting
+    - Ideal for quadrature and three-phase modulation
+    - When dephasing, the LFOs always share a common frequency
+  - Turning clockwise from center detunes the LFOs
+    - Each LFO's frequency is a multiple of the last, with that multiple being between 1x and 2x depending on the setting
+    - Facilitates unstable, meandering modulation
   
 ### Other tweaks
 - Broadened portamento setting range from 51 to 64 values per curve shape
 - Allow an explicit clock start (from panel switch or MIDI) to supersede an implicit clock start (from keyboard)
+- Change 'split' controls (portamento and vibrato speed) to have a common zero at the split point, increasing both CCW and CW of this point

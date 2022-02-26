@@ -38,8 +38,8 @@
 
 namespace yarns {
 
-const char* const layout_values[] = {
-  "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "31", "22", "21", "*2"
+const char* const layout_values[LAYOUT_LAST] = {
+  "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "31", "22", "21", "*2", "3M"
 };
 
 const char* const midi_out_mode_values[] = {
@@ -50,28 +50,45 @@ const char* const boolean_values[] = {
   "OFF", "ON"
 };
 
-const char* const voicing_allocation_mode_values[] = {
+const char* const voicing_allocation_mode_values[VOICE_ALLOCATION_MODE_LAST] = {
   "MONO", "POLY", "CYCLIC", "RANDOM", "VELO", "SORTED", "U1 UNISON",
   "U2 UNISON 2", "STEAL MOST RECENT", "NICE"
 };
 
-const char* const sequencer_arp_direction_values[] = {
+const char* const sequencer_arp_direction_values[ARPEGGIATOR_DIRECTION_LAST] = {
   "LINEAR", "BOUNCE", "RANDOM", "ROTATE", "SUBROTATE"
 };
 
-const char* const voicing_aux_cv_values[] = {
-  "VELOCITY", "MODULATION", "AT", "BREATH", "PEDAL", "BEND", "VIBRATO LFO", "LFO", "ENVELOPE"
+const char* const voicing_aux_cv_values[MOD_AUX_LAST] = {
+  "VELOCITY",
+  "MODULATION",
+  "AFTERTOUCH",
+  "BREATH",
+  "PEDAL",
+  "BEND",
+  "VIBRATO LFO",
+  "LFO",
+  "ENVELOPE",
+  // lut_fm_ratio_names[0],
+  // lut_fm_ratio_names[1],
+  // lut_fm_ratio_names[2],
+  // lut_fm_ratio_names[3],
+  // lut_fm_ratio_names[4],
+  // lut_fm_ratio_names[5],
+  // lut_fm_ratio_names[6],
+  "11 FM 1/1", "12 FM 1/2", "13 FM 1/3", "15 FM 1/5",
+  "17 FM 1/7", "25 FM 2/5", "27 FM 2/7"
 };
 
-const char* const legato_mode_values[] = {
+const char* const legato_mode_values[LEGATO_MODE_LAST] = {
   "OFF", "AUTO PORTAMENTO", "ON"
 };
 
-const char* const voicing_oscillator_mode_values[] = {
+const char* const voicing_oscillator_mode_values[OSCILLATOR_MODE_LAST] = {
   "OFF", "DRONE", "ENVELOPED"
 };
 
-const char* const voicing_oscillator_shape_values[] = {
+const char* const voicing_oscillator_shape_values[OSC_SHAPE_FM] = {
   "*\xA2 NOISE NOTCH SVF",
   "*\xA0 NOISE LOW-PASS SVF",
   "*^ NOISE BAND-PASS SVF",
@@ -97,7 +114,7 @@ const char* const voicing_oscillator_shape_values[] = {
   "\x8E\x8E DIRAC COMB",
 };
 
-const char* const tremolo_shape_values[] = {
+const char* const lfo_shape_values[LFO_SHAPE_LAST] = {
   "/\\",
   "|\\",
   "/|",
@@ -108,15 +125,15 @@ const char* const voicing_allocation_priority_values[] = {
   "LAST", "LOW", "HIGH", "FIRST"
 };
 
-const char* const trigger_shape_values[] = {
+const char* const trigger_shape_values[TRIGGER_SHAPE_LAST] = {
   "SQ", "LINEAR", "EXPO", "RING", "STEP", "BURST"
 };
 
-const char* const note_values[] = {
+const char* const note_values[12] = {
   "C ", "Db", "D", "Eb", "E ", "F ", "Gb", "G ", "Ab", "A ", "Bb", "B "
 };
 
-const char* const tuning_system_values[] = {
+const char* const tuning_system_values[TUNING_SYSTEM_LAST] = {
   "EQUAL TEMPERAMENT",
   "JUST INTONATION",
   "PYTHAGOREAN",
@@ -153,7 +170,7 @@ const char* const tuning_system_values[] = {
   "CUSTOM"
 };
 
-const char* const sequencer_play_mode_values[] = {
+const char* const sequencer_play_mode_values[PLAY_MODE_LAST] = {
   "MANUAL",
   "ARPEGGIATOR",
   "SEQUENCER",
@@ -164,11 +181,11 @@ const char* const sequencer_clock_quantization_values[] = {
   "STEP"
 };
 
-const char* const sequencer_input_response_values[] = {
+const char* const sequencer_input_response_values[SEQUENCER_INPUT_RESPONSE_LAST] = {
   "OFF", "TRANSPOSE", "REPLACE", "DIRECT"
 };
 
-const char* const sustain_mode_values[] = {
+const char* const sustain_mode_values[SUSTAIN_MODE_LAST] = {
   "OFF",
   "SUSTAIN",
   "SOSTENUTO",
@@ -199,9 +216,6 @@ const char* const tuning_factor_values[] = {
   "2  2/1",
   "ALPHA"
 };
-
-const uint8_t kVibratoSpeedMax = LUT_LFO_INCREMENTS_SIZE + LUT_CLOCK_RATIO_NAMES_SIZE - 1;
-STATIC_ASSERT(kVibratoSpeedMax <= 127, overflow);
 
 /* static */
 const Setting Settings::settings_[] = {
@@ -363,10 +377,22 @@ const Setting Settings::settings_[] = {
     22, 13,
   },
   {
-    "VS", "VIBRATO SPEED",
-    SETTING_DOMAIN_PART, { PART_VOICING_MODULATION_RATE, 0 },
-    SETTING_UNIT_VIBRATO_SPEED, 0, kVibratoSpeedMax, NULL,
+    "LF", "LFO RATE",
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_RATE, 0 },
+    SETTING_UNIT_LFO_RATE, 0, 127, NULL,
     23, 14,
+  },
+  {
+    "LT", "LFO SPREAD TYPES",
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_TYPES, 0 },
+    SETTING_UNIT_LFO_SPREAD, -64, 63, NULL,
+    118, 0xff,
+  },
+  {
+    "LV", "LFO SPREAD VOICES",
+    SETTING_DOMAIN_PART, { PART_VOICING_LFO_SPREAD_VOICES, 0 },
+    SETTING_UNIT_LFO_SPREAD, -64, 63, NULL,
+    119, 0xff,
   },
   {
     "VB", "VIBRATO AMOUNT",
@@ -381,9 +407,21 @@ const Setting Settings::settings_[] = {
     93, 0xff,
   },
   {
+    "VS", "VIBRATO SHAPE",
+    SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
+    125, 0xff,
+  },
+  {
+    "LS", "TIMBRE LFO SHAPE",
+    SETTING_DOMAIN_PART, { PART_VOICING_TIMBRE_LFO_SHAPE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
+    126, 0xff,
+  },
+  {
     "TS", "TREMOLO SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_TREMOLO_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, tremolo_shape_values,
+    SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
     94, 0xff,
   },
   {
@@ -426,7 +464,7 @@ const Setting Settings::settings_[] = {
   {
     "T\x88", "TRIG SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_TRIGGER_SHAPE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, 5, trigger_shape_values,
+    SETTING_UNIT_ENUMERATION, 0, TRIGGER_SHAPE_LAST - 1, trigger_shape_values,
     30, 21,
   },
   {
@@ -713,24 +751,29 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       strcpy(buffer, lut_clock_ratio_names[value]);
       break;
     
-    case SETTING_UNIT_VIBRATO_SPEED:
-      if (value < LUT_LFO_INCREMENTS_SIZE) {
-        PrintInteger(buffer, value);
+    case SETTING_UNIT_LFO_RATE:
+      if (value < 64) {
+        STATIC_ASSERT(LUT_CLOCK_RATIO_NAMES_SIZE == 32, ratios); // Allows an easy bit shift
+        Print(settings_[SETTING_SEQUENCER_CLOCK_DIVISION], (64 - value - 1) >> 1, buffer);
       } else {
-        Print(settings_[SETTING_SEQUENCER_CLOCK_DIVISION], value - LUT_LFO_INCREMENTS_SIZE, buffer);
+        PrintInteger(buffer, value + 1 - 64);
+        if (buffer[0] == ' ') buffer[0] = 'F';
       }
       break;
       
     case SETTING_UNIT_PORTAMENTO:
-      if (value < (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1)) {
-        PrintInteger(buffer, value);
+    {
+      uint8_t split_point = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
+      if (value < split_point) {
+        PrintInteger(buffer, split_point - value);
       } else {
-        PrintInteger(buffer, value - (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1));
+        PrintInteger(buffer, value - split_point);
       }
       if (buffer[0] == ' ') {
-        buffer[0] = (value < (LUT_PORTAMENTO_INCREMENTS_SIZE >> 1)) ? 'T' : 'R';
+        buffer[0] = value < split_point ? 'T' : 'R';
       }
       break;
+    }
       
     case SETTING_UNIT_ENUMERATION:
       strcpy(buffer, setting.values[value]);
@@ -755,6 +798,15 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
         strcpy(buffer, voicing_oscillator_shape_values[value]);
       }
       break;
+
+    case SETTING_UNIT_LFO_SPREAD: {
+      int8_t spread = value;
+      bool dephase = spread < 0;
+      if (dephase) spread++;
+      PrintInteger(buffer, abs(spread));
+      if (buffer[0] == ' ') buffer[0] = dephase ? 'P' : 'F';
+      break;
+    }
       
     default:
       strcpy(buffer, "??");

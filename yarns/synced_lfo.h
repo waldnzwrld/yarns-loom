@@ -48,28 +48,17 @@ class SyncedLFO {
 
   SyncedLFO() { }
   ~SyncedLFO() { }
-  void Init() {
-    counter_ = 0;
-    period_ticks_ = 0;
+  void Init(uint8_t phase_err_coeff_shift, uint8_t freq_err_coeff_shift) {
     phase_ = 0;
+    phase_err_coeff_shift_ = phase_err_coeff_shift;
+    freq_err_coeff_shift_ = freq_err_coeff_shift;
   }
 
-  uint32_t GetPhase() const {
-    return phase_;
-  }
-
-  uint32_t GetPhaseIncrement() const {
-    return phase_increment_;
-  }
-
-  uint32_t Increment(uint32_t increment) {
-    phase_ += increment;
-    return GetPhase();
-  }
-
-  uint32_t Refresh() {
-    return Increment(phase_increment_);
-  }
+  uint32_t GetPhase() const { return phase_; }
+  uint32_t GetPhaseIncrement() const { return phase_increment_; }
+  void SetPhaseIncrement(uint32_t i) { phase_increment_ = i; }
+  void Increment(uint32_t increment) { phase_ += increment; }
+  void Refresh() { return Increment(phase_increment_); }
 
   int16_t shape(LFOShape s) const { return shape(s, phase_); }
   int16_t shape(LFOShape shape, uint32_t phase) const {
@@ -89,22 +78,18 @@ class SyncedLFO {
     } 
   }
 
-  void Tap(uint16_t new_period_ticks, uint32_t phase_offset = 0) {
-    if (new_period_ticks != period_ticks_) {
-      if (period_ticks_) {
-        counter_ = (counter_ * new_period_ticks) / period_ticks_;
-      }
-      period_ticks_ = new_period_ticks;
-      counter_ %= period_ticks_;
-    }
+  void Tap(uint32_t tick_counter, uint16_t period_ticks, uint32_t phase_offset = 0) {
+    uint16_t tick_phase = tick_counter % period_ticks;
+    uint32_t target_phase = ((tick_phase << 16) / period_ticks) << 16;
+    SetTargetPhase(target_phase + phase_offset);
+  }
 
-    uint32_t target_phase = ((counter_ << 16) / period_ticks_) << 16;
-    target_phase += phase_offset;
+  void SetTargetPhase(uint32_t target_phase) {
+    // TODO delta of unsigneds can overflow signed
     uint32_t target_increment = target_phase - previous_target_phase_;
-
     int32_t d_error = target_increment - (phase_ - previous_phase_);
     int32_t p_error = target_phase - phase_;
-    int32_t error = (d_error + (p_error >> 1)) >> 11;
+    int32_t error = (p_error >> phase_err_coeff_shift_) + (d_error >> freq_err_coeff_shift_);
 
     if (error < 0 && abs(error) > phase_increment_) {
       // underflow
@@ -118,18 +103,15 @@ class SyncedLFO {
 
     previous_phase_ = phase_;
     previous_target_phase_ = target_phase;
-    counter_ = (counter_ + 1) % period_ticks_;
   }
 
  private:
 
-  uint16_t counter_;
-  uint16_t period_ticks_;
-
   uint32_t phase_;
   uint32_t phase_increment_;
-  uint32_t previous_target_phase_;
-  uint32_t previous_phase_;
+  uint32_t previous_phase_, previous_target_phase_;
+
+  uint8_t phase_err_coeff_shift_, freq_err_coeff_shift_;
 
   DISALLOW_COPY_AND_ASSIGN(SyncedLFO);
 };

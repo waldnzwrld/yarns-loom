@@ -150,7 +150,7 @@ characters = {
   ';': 'hn',
   '<': 'jl',
   '>': 'gn',
-  '?': 'fajm',
+  '?': 'fabkm',
   '=': 'pkd',
   '@': 'kmcbafed',
   '[': 'afed',
@@ -215,6 +215,9 @@ characters = {
   '\xB1': CZ + peaking,
   '\xB2': CZ + band_pass,
   '\xB3': CZ + high_pass,
+
+  '\xC0': 'plcb', # sqrt
+  '\xC1': 'fhak', # pi
   
   '\xFF': 'abcdefghjklmnp',
   

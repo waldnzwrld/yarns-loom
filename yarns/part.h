@@ -144,7 +144,7 @@ enum LegatoMode {
   LEGATO_MODE_LAST
 };
 struct PackedPart {
-  // Currently has 36 bits to spare
+  // Currently has 7 bits to spare
 
   struct PackedSequencerStep {
     unsigned int
@@ -159,6 +159,7 @@ struct PackedPart {
     looper_size         : looper::kBitsNoteIndex;
 
   static const uint8_t kTimbreBits = 7;
+  static const uint8_t kLFOShapeBits = 2;
 
   signed int
     // MidiSettings
@@ -166,6 +167,8 @@ struct PackedPart {
     // VoicingSettings
     tuning_transpose : 7,
     tuning_fine : 7,
+    lfo_spread_types : kTimbreBits,
+    lfo_spread_voices : kTimbreBits,
     amplitude_mod_velocity : kTimbreBits,
     timbre_mod_envelope : kTimbreBits,
     timbre_mod_velocity : kTimbreBits,
@@ -194,22 +197,23 @@ struct PackedPart {
     portamento : 7,
     legato_mode : 2,
     pitch_bend_range : 5,
-    vibrato_shape: 3,
     vibrato_range : 4,
     vibrato_mod : 7,
-    modulation_rate : 7,
+    lfo_rate : 7,
     tuning_root : 4,
     tuning_system : 6,
     trigger_duration : 7, // probably excessive
     trigger_scale : 1,
     trigger_shape : 3,
-    aux_cv : 4, // barely
-    aux_cv_2 : 4, // barely
+    aux_cv : 4,
+    aux_cv_2 : 4,
     tuning_factor : 4,
     oscillator_mode : 2,
-    oscillator_shape : 7,
+    oscillator_shape : 7, // 1 bit unused
     tremolo_mod : kTimbreBits,
-    tremolo_shape : 3,
+    vibrato_shape : kLFOShapeBits,
+    timbre_lfo_shape : kLFOShapeBits,
+    tremolo_shape : kLFOShapeBits,
     timbre_initial : kTimbreBits,
     timbre_mod_lfo : kTimbreBits,
     env_init_attack : kTimbreBits,
@@ -286,8 +290,12 @@ struct VoicingSettings {
   uint8_t vibrato_range;
   uint8_t vibrato_mod;
   uint8_t tremolo_mod;
+  uint8_t vibrato_shape;
+  uint8_t timbre_lfo_shape;
   uint8_t tremolo_shape;
-  uint8_t modulation_rate;
+  uint8_t lfo_rate;
+  int8_t lfo_spread_types;
+  int8_t lfo_spread_voices;
   int8_t tuning_transpose;
   int8_t tuning_fine;
   int8_t tuning_root;
@@ -324,8 +332,12 @@ struct VoicingSettings {
     packed.vibrato_range = vibrato_range;
     packed.vibrato_mod = vibrato_mod;
     packed.tremolo_mod = tremolo_mod;
+    packed.vibrato_shape = vibrato_shape;
+    packed.timbre_lfo_shape = timbre_lfo_shape;
     packed.tremolo_shape = tremolo_shape;
-    packed.modulation_rate = modulation_rate;
+    packed.lfo_rate = lfo_rate;
+    packed.lfo_spread_types = lfo_spread_types;
+    packed.lfo_spread_voices = lfo_spread_voices;
     packed.tuning_transpose = tuning_transpose;
     packed.tuning_fine = tuning_fine;
     packed.tuning_root = tuning_root;
@@ -362,8 +374,12 @@ struct VoicingSettings {
     vibrato_range = packed.vibrato_range;
     vibrato_mod = packed.vibrato_mod;
     tremolo_mod = packed.tremolo_mod;
+    vibrato_shape = packed.vibrato_shape;
+    timbre_lfo_shape = packed.timbre_lfo_shape;
     tremolo_shape = packed.tremolo_shape;
-    modulation_rate = packed.modulation_rate;
+    lfo_rate = packed.lfo_rate;
+    lfo_spread_types = packed.lfo_spread_types;
+    lfo_spread_voices = packed.lfo_spread_voices;
     tuning_transpose = packed.tuning_transpose;
     tuning_fine = packed.tuning_fine;
     tuning_root = packed.tuning_root;
@@ -415,8 +431,12 @@ enum PartSetting {
   PART_VOICING_VIBRATO_RANGE,
   PART_VOICING_VIBRATO_MOD,
   PART_VOICING_TREMOLO_MOD,
+  PART_VOICING_VIBRATO_SHAPE,
+  PART_VOICING_TIMBRE_LFO_SHAPE,
   PART_VOICING_TREMOLO_SHAPE,
-  PART_VOICING_MODULATION_RATE,
+  PART_VOICING_LFO_RATE,
+  PART_VOICING_LFO_SPREAD_TYPES,
+  PART_VOICING_LFO_SPREAD_VOICES,
   PART_VOICING_TUNING_TRANSPOSE,
   PART_VOICING_TUNING_FINE,
   PART_VOICING_TUNING_ROOT,
@@ -579,29 +599,32 @@ struct ArpeggiatorState {
   }
 };
 
-struct PressedKeys {
+struct HeldKeys {
 
   static const uint8_t VELOCITY_SUSTAIN_MASK = 0x80;
 
   stmlib::NoteStack<kNoteStackSize> stack;
-  bool ignore_note_off_messages;
-  bool release_latched_keys_on_next_note_on;
-  bool sustainable[kNoteStackMapping];
+  bool universally_sustainable; // Includes keys not yet pressed
+  bool stop_sustained_notes_on_next_note_on;
+  bool individually_sustainable[kNoteStackMapping]; // Only keys already held
 
   void Init() {
     stack.Init();
-    ignore_note_off_messages = false;
-    release_latched_keys_on_next_note_on = false;
+    universally_sustainable = false;
+    stop_sustained_notes_on_next_note_on = false;
     std::fill(
-      &sustainable[0],
-      &sustainable[kNoteStackMapping],
+      &individually_sustainable[0],
+      &individually_sustainable[kNoteStackMapping],
       false
     );
   }
 
-  bool SustainableNoteOff(uint8_t pitch) {
-    SetSustain(pitch);
-    if (IsSustained(pitch)) { return false; }
+  // Returns true if result is NoteOff
+  bool NoteOff(uint8_t pitch, bool respect_sustain) {
+    if (respect_sustain) {
+      SetSustain(pitch);
+      if (IsSustained(pitch)) return false;
+    }
     stack.NoteOff(pitch);
     return true;
   }
@@ -613,36 +636,29 @@ struct PressedKeys {
     stack.mutable_note(i)->velocity |= VELOCITY_SUSTAIN_MASK;
   }
 
-  bool SustainAll() {
-    bool changed = false;
-    for (uint8_t i = 1; i <= stack.max_size(); ++i) {
-      stmlib::NoteEntry* e = stack.mutable_note(i);
-      if (e->note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
-      if (IsSustained(*e)) { continue; }
-      e->velocity |= VELOCITY_SUSTAIN_MASK;
-      changed = true;
-    }
-    return changed;
-  }
-
-  void SetSustainable(bool value) {
+  void SetIndividuallySustainable(bool value) {
     for (uint8_t i = 1; i <= stack.max_size(); ++i) {
       if (stack.note(i).note == stmlib::NOTE_STACK_FREE_SLOT) { continue; }
-      sustainable[i - 1] = value;
+      individually_sustainable[i - 1] = value;
     }
   }
 
-  void Clutch(bool on) {
-    release_latched_keys_on_next_note_on = on;
-    SetSustainable(!on);
+  void Clutch(bool sustain_on) {
+    stop_sustained_notes_on_next_note_on = !sustain_on;
+    SetIndividuallySustainable(sustain_on);
+  }
+
+  void Latch(bool sustain_on) {
+    universally_sustainable = sustain_on;
+    stop_sustained_notes_on_next_note_on = true;
   }
 
   bool IsSustainable(uint8_t index) const {
-    return ignore_note_off_messages || sustainable[index - 1];
+    return universally_sustainable || individually_sustainable[index - 1];
   }
 
   bool IsSustained(const stmlib::NoteEntry &note_entry) const {
-    // If the note is flagged, it can only be released by ReleaseLatchedNotes
+    // If the note is flagged, it can only be released by StopSustainedNotes
     return note_entry.velocity & VELOCITY_SUSTAIN_MASK;
   }
   bool IsSustained(uint8_t pitch) const {
@@ -667,9 +683,9 @@ class Part {
   // Also, note that channel / keyrange / velocity range filtering is not
   // applied here. It is up to the caller to call accepts() first to check
   // whether the message should be sent to the part.
-  uint8_t PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t velocity);
+  uint8_t HeldKeysNoteOn(HeldKeys &keys, uint8_t pitch, uint8_t velocity);
   bool NoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
-  bool NoteOff(uint8_t channel, uint8_t note);
+  bool NoteOff(uint8_t channel, uint8_t note, bool respect_sustain = true);
   uint8_t TransposeInputPitch(uint8_t pitch, int8_t transpose_octaves) const {
     CONSTRAIN(transpose_octaves, (0 - pitch) / 12, (127 - pitch) / 12);
     return pitch + 12 * transpose_octaves;
@@ -707,6 +723,12 @@ class Part {
     voicing_.legato_mode = LEGATO_MODE_OFF;
   }
 
+  inline bool seq_overwrite() const { return seq_overwrite_; }
+  inline void toggle_seq_overwrite() { set_seq_overwrite(!seq_overwrite_); }
+  inline void set_seq_overwrite(bool b) {
+    seq_overwrite_ = b && (looped() ? looper_.num_notes() : seq_.num_steps);
+  }
+
   inline const looper::Deck& looper() const { return looper_; }
   inline looper::Deck& mutable_looper() { return looper_; }
   inline uint8_t LooperCurrentNoteIndex() const {
@@ -733,10 +755,12 @@ class Part {
   }
 
   inline bool looper_in_use() const {
-    return looped() && (
-      midi_.play_mode == PLAY_MODE_SEQUENCER ||
-      seq_driven_arp()
-    );
+    return looped() && sequencer_in_use();
+  }
+
+  inline bool sequencer_in_use() const {
+    return midi_.play_mode == PLAY_MODE_SEQUENCER ||
+      (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && seq_driven_arp());
   }
 
   inline bool seq_driven_arp() const {
@@ -763,7 +787,8 @@ class Part {
     pitch = ApplySequencerInputResponse(pitch);
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Advance arp
-      arp_ = BuildArpState(SequencerStep(pitch, velocity));
+      SequencerStep step = SequencerStep(pitch, velocity);
+      arp_ = BuildArpState(&step);
       pitch = arp_.step.note();
       if (arp_.step.has_note()) {
         InternalNoteOn(pitch, arp_.step.velocity());
@@ -789,7 +814,7 @@ class Part {
       uint8_t next_on_index = looper_.PeekNextOn();
       const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
-      next_step = BuildArpState(next_step).step;
+      next_step = BuildArpState(&next_step).step;
       if (next_step.is_continuation()) {
         // Leave this pitch in the care of the next looper note
         output_pitch_for_looper_note_[next_on_index] = pitch;
@@ -802,6 +827,7 @@ class Part {
   }
 
   inline void LooperRecordNoteOn(uint8_t pressed_key_index) {
+    if (seq_overwrite_) { DeleteRecording(); }
     const stmlib::NoteEntry& e = manual_keys_.stack.note(pressed_key_index);
     uint8_t looper_note_index = looper_.RecordNoteOn(e.note, e.velocity & 0x7f);
     looper_note_recording_pressed_key_[pressed_key_index] = looper_note_index;
@@ -820,26 +846,26 @@ class Part {
   void DeleteRecording();
 
   inline void SustainOn() {
-    PressedKeysSustainOn(manual_keys_);
-    PressedKeysSustainOn(arp_keys_);
+    HeldKeysSustainOn(manual_keys_);
+    HeldKeysSustainOn(arp_keys_);
   }
   inline void SustainOff() {
-    PressedKeysSustainOff(manual_keys_);
-    PressedKeysSustainOff(arp_keys_);
+    HeldKeysSustainOff(manual_keys_);
+    HeldKeysSustainOff(arp_keys_);
   }
-  void PressedKeysSustainOn(PressedKeys &keys);
-  void PressedKeysSustainOff(PressedKeys &keys);
-  inline const PressedKeys& PressedKeysForLatchUI() const {
+  void HeldKeysSustainOn(HeldKeys &keys);
+  void HeldKeysSustainOff(HeldKeys &keys);
+  inline const HeldKeys& HeldKeysForUI() const {
     return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
   }
-  inline PressedKeys& MutablePressedKeysForLatchUI() {
+  inline HeldKeys& MutableHeldKeysForUI() {
     return midi_.play_mode == PLAY_MODE_ARPEGGIATOR ? arp_keys_ : manual_keys_;
   }
-  inline void PressedKeysResetLatch(PressedKeys &keys) {
-    ReleaseLatchedNotes(keys);
+  inline void ResetKeys(HeldKeys &keys) {
+    StopSustainedNotes(keys);
     keys.Init();
   }
-  void ResetLatch();
+  void ResetAllKeys();
 
   inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
@@ -851,6 +877,7 @@ class Part {
 
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
+      if (seq_overwrite_) { DeleteRecording(); }
       SequencerStep* target = &seq_.step[seq_rec_step_];
       target->data[0] = step.data[0];
       target->data[1] |= step.data[1];
@@ -979,9 +1006,10 @@ class Part {
     CONSTRAIN(seq_.loop_length, 0, 7);
     CONSTRAIN(seq_.arp_range, 0, 3);
     CONSTRAIN(seq_.arp_direction, 0, ARPEGGIATOR_DIRECTION_LAST - 1);
+    AllNotesOff();
     TouchVoices();
     TouchVoiceAllocation();
-    ResetLatch();
+    ResetAllKeys();
   }
 
   void set_siblings(bool has_siblings) {
@@ -994,8 +1022,11 @@ class Part {
   void TouchVoiceAllocation();
   void TouchVoices();
   
-  void ReleaseLatchedNotes(PressedKeys &keys);
-  void DispatchSortedNotes(bool note_off);
+  void StopNotesBySustainStatus(HeldKeys &keys, bool where_sustained);
+  void StopSustainedNotes(HeldKeys &keys) {
+    StopNotesBySustainStatus(keys, true);
+  }
+  void DispatchSortedNotes(bool legato);
   void VoiceNoteOn(
     uint8_t voice, uint8_t pitch, uint8_t vel,
     bool legato//, bool reset_gate_counter
@@ -1003,8 +1034,8 @@ class Part {
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
-  const SequencerStep BuildSeqStep() const;
-  const ArpeggiatorState BuildArpState(SequencerStep seq_step) const;
+  const SequencerStep BuildSeqStep(uint8_t step_index) const;
+  const ArpeggiatorState BuildArpState(SequencerStep* seq_step_ptr) const;
 
   MidiSettings midi_;
   VoicingSettings voicing_;
@@ -1015,8 +1046,8 @@ class Part {
   uint8_t num_voices_;
   bool polychained_;
 
-  PressedKeys manual_keys_;
-  PressedKeys arp_keys_;
+  HeldKeys manual_keys_;
+  HeldKeys arp_keys_;
   bool hold_pedal_engaged_;
 
   stmlib::NoteStack<kNoteStackSize> generated_notes_;  // by sequencer or arpeggiator.
@@ -1025,14 +1056,13 @@ class Part {
   uint8_t active_note_[kNumMaxVoicesPerPart];
   uint8_t cyclic_allocation_note_counter_;
   
-  uint16_t arp_seq_prescaler_;
-  
   ArpeggiatorState arp_;
   
   bool seq_recording_;
   bool seq_overdubbing_;
   uint8_t seq_step_;
   uint8_t seq_rec_step_;
+  bool seq_overwrite_;
   
   looper::Deck looper_;
 

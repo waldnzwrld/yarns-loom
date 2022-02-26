@@ -46,7 +46,7 @@ const uint16_t kRefreshTwoThirds = 600;
 const uint32_t kEncoderLongPressTime = kRefreshPeriod * 2 / 3;
 const uint32_t kDefaultFade = (1 << 15) / kRefreshPeriod; // 1/2 frequency
 
-const char* const kVersion = "Loom 2_2_0";
+const char* const kVersion = "Loom 2_4_1";
 
 /* static */
 const Ui::Command Ui::commands_[] = {
@@ -95,7 +95,7 @@ Ui::Mode Ui::modes_[] = {
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectVoice,
     &Ui::PrintCalibrationVoiceNumber,
     UI_MODE_CALIBRATION_SELECT_VOICE,
-    NULL, 0, kNumSystemVoices },
+    NULL, 0, kNumCVOutputs },
   
   // UI_MODE_CALIBRATION_SELECT_NOTE
   { &Ui::OnIncrement, &Ui::OnClickCalibrationSelectNote,
@@ -199,7 +199,7 @@ void Ui::Poll() {
   display_.RefreshSlow();
   
   // Read LED brightness from multi and copy to LEDs driver.
-  uint8_t leds_brightness[kNumSystemVoices];
+  uint8_t leds_brightness[kNumCVOutputs];
   multi.GetLedsBrightness(leds_brightness);
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     ++factory_testing_leds_counter_;
@@ -274,7 +274,7 @@ void Ui::PrintProgramNumber() {
 }
 
 void Ui::PrintCalibrationVoiceNumber() {
-  if (calibration_voice_ < kNumSystemVoices) {
+  if (calibration_voice_ < kNumCVOutputs) {
     strcpy(buffer_, "*1");
     buffer_[1] += calibration_voice_;
     display_.Print(buffer_);
@@ -289,15 +289,10 @@ void Ui::PrintCalibrationNote() {
       calibration_strings[calibration_note_]);
 }
 
-void Ui::PrintActivePartAndPlayMode() {
-  uint8_t play_mode = active_part().midi_settings().play_mode;
-  if (multi.running()) {
-    SetBrightnessFromSequencerPhase(active_part());
-  } else {
-    display_.set_brightness(UINT16_MAX);
-  }
+void Ui::PrintPartAndPlayMode(uint8_t part) {
+  uint8_t play_mode = multi.part(part).midi_settings().play_mode;
   strcpy(buffer_, "1x");
-  buffer_[0] += active_part_;
+  buffer_[0] += part;
   buffer_[1] = setting_defs.get(SETTING_SEQUENCER_PLAY_MODE).values[play_mode][0];
   buffer_[2] = '\0';
   display_.Print(buffer_);
@@ -334,28 +329,30 @@ void Ui::SetBrightnessFromSequencerPhase(const Part& part) {
   uint16_t phase;
   if (part.looped()) {
     phase = UINT16_MAX - part.looper().phase();
+  } else if (!part.sequencer_settings().num_steps) {
+    phase = UINT16_MAX;
   } else {
     phase = ((1 + part.playing_step()) << 16) / part.sequencer_settings().num_steps;
   }
   display_.set_brightness(phase);
 }
 
-const uint16_t kMasksNewLooperBeat[2] = { 0x1000 | 0x10, 0x1000 | 0x10 };
+const uint16_t kMasksNewLooperBeat[kDisplayWidth] = { 0x8000, 0x8000 };
 void Ui::PrintLooperRecordingStatus() {
-  if (
-    recording_part().looper().overwrite_enabled() &&
-    system_clock.milliseconds() % 320 < 40
-  ) {
-    display_.set_brightness(UINT16_MAX);
-    display_.Print("//");
-    return;
-  }
   uint8_t note_index = recording_part().LooperCurrentNoteIndex();
   if (note_index == looper::kNullIndex) {
-    SetBrightnessFromSequencerPhase(recording_part());
-    recording_part().new_beat()
-      ? display_.PrintMasks(kMasksNewLooperBeat)
-      : display_.Print("__");
+    uint16_t ticks = lut_clock_ratio_ticks[recording_part().sequencer_settings().clock_division];
+    if (static_cast<uint16_t>(multi.tick_counter() % ticks) <= (ticks >> 4)) {
+      display_.set_brightness(UINT16_MAX);
+      if (recording_part().seq_overwrite()) {
+        display_.Print("//");
+      } else {
+        display_.PrintMasks(kMasksNewLooperBeat);
+      }
+    } else {
+      SetBrightnessFromSequencerPhase(recording_part());
+      display_.Print("__");
+    }
     return;
   }
   const looper::Deck& looper_tape = recording_part().looper();
@@ -373,7 +370,10 @@ void Ui::PrintRecordingStatus() {
   if (push_it_) {
     PrintPushItNote();
   } else {
-    if (recording_part().recording_step() == recording_part().playing_step()) {
+    if (
+      recording_part().num_steps() == 0 ||
+      recording_part().recording_step() == recording_part().playing_step()
+    ) {
       display_.set_brightness(UINT16_MAX);
     } else {
       // If playing a sequencer step other than the selected one, 2/3 brightness
@@ -442,14 +442,18 @@ void Ui::SplashOn(Splash s) {
   display_.set_fade(0);
   display_.set_blink(false);
   switch (splash_) {
+    case SPLASH_NONE:
+    case SPLASH_PART_STRING:
+      break;
+
     case SPLASH_ACTIVE_PART:
       if (multi.recording()) {
         strcpy(buffer_, "1R");
-        buffer_[0] += multi.recording_part();
+        buffer_[0] += splash_part_;
         buffer_[2] = '\0';
         display_.Print(buffer_);
       } else {
-        PrintActivePartAndPlayMode();
+        PrintPartAndPlayMode(splash_part_);
       }
       break;
 
@@ -458,15 +462,22 @@ void Ui::SplashOn(Splash s) {
       display_.Scroll();
       break;
 
-    case SPLASH_SETTING:
+    case SPLASH_SETTING_VALUE:
       SetFadeForSetting(*splash_setting_def_);
-      if (splash_part_ == kNoSplashPart) {
-        display_.Print(splash_setting_def_->short_name, splash_setting_def_->name);
-      } else {
-        setting_defs.Print(*splash_setting_def_, multi.GetSetting(*splash_setting_def_, splash_part_), buffer_);
-        display_.Print(buffer_);
-      }
+      setting_defs.Print(*splash_setting_def_, multi.GetSetting(*splash_setting_def_, splash_part_), buffer_);
+      display_.Print(buffer_);
       display_.Scroll();
+      break;
+
+    case SPLASH_SETTING_NAME:
+      display_.Print(splash_setting_def_->short_name);
+      break;
+
+    case SPLASH_SETTING_PART:
+      strcpy(buffer_, "1C");
+      buffer_[0] += splash_part_;
+      buffer_[2] = '\0';
+      display_.Print(buffer_);
       break;
 
     case SPLASH_DELETE_RECORDING:
@@ -492,9 +503,6 @@ void Ui::SplashOn(Splash s) {
       strcpy(buffer_, "S1");
       buffer_[1] += program_index_;
       display_.Print(buffer_);
-      break;
-
-    default:
       break;
   }
 }
@@ -566,7 +574,7 @@ void Ui::OnClickLoadSave(const Event& e) {
 }
 
 void Ui::OnClickCalibrationSelectVoice(const Event& e) {
-  if (calibration_voice_ == kNumSystemVoices) {
+  if (calibration_voice_ == kNumCVOutputs) {
     mode_ = UI_MODE_PARAMETER_SELECT;
     calibration_voice_ = 0;
     storage_manager.SaveCalibration();
@@ -621,7 +629,10 @@ void Ui::OnIncrementParameterSelect(const Event& e) {
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
   int16_t value = multi.GetSetting(setting(), active_part_);
-  if (setting().unit == SETTING_UNIT_INT8) {
+  if (
+    setting().unit == SETTING_UNIT_INT8 ||
+    setting().unit == SETTING_UNIT_LFO_SPREAD
+  ) {
     value = static_cast<int8_t>(value);
   }
   value += e.data;
@@ -741,8 +752,8 @@ void Ui::OnSwitchPress(const Event& e) {
   }
 }
 
-PressedKeys& Ui::LatchableKeys() {
-  return mutable_active_part()->MutablePressedKeysForLatchUI();
+HeldKeys& Ui::ActivePartHeldKeys() {
+  return mutable_active_part()->MutableHeldKeysForUI();
 }
 
 void Ui::OnSwitchHeld(const Event& e) {
@@ -752,14 +763,13 @@ void Ui::OnSwitchHeld(const Event& e) {
     case UI_SWITCH_REC:
       if (recording_any) {
         mutable_recording_part()->DeleteRecording();
-        SetSplashPart(active_part_);
-        SplashOn(SPLASH_DELETE_RECORDING);
+        SplashOn(SPLASH_DELETE_RECORDING, active_part_);
       } else {
-        PressedKeys &keys = LatchableKeys();
-        if (keys.ignore_note_off_messages) {
-          mutable_active_part()->PressedKeysSustainOff(keys);
+        HeldKeys &keys = ActivePartHeldKeys();
+        if (keys.universally_sustainable) {
+          mutable_active_part()->HeldKeysSustainOff(keys);
         } else if (multi.running() && keys.stack.most_recent_note_index()) {
-          mutable_active_part()->PressedKeysSustainOn(keys);
+          mutable_active_part()->HeldKeysSustainOn(keys);
         } else {
           if (push_it_) {
             multi.PushItNoteOff(push_it_note_);
@@ -786,14 +796,12 @@ void Ui::OnSwitchHeld(const Event& e) {
       if (recording_any) {
         multi.StartRecording(active_part_);
       }
-      SplashOn(SPLASH_ACTIVE_PART);
+      SplashOn(SPLASH_ACTIVE_PART, active_part_);
       break;
 
     case UI_SWITCH_TAP_TEMPO:
       if (recording_any) {
-        if (recording_part().looped()) {
-          mutable_recording_part()->mutable_looper().ToggleOverwrite();
-        } // Else, set last step for sequencer?
+        mutable_recording_part()->toggle_seq_overwrite();
       } else {
         multi.ApplySettingAndSplash(
           setting_defs.get(SETTING_SEQUENCER_PLAY_MODE),
@@ -820,7 +828,7 @@ void Ui::DoLearnCommand() {
   multi.StartLearning();
 }
 
-const uint32_t kTapDeltaMax = 1500;
+const uint32_t kTapDeltaMax = 1500; // 40 BPM
 
 void Ui::TapTempo() {
   uint32_t tap_time = system_clock.milliseconds();
@@ -908,16 +916,15 @@ void Ui::DoEvents() {
   }
 
   if (splash_) {
-    if (splash_ == SPLASH_ACTIVE_PART && multi.running()) {
-      SetBrightnessFromSequencerPhase(active_part());
-    }
     if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
       return; // Splash isn't over yet
     }
-    if (splash_ == SPLASH_SETTING && splash_part_ != kNoSplashPart) {
-      // If done displaying setting value, switch to displaying setting name
-      SetSplashPart(kNoSplashPart);
-      SplashOn(SPLASH_SETTING);
+    // Chaining
+    if (splash_ == SPLASH_SETTING_VALUE) {
+      SplashOn(SPLASH_SETTING_NAME);
+      return;
+    } else if (splash_ == SPLASH_SETTING_NAME || splash_ == SPLASH_PART_STRING) {
+      SplashOn(SPLASH_SETTING_PART);
       return;
     }
     // Exit splash
@@ -956,17 +963,17 @@ void Ui::DoEvents() {
     );
     if (multi.recording()) {
       display_.set_fade(0);
-    } else if (
-      mode_ == UI_MODE_MAIN_MENU || (
-        mode_ == UI_MODE_PARAMETER_SELECT && (
-          &setting() == &setting_defs.get(SETTING_MENU_SETUP) ||
-          &setting() == &setting_defs.get(SETTING_MENU_OSCILLATOR) ||
-          &setting() == &setting_defs.get(SETTING_MENU_ENVELOPE) ||
-          current_menu_ != &live_menu_
-        )
-      )
-    ) {
-      display_.set_fade(kDefaultFade);
+    // } else if (
+    //   mode_ == UI_MODE_MAIN_MENU || (
+    //     mode_ == UI_MODE_PARAMETER_SELECT && (
+    //       &setting() == &setting_defs.get(SETTING_MENU_SETUP) ||
+    //       &setting() == &setting_defs.get(SETTING_MENU_OSCILLATOR) ||
+    //       &setting() == &setting_defs.get(SETTING_MENU_ENVELOPE) ||
+    //       current_menu_ != &live_menu_
+    //     )
+    //   )
+    // ) {
+    //   display_.set_fade(kDefaultFade);
     } else if (mode_ == UI_MODE_PARAMETER_EDIT) {
       SetFadeForSetting(setting());
     } else {
@@ -979,12 +986,17 @@ void Ui::DoEvents() {
   // If display is idle, flash various statuses
   bool print_latch =
     active_part().midi_settings().sustain_mode != SUSTAIN_MODE_OFF &&
-    LatchableKeys().stack.most_recent_note_index();
+    ActivePartHeldKeys().stack.most_recent_note_index();
   bool print_part = mode_ == UI_MODE_PARAMETER_SELECT;
   if (queue_.idle_time() > kRefreshTwoThirds) {
     if (print_part) {
       display_.set_fade(0);
-      PrintActivePartAndPlayMode();
+      PrintPartAndPlayMode(active_part_);
+      if (multi.running() && active_part().sequencer_in_use()) {
+        SetBrightnessFromSequencerPhase(active_part());
+      } else {
+        display_.set_brightness(UINT16_MAX);
+      }
     } else if (print_latch) {
       PrintLatch();
     }
@@ -1019,7 +1031,7 @@ const uint16_t kHoldDisplayMasks[2][3] = {
 };
 void Ui::PrintLatch() {
   display_.set_fade(0);
-  const PressedKeys& keys = LatchableKeys();
+  const HeldKeys& keys = ActivePartHeldKeys();
   uint16_t masks[kDisplayWidth];
   std::fill(&masks[0], &masks[kDisplayWidth], 0);
   uint8_t note_ordinal = 0, display_pos = 0;
@@ -1034,7 +1046,7 @@ void Ui::PrintLatch() {
     bool sustained = keys.IsSustained(note_entry);
     bool top;
     if (sustained) {
-      top = (keys.release_latched_keys_on_next_note_on && !keys.ignore_note_off_messages) ? blink : true;
+      top = keys.stop_sustained_notes_on_next_note_on ? blink : true;
     } else {
       top = keys.IsSustainable(note_index);
     }

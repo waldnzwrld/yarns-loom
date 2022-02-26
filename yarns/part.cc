@@ -80,7 +80,9 @@ void Part::Init() {
   voicing_.pitch_bend_range = 2;
   voicing_.vibrato_range = 1;
   voicing_.vibrato_mod = 0;
-  voicing_.modulation_rate = 50;
+  voicing_.lfo_rate = 70;
+  voicing_.lfo_spread_types = 0;
+  voicing_.lfo_spread_voices = 0;
   voicing_.trigger_duration = 2;
   voicing_.aux_cv = MOD_AUX_ENVELOPE;
   voicing_.aux_cv_2 = MOD_AUX_ENVELOPE;
@@ -134,22 +136,9 @@ void Part::AllocateVoices(Voice* voice, uint8_t num_voices, bool polychain) {
   TouchVoices();
 }
 
-uint8_t Part::PressedKeysNoteOn(PressedKeys &keys, uint8_t pitch, uint8_t velocity) {
-  if (keys.release_latched_keys_on_next_note_on) {
-    bool still_latched = keys.ignore_note_off_messages;
-
-    // Releasing all latched key will generate "fake" NoteOff messages. We
-    // should not ignore them.
-    keys.ignore_note_off_messages = false;
-    ReleaseLatchedNotes(keys);
-
-    keys.release_latched_keys_on_next_note_on = still_latched;
-    keys.ignore_note_off_messages = still_latched;
-  }
-  bool sustained = keys.IsSustained(pitch); // Capture existing sustain status
-  uint8_t index = keys.stack.NoteOn(pitch, velocity);
-  if (sustained) { keys.SetSustain(pitch); }
-  return index;
+uint8_t Part::HeldKeysNoteOn(HeldKeys &keys, uint8_t pitch, uint8_t velocity) {
+  if (keys.stop_sustained_notes_on_next_note_on) StopSustainedNotes(keys);
+  return keys.stack.NoteOn(pitch, velocity);
 }
 
 bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
@@ -164,13 +153,13 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     if (!looped() && !sent_from_step_editor) {
       RecordStep(SequencerStep(note, velocity));
     } else if (looped()) {
-      uint8_t pressed_key_index = PressedKeysNoteOn(manual_keys_, note, velocity);
+      uint8_t pressed_key_index = HeldKeysNoteOn(manual_keys_, note, velocity);
       LooperRecordNoteOn(pressed_key_index);
     }
   } else if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-    PressedKeysNoteOn(arp_keys_, note, velocity);
+    HeldKeysNoteOn(arp_keys_, note, velocity);
   } else {
-    PressedKeysNoteOn(manual_keys_, note, velocity);
+    HeldKeysNoteOn(manual_keys_, note, velocity);
     if (sent_from_step_editor || manual_control()) {
       InternalNoteOn(note, velocity);
     }
@@ -179,7 +168,7 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
 }
 
-bool Part::NoteOff(uint8_t channel, uint8_t note) {
+bool Part::NoteOff(uint8_t channel, uint8_t note, bool respect_sustain) {
   bool sent_from_step_editor = channel & 0x80;
 
   uint8_t recording_pitch = ArpUndoTransposeInputPitch(note);
@@ -193,9 +182,9 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
       manual_keys_.stack.NoteOff(recording_pitch);
     }
   } else if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-    arp_keys_.SustainableNoteOff(note);
+    arp_keys_.NoteOff(note, respect_sustain);
   } else {
-    bool off = manual_keys_.SustainableNoteOff(note);
+    bool off = manual_keys_.NoteOff(note, respect_sustain);
     if (off && (sent_from_step_editor || manual_control())) {
       InternalNoteOff(note);
     }
@@ -203,19 +192,48 @@ bool Part::NoteOff(uint8_t channel, uint8_t note) {
   return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
 }
 
-void Part::PressedKeysSustainOn(PressedKeys &keys) {
+void Part::HeldKeysSustainOn(HeldKeys &keys) {
   switch (midi_.sustain_mode) {
     case SUSTAIN_MODE_NORMAL:
-      keys.ignore_note_off_messages = true;
+      keys.universally_sustainable = true;
       break;
     case SUSTAIN_MODE_SOSTENUTO:
-      keys.SetSustainable(true);
+      keys.SetIndividuallySustainable(true);
+      break;
+    case SUSTAIN_MODE_LATCH:
+    case SUSTAIN_MODE_MOMENTARY_LATCH:
+      keys.Latch(true);
+      break;
+    case SUSTAIN_MODE_FILTER:
+      keys.universally_sustainable = true;
+      keys.stop_sustained_notes_on_next_note_on = false;
+      break;
+    case SUSTAIN_MODE_CLUTCH:
+      keys.Clutch(true);
+      break;
+    case SUSTAIN_MODE_OFF:
+    default:
+      break;
+  }
+}
+
+void Part::HeldKeysSustainOff(HeldKeys &keys) {
+  switch (midi_.sustain_mode) {
+    case SUSTAIN_MODE_NORMAL:
+      keys.universally_sustainable = false;
+      StopSustainedNotes(keys);
+      break;
+    case SUSTAIN_MODE_SOSTENUTO:
+      keys.SetIndividuallySustainable(false);
+      StopSustainedNotes(keys);
       break;
     case SUSTAIN_MODE_LATCH:
     case SUSTAIN_MODE_MOMENTARY_LATCH:
     case SUSTAIN_MODE_FILTER:
-      keys.ignore_note_off_messages = true;
-      keys.release_latched_keys_on_next_note_on = true;
+      if (midi_.sustain_mode == SUSTAIN_MODE_MOMENTARY_LATCH) {
+        StopSustainedNotes(keys);
+      }
+      keys.Latch(false);
       break;
     case SUSTAIN_MODE_CLUTCH:
       keys.Clutch(false);
@@ -226,35 +244,9 @@ void Part::PressedKeysSustainOn(PressedKeys &keys) {
   }
 }
 
-void Part::PressedKeysSustainOff(PressedKeys &keys) {
-  switch (midi_.sustain_mode) {
-    case SUSTAIN_MODE_NORMAL:
-      keys.ignore_note_off_messages = false;
-      ReleaseLatchedNotes(keys);
-      break;
-    case SUSTAIN_MODE_SOSTENUTO:
-      keys.SetSustainable(false);
-      ReleaseLatchedNotes(keys);
-      break;
-    case SUSTAIN_MODE_LATCH:
-    case SUSTAIN_MODE_FILTER:
-      keys.ignore_note_off_messages = false;
-      keys.release_latched_keys_on_next_note_on = true;
-      break;
-    case SUSTAIN_MODE_MOMENTARY_LATCH:
-      PressedKeysResetLatch(keys);
-    case SUSTAIN_MODE_CLUTCH:
-      keys.Clutch(true);
-      break;
-    case SUSTAIN_MODE_OFF:
-    default:
-      break;
-  }
-}
-
-void Part::ResetLatch() {
-  PressedKeysResetLatch(manual_keys_);
-  PressedKeysResetLatch(arp_keys_);
+void Part::ResetAllKeys() {
+  ResetKeys(manual_keys_);
+  ResetKeys(arp_keys_);
   ControlChange(0, kCCHoldPedal, hold_pedal_engaged_ ? 127 : 0);
 }
 
@@ -336,6 +328,7 @@ bool Part::PitchBend(uint8_t channel, uint16_t pitch_bend) {
   
   if (seq_recording_ &&
       (pitch_bend > 8192 + 2048 || pitch_bend < 8192 - 2048)) {
+    // Set slide flag
     seq_.step[seq_rec_step_].data[1] |= 0x80;
   }
   
@@ -372,89 +365,67 @@ void Part::Reset() {
   }
 }
 
-void Part::Clock() {
-  SequencerStep step;
+void Part::Clock() { // From Multi::ClockFast
+  if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
 
-  bool clock = !arp_seq_prescaler_;
-  bool play = midi_.play_mode != PLAY_MODE_MANUAL && (
-    !looped() || (
-      midi_.play_mode == PLAY_MODE_ARPEGGIATOR && !seq_driven_arp()
-    )
-  );
+  uint16_t ticks_per_step = lut_clock_ratio_ticks[seq_.clock_division];
 
-  if (clock && play) {
-    step = BuildSeqStep();
-    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-      arp_ = BuildArpState(step);
-      step = arp_.step;
+  if (multi.tick_counter() % ticks_per_step == 0) { // New step
+    uint32_t step_counter = multi.tick_counter() / ticks_per_step;
+    SequencerStep* step_ptr = NULL;
+    SequencerStep step;
+    if (seq_.num_steps) {
+      seq_step_ = step_counter % seq_.num_steps;
+      step = BuildSeqStep(seq_step_);
+      step_ptr = &step;
     }
-    if (step.has_note()) {
+    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      arp_ = BuildArpState(step_ptr);
+      step_ptr = &arp_.step;
+    }
+    if (step_ptr && step_ptr->has_note()) {
       // TODO how to identify the continuated notes here?
       // looper uses output_pitch_for_looper_note_
-      if (step.is_slid()) {
-        InternalNoteOn(step.note(), step.velocity());
+      if (step_ptr->is_slid()) {
+        InternalNoteOn(step_ptr->note(), step_ptr->velocity());
         StopSequencerArpeggiatorNotes();
       } else {
         StopSequencerArpeggiatorNotes();
-        InternalNoteOn(step.note(), step.velocity());
+        InternalNoteOn(step_ptr->note(), step_ptr->velocity());
       }
-      generated_notes_.NoteOn(step.note(), step.velocity());
+      generated_notes_.NoteOn(step_ptr->note(), step_ptr->velocity());
     }
   }
 
-  if (clock) {
-    ++seq_step_;
-    if (seq_step_ >= seq_.num_steps) {
-      seq_step_ = 0;
+  for (uint8_t v = 0; v < num_voices_; ++v) {
+    if (gate_length_counter_[v]) { // Gate hasn't ended yet
+      --gate_length_counter_[v];
+      continue;
+    }
+    // TODO the peek may be redundant
+    // TODO it's weird that more than one note can be continued here
+    // Peek at next step to see if it's a continuation
+    SequencerStep* next_step_ptr = NULL;
+    SequencerStep next_step;
+    if (seq_.num_steps) {
+      next_step = BuildSeqStep((seq_step_ + 1) % seq_.num_steps);
+      next_step_ptr = &next_step;
+    }
+    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
+      next_step = BuildArpState(next_step_ptr).step;
+      next_step_ptr = &next_step;
+    }
+    if (next_step_ptr && next_step_ptr->is_continuation()) {
+      // The next step contains a "sustain" message; or a slid note. Extends
+      // the duration of the current note.
+      gate_length_counter_[v] += lut_clock_ratio_ticks[seq_.clock_division];
+    } else {
+      StopGeneratedNote(active_note_[v]);
     }
   }
-
-  if (play) {
-    for (uint8_t v = 0; v < num_voices_; ++v) {
-      if (gate_length_counter_[v]) { // Gate hasn't ended yet
-        --gate_length_counter_[v];
-        continue;
-      }
-      if (!generated_notes_.most_recent_note_index()) continue; // No notes
-      // TODO the peek may be redundant
-      // TODO it's weird that more than one note can be continued here
-      // Peek at next step to see if it's a continuation
-      step = BuildSeqStep();
-      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-        step = BuildArpState(step).step;
-      }
-      if (step.is_continuation()) {
-        // The next step contains a "sustain" message; or a slid note. Extends
-        // the duration of the current note.
-        gate_length_counter_[v] += lut_clock_ratio_ticks[seq_.clock_division];
-      } else {
-        StopGeneratedNote(active_note_[v]);
-      }
-    }
-  }
-  
-  ++arp_seq_prescaler_;
-  if (arp_seq_prescaler_ >= lut_clock_ratio_ticks[seq_.clock_division]) {
-    arp_seq_prescaler_ = 0;
-  }
-  
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    voice_[i]->Clock();
-  }
-
-  looper_.Clock();
-}
-
-bool Part::new_beat() const {
-  return arp_seq_prescaler_ > 0 &&
-    arp_seq_prescaler_ <= (lut_clock_ratio_ticks[seq_.clock_division] >> 3);
 }
 
 void Part::Start() {
-  arp_seq_prescaler_ = 0;
-
-  seq_step_ = 0;
-  
   arp_.ResetKey();
   arp_.step_index = 0;
   
@@ -523,6 +494,7 @@ void Part::DeleteRecording() {
   if (midi_.play_mode == PLAY_MODE_MANUAL) { return; }
   StopSequencerArpeggiatorNotes();
   looped() ? looper_.RemoveAll() : DeleteSequence();
+  seq_overwrite_ = false;
 }
 
 void Part::DeleteSequence() {
@@ -532,7 +504,6 @@ void Part::DeleteSequence() {
     SequencerStep(SEQUENCER_STEP_REST, 0)
   );
   seq_rec_step_ = 0;
-  seq_step_ = 0;
   seq_.num_steps = 0;
   seq_overdubbing_ = false;
 }
@@ -553,7 +524,7 @@ void Part::StopGeneratedNote(uint8_t pitch) {
       pitch = output_pitch_for_looper_note_[looper_note_index];
     }
     if (!looper_can_control(pitch)) { return; }
-  }
+  } else if (manual_keys_.stack.Find(pitch)) return;
   InternalNoteOff(pitch);
 }
 
@@ -588,8 +559,8 @@ uint8_t Part::ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch) cons
   return pitch;
 }
 
-const SequencerStep Part::BuildSeqStep() const {
-  const SequencerStep& step = seq_.step[seq_step_];
+const SequencerStep Part::BuildSeqStep(uint8_t step_index) const {
+  const SequencerStep& step = seq_.step[step_index];
   int16_t note = step.note();
   if (step.has_note()) {
     // When we play a monophonic sequence, we can make the guess that root
@@ -602,7 +573,8 @@ const SequencerStep Part::BuildSeqStep() const {
   return SequencerStep((0x80 & step.data[0]) | (0x7f & note), step.data[1]);
 }
 
-const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
+const ArpeggiatorState Part::BuildArpState(SequencerStep* seq_step_ptr) const {
+  SequencerStep seq_step;
   ArpeggiatorState next = arp_;
   // In case the pattern doesn't hit a note, the default output step is a REST
   next.step.data[0] = SEQUENCER_STEP_REST;
@@ -614,6 +586,8 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
   bool hit = false;
   if (seq_driven_arp()) {
     pattern_length = seq_.num_steps;
+    if (!seq_step_ptr) return next;
+    seq_step = *seq_step_ptr;
     if (seq_step.has_note()) {
       hit = true;
     } else { // Here, the output step can also be a TIE
@@ -765,7 +739,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep seq_step) const {
 }
 
 void Part::ResetAllControllers() {
-  ResetLatch();
+  ResetAllKeys();
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->ResetAllControllers();
   }
@@ -775,7 +749,7 @@ void Part::AllNotesOff() {
   poly_allocator_.ClearNotes();
   mono_allocator_.Clear();
 
-  ResetLatch();
+  ResetAllKeys();
 
   generated_notes_.Clear();
   looper_note_index_for_generated_note_index_[generated_notes_.most_recent_note_index()] = looper::kNullIndex;
@@ -788,12 +762,11 @@ void Part::AllNotesOff() {
       VOICE_ALLOCATION_NOT_FOUND);
 }
 
-void Part::ReleaseLatchedNotes(PressedKeys &keys) {
+void Part::StopNotesBySustainStatus(HeldKeys &keys, bool sustain_status) {
   for (uint8_t i = 1; i <= keys.stack.max_size(); ++i) {
     NoteEntry* e = keys.stack.mutable_note(i);
-    if (!keys.IsSustained(*e)) { continue; }
-    e->velocity &= ~PressedKeys::VELOCITY_SUSTAIN_MASK; // Un-flag the note
-    NoteOff(tx_channel(), e->note);
+    if (keys.IsSustained(*e) != sustain_status) continue;
+    NoteOff(tx_channel(), e->note, false);
   }
 }
 
@@ -860,6 +833,7 @@ void Part::VoiceNoteOn(uint8_t voice, uint8_t pitch, uint8_t vel, bool legato) {
     default:
       break;
   }
+  // TODO why?
   if (trigger) gate_length_counter_[voice] = seq_.gate_length;
 
   int32_t timbre_14 = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
@@ -1034,13 +1008,15 @@ void Part::TouchVoiceAllocation() {
 void Part::TouchVoices() {
   CONSTRAIN(voicing_.aux_cv, 0, MOD_AUX_LAST - 1);
   CONSTRAIN(voicing_.aux_cv_2, 0, MOD_AUX_LAST - 1);
+  voice_[0]->garbage(0);
   for (uint8_t i = 0; i < num_voices_; ++i) {
     voice_[i]->set_pitch_bend_range(voicing_.pitch_bend_range);
-    voice_[i]->set_modulation_rate(voicing_.modulation_rate, i);
     voice_[i]->set_vibrato_range(voicing_.vibrato_range);
     voice_[i]->set_vibrato_mod(voicing_.vibrato_mod);
     voice_[i]->set_tremolo_mod(voicing_.tremolo_mod);
-    voice_[i]->set_tremolo_shape(voicing_.tremolo_shape);
+    voice_[i]->set_lfo_shape(LFO_ROLE_PITCH, voicing_.vibrato_shape);
+    voice_[i]->set_lfo_shape(LFO_ROLE_TIMBRE, voicing_.timbre_lfo_shape);
+    voice_[i]->set_lfo_shape(LFO_ROLE_AMPLITUDE, voicing_.tremolo_shape);
     voice_[i]->set_trigger_duration(voicing_.trigger_duration);
     voice_[i]->set_trigger_scale(voicing_.trigger_scale);
     voice_[i]->set_trigger_shape(voicing_.trigger_shape);
@@ -1068,10 +1044,16 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_MIDI_MAX_VELOCITY:
     case PART_MIDI_INPUT_RESPONSE:
     case PART_MIDI_PLAY_MODE:
-    case PART_MIDI_TRANSPOSE_OCTAVES:
       // Shut all channels off when a MIDI parameter is changed to prevent
       // stuck notes.
       AllNotesOff();
+      break;
+
+    case PART_MIDI_TRANSPOSE_OCTAVES:
+      // Release notes that are currently under direct manual control, sparing
+      // notes that are controlled by sustain or the sequencer
+      StopNotesBySustainStatus(manual_keys_, false);
+      StopNotesBySustainStatus(arp_keys_, false);
       break;
 
     case PART_VOICING_ALLOCATION_MODE:
@@ -1079,17 +1061,18 @@ bool Part::Set(uint8_t address, uint8_t value) {
       break;
       
     case PART_VOICING_PITCH_BEND_RANGE:
-    case PART_VOICING_MODULATION_RATE:
+    case PART_VOICING_LFO_RATE:
     case PART_VOICING_VIBRATO_RANGE:
     case PART_VOICING_VIBRATO_MOD:
     case PART_VOICING_TREMOLO_MOD:
+    case PART_VOICING_VIBRATO_SHAPE:
+    case PART_VOICING_TIMBRE_LFO_SHAPE:
     case PART_VOICING_TREMOLO_SHAPE:
     case PART_VOICING_TRIGGER_DURATION:
     case PART_VOICING_TRIGGER_SHAPE:
     case PART_VOICING_TRIGGER_SCALE:
     case PART_VOICING_AUX_CV:
     case PART_VOICING_AUX_CV_2:
-    case PART_VOICING_OSCILLATOR_MODE:
     case PART_VOICING_OSCILLATOR_SHAPE:
     case PART_VOICING_TIMBRE_INIT:
     case PART_VOICING_TIMBRE_MOD_LFO:
@@ -1105,6 +1088,11 @@ bool Part::Set(uint8_t address, uint8_t value) {
     case PART_MIDI_SUSTAIN_MODE:
     case PART_MIDI_SUSTAIN_POLARITY:
       AllNotesOff();
+      break;
+
+    case PART_VOICING_OSCILLATOR_MODE:
+      AllNotesOff();
+      TouchVoices();
       break;
 
     default:

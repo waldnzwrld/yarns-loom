@@ -146,9 +146,7 @@ uint32_t Oscillator::ComputePhaseIncrement(int16_t midi_pitch) const {
       (static_cast<int32_t>(b - a) * (ref_pitch & 0xf) >> 4);
   if (num_shifts > 0) phase_increment >>= num_shifts;
   else if (num_shifts < 0) {
-    int16_t shifts_available = __builtin_clz(phase_increment) - 1;
-    num_shifts = -num_shifts;
-    num_shifts = std::min(shifts_available, num_shifts);
+    num_shifts = std::min(__builtin_clzl(phase_increment), static_cast<int>(-num_shifts));
     phase_increment <<= num_shifts;
   }
   return phase_increment;
@@ -184,7 +182,7 @@ void Oscillator::Render() {
     phase += phase_increment; \
     timbre_.Tick(); gain_.Tick(); \
     body \
-    audio_buffer_.Overwrite(offset_ - ((gain_.value() * this_sample) >> 15)); \
+    audio_buffer_.Overwrite((gain_.value() * this_sample) >> 15); \
   } \
   next_sample_ = next_sample; \
   phase_ = phase; \
@@ -305,7 +303,7 @@ void Oscillator::RenderSaw() {
 
 #define SET_SYNC_INCREMENT \
   int32_t modulator_pitch = pitch_ + (timbre_.target() >> 3); \
-  CONSTRAIN(modulator_pitch, 0, 16383); \
+  CONSTRAIN(modulator_pitch, 0, kHighestNote - 1); \
   modulator_phase_increment_ = ComputePhaseIncrement(modulator_pitch);
 
 void Oscillator::RenderSyncSine() {
@@ -382,7 +380,9 @@ void Oscillator::RenderFM() {
   RENDER_LOOP(
     int16_t modulator = Interpolate824(wav_sine, modulator_phase);
     uint32_t phase_mod = modulator * timbre_.value();
-    phase_mod = (phase_mod << 3) + (phase_mod << 2); // FM index 0-3
+    // phase_mod = (phase_mod << 3) + (phase_mod << 2); // FM index 0-3
+    phase_mod <<= 3; // FM index 0-2
+    if (interval == 0) phase_mod <<= 1; // Double index range for 1:1 FM ratio
     this_sample = Interpolate824(wav_sine, phase + phase_mod);
   )
 }

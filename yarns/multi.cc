@@ -43,8 +43,12 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
+const uint8_t kCCMacroRecord = 116;
+const uint8_t kCCMacroPlayMode = 117;
+
 void Multi::Init(bool reset_calibration) {
   just_intonation_processor.Init();
+  master_lfo_.Init(17, 9);
   
   fill(
       &settings_.custom_pitch_table[0],
@@ -55,6 +59,7 @@ void Multi::Init(bool reset_calibration) {
     part_[i].Init();
     part_[i].set_custom_pitch_table(settings_.custom_pitch_table);
   }
+  fill(&swing_predelay_[0], &swing_predelay_[12], -1);
   for (uint8_t i = 0; i < kNumSystemVoices; ++i) {
     voice_[i].Init();
   }
@@ -67,7 +72,7 @@ void Multi::Init(bool reset_calibration) {
   started_by_keyboard_ = true;
   
   // Put the multi in a usable state. Even if these settings will later be
-  // overriden with some data retrieved from Flash (presets).
+  // overridden with some data retrieved from Flash (presets).
   settings_.clock_tempo = 120;
   settings_.clock_swing = 0;
   settings_.clock_input_division = 1;
@@ -132,6 +137,13 @@ void Multi::Clock() {
   
   if (!clock_input_prescaler_) {
     midi_handler.OnClock();
+
+    // Sync LFOs
+    ++tick_counter_;
+    master_lfo_.Tap(tick_counter_, 16);
+    for (uint8_t p = 0; p < num_active_parts_; ++p) {
+      part_[p].mutable_looper().Clock(tick_counter_);
+    }
     
     ++swing_counter_;
     if (swing_counter_ >= 12) {
@@ -203,6 +215,7 @@ void Multi::Start(bool started_by_keyboard) {
   clock_input_prescaler_ = 0;
   clock_output_prescaler_ = 0;
   stop_count_down_ = 0;
+  tick_counter_ = master_lfo_tick_counter_ = -1;
   bar_position_ = -1;
   swing_counter_ = -1;
   previous_output_division_ = 0;
@@ -254,12 +267,54 @@ void Multi::ClockFast() {
   }
 }
 
+void Multi::SpreadLFOs(int8_t spread, SyncedLFO** base_lfo, uint8_t num_lfos) {
+  if (spread >= 0) { // Detune
+    uint8_t spread_8 = spread << 1;
+    uint16_t spread_expo_16 = UINT16_MAX - lut_env_expo[((127 - spread_8) << 1)];
+    uint32_t phase_increment = (*base_lfo)->GetPhaseIncrement();
+    for (uint8_t i = 1; i < num_lfos; ++i) {
+      phase_increment += ((phase_increment >> 4) * (spread_expo_16 >> 4)) >> 8;
+      (*(base_lfo + i))->SetPhaseIncrement(phase_increment);
+    }
+  } else { // Dephase
+    uint32_t phase = (*base_lfo)->GetPhase();
+    uint32_t phase_offset = (spread + 1) << (32 - 6);
+    for (uint8_t i = 1; i < num_lfos; ++i) {
+      phase += phase_offset;
+      (*(base_lfo + i))->SetTargetPhase(phase);
+    }
+  }
+}
+
 void Multi::Refresh() {
-  for (uint8_t j = 0; j < num_active_parts_; ++j) {
-    Part& part = part_[j];
+  master_lfo_.Refresh();
+  bool new_tick = (master_lfo_.GetPhase() << 4) < (master_lfo_.GetPhaseIncrement() << 4);
+  if (new_tick) master_lfo_tick_counter_++;
+  for (uint8_t p = 0; p < num_active_parts_; ++p) {
+    Part& part = part_[p];
     part.mutable_looper().Refresh();
+    if (new_tick) {
+      uint8_t lfo_rate = part.voicing_settings().lfo_rate;
+      SyncedLFO* part_lfos[part.num_voices()];
+      for (uint8_t v = 0; v < part.num_voices(); ++v) {
+        part_lfos[v] = part.voice(v)->lfo(static_cast<LFORole>(0));
+      }
+      if (lfo_rate < 64) {
+        part_lfos[0]->Tap(master_lfo_tick_counter_, lut_clock_ratio_ticks[(64 - lfo_rate - 1) >> 1]);
+      } else {
+        part_lfos[0]->SetPhaseIncrement(lut_lfo_increments[lfo_rate - 64]);
+      }
+      SpreadLFOs(part.voicing_settings().lfo_spread_voices, &part_lfos[0], part.num_voices());
+      for (uint8_t v = 0; v < part.num_voices(); ++v) {
+        SyncedLFO* voice_lfos[LFO_ROLE_LAST];
+        for (uint8_t l = 0; l < LFO_ROLE_LAST; ++l) {
+          voice_lfos[l] = part.voice(v)->lfo(static_cast<LFORole>(l));
+        }
+        SpreadLFOs(part.voicing_settings().lfo_spread_types, &voice_lfos[0], LFO_ROLE_LAST);
+      }
+    }
     for (uint8_t v = 0; v < part.num_voices(); ++v) {
-      part.voice(v)->Refresh(v);
+      part.voice(v)->Refresh();
     }
   }
 
@@ -279,7 +334,7 @@ bool Multi::Set(uint8_t address, uint8_t value) {
         static_cast<Layout>(previous_value),
         static_cast<Layout>(value));
   } else if (address == MULTI_CLOCK_TEMPO) {
-    internal_clock_.set_tempo(settings_.clock_tempo);
+    UpdateTempo();
   } else if (address == MULTI_CLOCK_SWING) {
     internal_clock_.set_swing(settings_.clock_swing);
   }
@@ -288,7 +343,10 @@ bool Multi::Set(uint8_t address, uint8_t value) {
 
 void Multi::AssignVoicesToCVOutputs() {
   for (uint8_t v = 0; v < kNumSystemVoices; ++v) {
-    voice_[v].set_has_audio_listener(false);
+    voice_[v].set_audio_output(NULL);
+    for (int role = 0; role < DC_LAST; role++) {
+      voice_[v].set_dc_output(static_cast<DCRole>(role), NULL);
+    }
   }
   switch (settings_.layout) {
     case LAYOUT_MONO:
@@ -346,6 +404,13 @@ void Multi::AssignVoicesToCVOutputs() {
       AssignOutputVoice(1, kNumParaphonicVoices, DC_PITCH, 1);
       AssignOutputVoice(2, kNumParaphonicVoices, DC_AUX_1, 0);
       AssignOutputVoice(3, kNumParaphonicVoices + 1, DC_PITCH, 1);
+      break;
+
+    case LAYOUT_TRI_MONO:
+      for (uint8_t i = 0; i < 3; ++i) {
+        AssignOutputVoice(i, i, DC_PITCH, 1);
+      }
+      AssignOutputVoice(3, 0, DC_VELOCITY, 0); // Dummy, will be overwritten
       break;
   }
 }
@@ -417,6 +482,14 @@ void Multi::GetCvGate(uint16_t* cv, bool* gate) {
       gate[1] = cv_outputs_[1].gate();
       gate[2] = settings_.clock_override ? clock() : cv_outputs_[2].trigger();
       gate[3] = cv_outputs_[3].gate();
+      break;
+
+    case LAYOUT_TRI_MONO:
+      for (uint8_t i = 0; i < 3; ++i) {
+        gate[i] = voice_[i].gate();
+      }
+      gate[3] = clock();
+      cv[3] = cv_outputs_[3].volts_dac_code(reset_or_playing_flag() ? 5 : 0);
       break;
 
     case LAYOUT_QUAD_TRIGGERS:
@@ -506,6 +579,13 @@ void Multi::GetLedsBrightness(uint8_t* brightness) {
       }
       break;
 
+    case LAYOUT_TRI_MONO:
+      for (uint8_t i = 0; i < 3; ++i) {
+        brightness[i] = voice_[i].gate() ? (voice_[i].velocity() << 1) : 0;
+      }
+      brightness[3] = clock() ? 0xff : 0;
+      break;
+
     case LAYOUT_QUAD_VOLTAGES:
       brightness[0] = voice_[0].aux_cv();
       brightness[1] = voice_[1].aux_cv();
@@ -585,6 +665,13 @@ void Multi::AllocateParts() {
       }
       break;
 
+    case LAYOUT_TRI_MONO:
+      num_active_parts_ = 3;
+      for (uint8_t i = 0; i < num_active_parts_; ++i) {
+        part_[i].AllocateVoices(&voice_[i], 1, false);
+      }
+      break;
+
     default:
       break;
   }
@@ -602,6 +689,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
     case LAYOUT_DUAL_MONO:
     case LAYOUT_QUAD_MONO:
     case LAYOUT_QUAD_VOLTAGES:
+    case LAYOUT_TRI_MONO:
       {
         // Duplicate uninitialized voices.
         for (uint8_t i = 1; i < num_active_parts_; ++i) {
@@ -654,16 +742,27 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
     default:
       break;
   }
+  for (uint8_t i = 1; i < num_active_parts_; ++i) {
+    part_[i].AfterDeserialize();
+  }
+}
+
+const uint32_t kTempoToRefreshPhaseIncrement = (UINT32_MAX / 4000) * 24 / 60;
+void Multi::UpdateTempo() {
+  internal_clock_.set_tempo(settings_.clock_tempo);
+  if (running_) return;
+  master_lfo_.SetPhaseIncrement((settings_.clock_tempo * kTempoToRefreshPhaseIncrement) >> 4);
 }
 
 void Multi::AfterDeserialize() {
   Stop();
 
-  internal_clock_.set_tempo(settings_.clock_tempo);
+  UpdateTempo();
   AllocateParts();
   
   for (uint8_t i = 0; i < kNumParts; ++i) {
     part_[i].AfterDeserialize();
+    macro_record_last_value_[i] = 127;
   }
 }
 
@@ -739,6 +838,7 @@ void Multi::StopRecording(uint8_t part) {
   if (recording_ && recording_part_ == part) {
     part_[part].StopRecording();
     recording_ = false;
+    part_[part].set_seq_overwrite(false);
   }
 }
 
@@ -752,18 +852,49 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   } else {
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
       if (!part_accepts_channel(i, channel)) { continue; }
-      if (controller == kCCRecordOffOn) {
+      int8_t macro_zone;
+      switch (controller) {
+      case kCCRecordOffOn:
         // Intercept this CC so multi can update its own recording state
         value >= 64 ? StartRecording(i) : StopRecording(i);
-        ui.SplashOn(SPLASH_ACTIVE_PART);
-      } else if (controller == kCCDeleteRecording) {
-        // Splash needs part index
+        ui.SplashOn(SPLASH_ACTIVE_PART, i);
+        break;
+      case kCCDeleteRecording:
         part_[i].DeleteRecording();
-        ui.SetSplashPart(i);
-        ui.SplashOn(SPLASH_DELETE_RECORDING);
-      } else {
+        ui.SplashPartString("RX", i);
+        break;
+      case kCCMacroRecord:
+        // 0..3: record off, record on, overwrite, delete
+        macro_zone = value >> 5; // 0..3
+        macro_zone >= 1 ? StartRecording(i) : StopRecording(i);
+        if (
+          // Only on increasing value, so that leaving the knob in the delete zone doesn't doom any subsequent recordings
+          macro_zone == 3 && value > macro_record_last_value_[i])
+        {
+          part_[i].DeleteRecording();
+          ui.SplashPartString("RX", i);
+        } else {
+          part_[i].set_seq_overwrite(macro_zone == 2);
+          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "--"), i);
+        }
+        macro_record_last_value_[i] = value;
+        break;
+      case kCCMacroPlayMode:
+        // -2..2: step seq, step arp, manual, loop arp, loop seq
+        macro_zone = (5 * value >> 7) - 2;
+        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, i, macro_zone < 0);
+        ApplySetting(SETTING_SEQUENCER_PLAY_MODE, i, abs(macro_zone));
+        char label[2];
+        if (macro_zone == 0) strcpy(label, "--"); else {
+          label[0] = macro_zone < 0 ? 'S' : 'L';
+          label[1] = abs(macro_zone) == 1 ? 'A' : 'S';
+        }
+        ui.SplashPartString(label, i);
+        break;
+      default:
         thru = part_[i].ControlChange(channel, controller, value) && thru;
         SetFromCC(i, controller, value);
+        break;
       }
     }
   }
@@ -801,11 +932,11 @@ void Multi::ApplySetting(const Setting& setting, uint8_t part, int16_t raw_value
   // Apply dynamic min/max as needed
   int16_t min_value = setting.min_value;
   int16_t max_value = setting.max_value;
-  if (
-    &setting == &setting_defs.get(SETTING_VOICING_ALLOCATION_MODE) &&
-    multi.part(part).num_voices() == 1
-  ) {
-    max_value = VOICE_ALLOCATION_MODE_MONO;
+  if (multi.part(part).num_voices() == 1) { // Part is monophonic
+    if (&setting == &setting_defs.get(SETTING_VOICING_ALLOCATION_MODE))
+      min_value = max_value = VOICE_ALLOCATION_MODE_MONO;
+    if (&setting == &setting_defs.get(SETTING_VOICING_LFO_SPREAD_VOICES))
+      min_value = max_value = 0;
   }
   if (
     multi.layout() == LAYOUT_PARAPHONIC_PLUS_TWO &&

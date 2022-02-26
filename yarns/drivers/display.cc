@@ -36,9 +36,9 @@
 
 namespace yarns {
 
-const uint16_t kPinClk = GPIO_Pin_7;
-const uint16_t kPinEnable = GPIO_Pin_8;
-const uint16_t kPinData = GPIO_Pin_9;
+const uint16_t kPinClk = GPIO_Pin_7; // DISP_SCK, SHCP, shift register clock input
+const uint16_t kPinEnable = GPIO_Pin_8; // DISP_EN, STCP, storage register clock input
+const uint16_t kPinData = GPIO_Pin_9; // DISP_SER, DS, serial data input
 
 const uint16_t kScrollingDelay = 180;
 const uint16_t kScrollingPreDelay = 600;
@@ -185,6 +185,7 @@ void Display::Print(const char* short_buffer, const char* long_buffer) {
     GPIOB->BRR = kPinData; \
   } \
   data >>= 1; \
+  /* Data is shifted on the LOW-to-HIGH transitions of the SHCP input. */ \
   GPIOB->BSRR = kPinClk;
 
 void Display::Shift14SegmentsWord(uint16_t data) {
@@ -205,6 +206,7 @@ void Display::Shift14SegmentsWord(uint16_t data) {
     }
 #endif  // APPLICATION
   }
+  // The data in the shift register is transferred to the storage register on a LOW-to-HIGH transition of the STCP input.
   GPIOB->BSRR = kPinEnable;
 }
 
