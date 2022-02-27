@@ -383,12 +383,16 @@ void Part::Clock() { // From Multi::ClockFast
       arp_ = BuildArpState(step_ptr);
       step_ptr = &arp_.step;
     }
-    if (step_ptr && step_ptr->has_note()) {
-      // TODO how to identify the continuated notes here?
-      // looper uses output_pitch_for_looper_note_
-      uint8_t voice = InternalNoteOn(
-        step_ptr->note(), step_ptr->velocity(), step_ptr->is_slid()
-      );
+    if (
+      step_ptr && step_ptr->has_note() &&
+      !manual_keys_.stack.Find(step_ptr->note())
+    ) {
+      // TODO generated_notes_.size() >= num_voices_ ?
+      while (generated_notes_.size() >= generated_notes_.max_size()) {
+        // Make room
+        StopGeneratedNote(priority_note(num_voices_ - 1).note);
+      }
+      InternalNoteOn(step_ptr->note(), step_ptr->velocity(), step_ptr->is_slid());
       generated_notes_.NoteOn(step_ptr->note(), step_ptr->velocity());
     }
   }
@@ -398,9 +402,8 @@ void Part::Clock() { // From Multi::ClockFast
       --gate_length_counter_[v];
       continue;
     }
-    // TODO the peek may be redundant
-    // TODO it's weird that more than one note can be continued here
     // Peek at next step to see if it's a continuation
+    // If more than one voice has a step ending, the peek is redundant
     SequencerStep* next_step_ptr = NULL;
     SequencerStep next_step;
     if (seq_.num_steps) {
@@ -415,7 +418,7 @@ void Part::Clock() { // From Multi::ClockFast
       // The next step contains a "sustain" message; or a slid note. Extends
       // the duration of the current note.
       gate_length_counter_[v] += lut_clock_ratio_ticks[seq_.clock_division];
-    } else {
+    } else if (active_note_[v] != VOICE_ALLOCATION_NOT_FOUND) {
       StopGeneratedNote(active_note_[v]);
     }
   }
@@ -519,7 +522,7 @@ void Part::StopGeneratedNote(uint8_t pitch) {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       pitch = output_pitch_for_looper_note_[looper_note_index];
     }
-    if (!looper_can_control(pitch)) { return; }
+    if (!looper_can_control(pitch)) return;
   } else if (manual_keys_.stack.Find(pitch)) return;
   InternalNoteOff(pitch);
 }
@@ -771,7 +774,7 @@ struct DispatchNote {
   bool done;
 };
 
-void Part::DispatchSortedNotes(bool legato) {
+void Part::DispatchSortedNotes(bool via_note_off) {
   uint8_t num_notes = mono_allocator_.size();
   uint8_t num_dispatch = num_voices_;
   bool unison = voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED;
@@ -808,7 +811,7 @@ void Part::DispatchSortedNotes(bool legato) {
     }
     if (note) {
       active_note_[v] = note->note;
-      VoiceNoteOn(v, note->note, note->velocity, legato); // reset gate if !legato
+      VoiceNoteOn(v, note->note, note->velocity, via_note_off, !via_note_off);
     } else if (active_note_[v] != VOICE_ALLOCATION_NOT_FOUND) {
       voice_[v]->NoteOff();
       active_note_[v] = VOICE_ALLOCATION_NOT_FOUND;
@@ -816,7 +819,10 @@ void Part::DispatchSortedNotes(bool legato) {
   }
 }
 
-void Part::VoiceNoteOn(uint8_t voice, uint8_t pitch, uint8_t vel, bool legato) {
+void Part::VoiceNoteOn(
+  uint8_t voice_index, uint8_t pitch, uint8_t vel,
+  bool legato, bool reset_gate_counter
+) {
   uint8_t portamento = voicing_.portamento;
   bool trigger = !legato;
   switch (voicing_.legato_mode) {
@@ -829,12 +835,15 @@ void Part::VoiceNoteOn(uint8_t voice, uint8_t pitch, uint8_t vel, bool legato) {
     default:
       break;
   }
-  // TODO why?
-  if (trigger) gate_length_counter_[voice] = seq_.gate_length;
+  // If this pitch is under manual control, don't extend the gate
+  if (reset_gate_counter && !manual_keys_.stack.Find(pitch)) {
+    gate_length_counter_[voice_index] = seq_.gate_length;
+  }
+  Voice* voice = voice_[voice_index];
 
   int32_t timbre_14 = (voicing_.timbre_mod_envelope << 7) + vel * voicing_.timbre_mod_velocity;
   CONSTRAIN(timbre_14, -1 << 13, (1 << 13) - 1)
-  voice_[voice]->set_timbre_mod_envelope(timbre_14 << 2);
+  voice->set_timbre_mod_envelope(timbre_14 << 2);
 
   uint16_t vel_concave_up = UINT16_MAX - lut_env_expo[((127 - vel) << 1)];
   int32_t damping_22 = -voicing_.amplitude_mod_velocity * vel_concave_up;
@@ -842,7 +851,7 @@ void Part::VoiceNoteOn(uint8_t voice, uint8_t pitch, uint8_t vel, bool legato) {
     damping_22 += voicing_.amplitude_mod_velocity << 16;
   }
 
-  voice_[voice]->envelope()->SetADSR(
+  voice->envelope()->SetADSR(
     UINT16_MAX - (damping_22 >> (22 - 16)),
     modulate_7bit(voicing_.env_init_attack, voicing_.env_mod_attack, vel),
     modulate_7bit(voicing_.env_init_decay, voicing_.env_mod_decay, vel),
@@ -850,10 +859,10 @@ void Part::VoiceNoteOn(uint8_t voice, uint8_t pitch, uint8_t vel, bool legato) {
     modulate_7bit(voicing_.env_init_release, voicing_.env_mod_release, vel)
   );
 
-  voice_[voice]->NoteOn(Tune(pitch), vel, portamento, trigger);
+  voice->NoteOn(Tune(pitch), vel, portamento, trigger);
 }
 
-void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato = false) {
+void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato) {
   if (midi_.out_mode == MIDI_OUT_MODE_GENERATED_EVENTS && !polychained_) {
     midi_handler.OnInternalNoteOn(tx_channel(), note, velocity);
   }
@@ -867,7 +876,7 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato = fa
     // to selected voice priority rules.
     if (before.note != after.note) {
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOn(i, after.note, after.velocity, legato); // reset gate despite legato!
+        VoiceNoteOn(i, after.note, after.velocity, legato, true);
       }
     }
   } else if (uses_sorted_dispatch()) {
@@ -919,7 +928,7 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato = fa
       }
       // Prevent the same note from being simultaneously played on two channels.
       KillAllInstancesOfNote(note);
-      VoiceNoteOn(voice_index, note, velocity, legato); // reset gate despite legato!
+      VoiceNoteOn(voice_index, note, velocity, legato, true);
       active_note_[voice_index] = note;
     } else {
       // Polychaining forwarding.
@@ -962,7 +971,7 @@ void Part::InternalNoteOff(uint8_t note) {
     } else if (before.note != after.note) {
       // Removing the note gives priority to another note that is still held
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOn(i, after.note, after.velocity, true); // don't reset gate
+        VoiceNoteOn(i, after.note, after.velocity, true, false);
       }
     }
   } else if (uses_sorted_dispatch()) {
@@ -987,7 +996,7 @@ void Part::InternalNoteOff(uint8_t note) {
       ) {
         const NoteEntry& nice = priority_note(NOTE_STACK_PRIORITY_FIRST, num_voices_ - 1);
         poly_allocator_.NoteOn(nice.note, VOICE_STEALING_MODE_NONE);
-        VoiceNoteOn(voice_index, nice.note, nice.velocity, true); // don't reset gate
+        VoiceNoteOn(voice_index, nice.note, nice.velocity, true, false);
         active_note_[voice_index] = nice.note;
       }
     } else {
