@@ -837,7 +837,7 @@ void Part::VoiceNoteOn(
   }
   // If this pitch is under manual control, don't extend the gate
   if (reset_gate_counter && !manual_keys_.stack.Find(pitch)) {
-    gate_length_counter_[voice_index] = seq_.gate_length;
+    gate_length_counter_[voice_index] = seq_.gate_length + 1;
   }
   Voice* voice = voice_[voice_index];
 
