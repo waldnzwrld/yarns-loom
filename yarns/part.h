@@ -693,7 +693,7 @@ class Part {
   uint8_t TransposeInputPitch(uint8_t pitch) const {
     return TransposeInputPitch(pitch, midi_.transpose_octaves);
   }
-  void InternalNoteOn(uint8_t note, uint8_t velocity);
+  void InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato);
   void InternalNoteOff(uint8_t note);
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
   bool PitchBend(uint8_t channel, uint16_t pitch_bend);

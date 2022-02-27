@@ -386,13 +386,9 @@ void Part::Clock() { // From Multi::ClockFast
     if (step_ptr && step_ptr->has_note()) {
       // TODO how to identify the continuated notes here?
       // looper uses output_pitch_for_looper_note_
-      if (step_ptr->is_slid()) {
-        InternalNoteOn(step_ptr->note(), step_ptr->velocity());
-        StopSequencerArpeggiatorNotes();
-      } else {
-        StopSequencerArpeggiatorNotes();
-        InternalNoteOn(step_ptr->note(), step_ptr->velocity());
-      }
+      uint8_t voice = InternalNoteOn(
+        step_ptr->note(), step_ptr->velocity(), step_ptr->is_slid()
+      );
       generated_notes_.NoteOn(step_ptr->note(), step_ptr->velocity());
     }
   }
@@ -857,7 +853,7 @@ void Part::VoiceNoteOn(uint8_t voice, uint8_t pitch, uint8_t vel, bool legato) {
   voice_[voice]->NoteOn(Tune(pitch), vel, portamento, trigger);
 }
 
-void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
+void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato = false) {
   if (midi_.out_mode == MIDI_OUT_MODE_GENERATED_EVENTS && !polychained_) {
     midi_handler.OnInternalNoteOn(tx_channel(), note, velocity);
   }
@@ -865,7 +861,7 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity) {
   const NoteEntry& before = priority_note();
   mono_allocator_.NoteOn(note, velocity);
   const NoteEntry& after = priority_note();
-  bool legato = mono_allocator_.size() > 1;
+  bool legato = force_legato || mono_allocator_.size() > 1;
   if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
     // Check if the note that has been played should be triggered according
     // to selected voice priority rules.
