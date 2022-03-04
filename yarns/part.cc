@@ -383,17 +383,13 @@ void Part::Clock() { // From Multi::ClockFast
       arp_ = BuildArpState(step_ptr);
       step_ptr = &arp_.step;
     }
-    if (
-      step_ptr && step_ptr->has_note() &&
-      !manual_keys_.stack.Find(step_ptr->note())
-    ) {
-      // TODO generated_notes_.size() >= num_voices_ ?
-      while (generated_notes_.size() >= generated_notes_.max_size()) {
-        // Make room
-        StopGeneratedNote(priority_note(num_voices_ - 1).note);
+    if (step_ptr && step_ptr->has_note()) {
+      uint8_t pitch = step_ptr->note();
+      uint8_t velocity = step_ptr->velocity();
+      GeneratedNoteOff(pitch); // Simulate a human retriggering a key
+      if (GeneratedNoteOn(pitch, velocity) && !manual_keys_.stack.Find(pitch)) {
+        InternalNoteOn(pitch, velocity, step_ptr->is_slid());
       }
-      InternalNoteOn(step_ptr->note(), step_ptr->velocity(), step_ptr->is_slid());
-      generated_notes_.NoteOn(step_ptr->note(), step_ptr->velocity());
     }
   }
 
@@ -419,7 +415,7 @@ void Part::Clock() { // From Multi::ClockFast
       // the duration of the current note.
       gate_length_counter_[v] += lut_clock_ratio_ticks[seq_.clock_division];
     } else if (active_note_[v] != VOICE_ALLOCATION_NOT_FOUND) {
-      StopGeneratedNote(active_note_[v]);
+      GeneratedNoteOff(active_note_[v]);
     }
   }
 }
@@ -507,13 +503,24 @@ void Part::DeleteSequence() {
   seq_overdubbing_ = false;
 }
 
+bool Part::GeneratedNoteOn(uint8_t pitch, uint8_t velocity) {
+  if (
+    mono_allocator_.size() == mono_allocator_.max_size() ||
+    generated_notes_.size() == generated_notes_.max_size()
+  ) {
+    return false;
+  }
+  generated_notes_.NoteOn(pitch, velocity);
+  return true;
+}
+
 void Part::StopSequencerArpeggiatorNotes() {
   while (generated_notes_.most_recent_note_index()) {
-    StopGeneratedNote(generated_notes_.most_recent_note().note);
+    GeneratedNoteOff(generated_notes_.most_recent_note().note);
   }
 }
 
-void Part::StopGeneratedNote(uint8_t pitch) {
+void Part::GeneratedNoteOff(uint8_t pitch) {
   uint8_t generated_note_index = generated_notes_.Find(pitch);
   uint8_t looper_note_index = looper_note_index_for_generated_note_index_[generated_note_index];
   looper_note_index_for_generated_note_index_[generated_note_index] = looper::kNullIndex;

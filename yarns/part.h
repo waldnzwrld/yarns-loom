@@ -701,7 +701,8 @@ class Part {
   bool Aftertouch(uint8_t channel, uint8_t velocity);
   void AllNotesOff();
   void StopSequencerArpeggiatorNotes();
-  void StopGeneratedNote(uint8_t pitch);
+  bool GeneratedNoteOn(uint8_t pitch, uint8_t velocity);
+  void GeneratedNoteOff(uint8_t pitch);
   void Reset();
   void Clock();
   void Start();
@@ -782,8 +783,10 @@ class Part {
   }
 
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
-    if (!looper_in_use()) { return; }
-    looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
+    if (!looper_in_use()) return;
+    uint8_t generated_note_index = GeneratedNoteOn(pitch, velocity);
+    if (!generated_note_index) return;
+    looper_note_index_for_generated_note_index_[generated_note_index] = looper_note_index;
     pitch = ApplySequencerInputResponse(pitch);
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Advance arp
