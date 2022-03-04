@@ -1034,6 +1034,7 @@ class Part {
     uint8_t voice, uint8_t pitch, uint8_t vel,
     bool legato, bool reset_gate_counter
   );
+  void VoiceNoteOff(uint8_t voice);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
