@@ -794,8 +794,9 @@ class Part {
       arp_ = BuildArpState(&step);
       pitch = arp_.step.note();
       if (arp_.step.has_note()) {
-        InternalNoteOn(pitch, arp_.step.velocity());
-        if (arp_.step.is_slid()) {
+        bool slide = arp_.step.is_slid();
+        InternalNoteOn(pitch, arp_.step.velocity(), slide);
+        if (slide) {
           InternalNoteOff(output_pitch_for_looper_note_[looper_note_index]);
         }
         output_pitch_for_looper_note_[looper_note_index] = pitch;
