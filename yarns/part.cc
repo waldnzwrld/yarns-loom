@@ -503,15 +503,14 @@ void Part::DeleteSequence() {
   seq_overdubbing_ = false;
 }
 
-bool Part::GeneratedNoteOn(uint8_t pitch, uint8_t velocity) {
+uint8_t Part::GeneratedNoteOn(uint8_t pitch, uint8_t velocity) {
   if (
     mono_allocator_.size() == mono_allocator_.max_size() ||
     generated_notes_.size() == generated_notes_.max_size()
   ) {
-    return false;
+    return 0;
   }
-  generated_notes_.NoteOn(pitch, velocity);
-  return true;
+  return generated_notes_.NoteOn(pitch, velocity);
 }
 
 void Part::StopSequencerArpeggiatorNotes() {
