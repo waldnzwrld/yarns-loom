@@ -413,7 +413,7 @@ void Part::Clock() { // From Multi::ClockFast
     if (next_step_ptr && next_step_ptr->is_continuation()) {
       // The next step contains a "sustain" message; or a slid note. Extends
       // the duration of the current note.
-      gate_length_counter_[v] += lut_clock_ratio_ticks[seq_.clock_division];
+      gate_length_counter_[v] += ticks_per_step;
     } else if (active_note_[v] != VOICE_ALLOCATION_NOT_FOUND) {
       GeneratedNoteOff(active_note_[v]);
     }
