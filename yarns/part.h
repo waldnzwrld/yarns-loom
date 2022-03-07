@@ -693,7 +693,7 @@ class Part {
   uint8_t TransposeInputPitch(uint8_t pitch) const {
     return TransposeInputPitch(pitch, midi_.transpose_octaves);
   }
-  void InternalNoteOn(uint8_t note, uint8_t velocity);
+  void InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato = false);
   void InternalNoteOff(uint8_t note);
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
   bool PitchBend(uint8_t channel, uint16_t pitch_bend);
@@ -701,6 +701,8 @@ class Part {
   bool Aftertouch(uint8_t channel, uint8_t velocity);
   void AllNotesOff();
   void StopSequencerArpeggiatorNotes();
+  uint8_t GeneratedNoteOn(uint8_t pitch, uint8_t velocity);
+  void GeneratedNoteOff(uint8_t pitch);
   void Reset();
   void Clock();
   void Start();
@@ -781,8 +783,10 @@ class Part {
   }
 
   inline void LooperPlayNoteOn(uint8_t looper_note_index, uint8_t pitch, uint8_t velocity) {
-    if (!looper_in_use()) { return; }
-    looper_note_index_for_generated_note_index_[generated_notes_.NoteOn(pitch, velocity)] = looper_note_index;
+    if (!looper_in_use()) return;
+    uint8_t generated_note_index = GeneratedNoteOn(pitch, velocity);
+    if (!generated_note_index) return;
+    looper_note_index_for_generated_note_index_[generated_note_index] = looper_note_index;
     pitch = ApplySequencerInputResponse(pitch);
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Advance arp
@@ -790,12 +794,13 @@ class Part {
       arp_ = BuildArpState(&step);
       pitch = arp_.step.note();
       if (arp_.step.has_note()) {
-        InternalNoteOn(pitch, arp_.step.velocity());
-        if (arp_.step.is_slid()) {
+        bool slide = arp_.step.is_slid();
+        InternalNoteOn(pitch, arp_.step.velocity(), slide);
+        if (slide) {
           InternalNoteOff(output_pitch_for_looper_note_[looper_note_index]);
         }
         output_pitch_for_looper_note_[looper_note_index] = pitch;
-      } //  else if tie, arp_pitch_for_looper_note_ is already set to the tied pitch
+      } //  else if tie, output_pitch_for_looper_note_ is already set to the tied pitch
     } else if (looper_can_control(pitch)) {
       InternalNoteOn(pitch, velocity);
       output_pitch_for_looper_note_[looper_note_index] = pitch;
@@ -1026,7 +1031,11 @@ class Part {
     StopNotesBySustainStatus(keys, true);
   }
   void DispatchSortedNotes(bool legato);
-  void VoiceNoteOn(Voice* voice, uint8_t pitch, uint8_t vel, bool legato);
+  void VoiceNoteOn(
+    uint8_t voice, uint8_t pitch, uint8_t vel,
+    bool legato, bool reset_gate_counter
+  );
+  void VoiceNoteOff(uint8_t voice);
   void KillAllInstancesOfNote(uint8_t note);
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
@@ -1071,7 +1080,7 @@ class Part {
   // Post-transpose
   uint8_t output_pitch_for_looper_note_[looper::kMaxNotes];
 
-  uint16_t gate_length_counter_;
+  uint16_t gate_length_counter_[kNumMaxVoicesPerPart];
   
   bool has_siblings_;
   
