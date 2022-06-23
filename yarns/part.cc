@@ -149,7 +149,6 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
   velocity = ((velocity - midi_.min_velocity) << 7) / (midi_.max_velocity - midi_.min_velocity + 1);
 
   if (seq_recording_) {
-    note = ArpUndoTransposeInputPitch(note);
     if (!looped() && !sent_from_step_editor) {
       RecordStep(SequencerStep(note, velocity));
     } else if (looped()) {
@@ -171,15 +170,14 @@ bool Part::NoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
 bool Part::NoteOff(uint8_t channel, uint8_t note, bool respect_sustain) {
   bool sent_from_step_editor = channel & 0x80;
 
-  uint8_t recording_pitch = ArpUndoTransposeInputPitch(note);
-  uint8_t pressed_key_index = manual_keys_.stack.Find(recording_pitch);
+  uint8_t pressed_key_index = manual_keys_.stack.Find(note);
   if (seq_recording_ && looped() && looper_is_recording(pressed_key_index)) {
     // Directly mapping pitch to looper notes would be cleaner, but requires a
     // data structure more sophisticated than an array
     LooperRecordNoteOff(pressed_key_index);
     // Sustain is respected only if it was applied before recording
-    if (!manual_keys_.IsSustained(recording_pitch)) {
-      manual_keys_.stack.NoteOff(recording_pitch);
+    if (!manual_keys_.IsSustained(note)) {
+      manual_keys_.stack.NoteOff(note);
     }
   } else if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
     arp_keys_.NoteOff(note, respect_sustain);

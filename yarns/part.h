@@ -875,14 +875,6 @@ class Part {
   }
   void ResetAllKeys();
 
-  inline uint8_t ArpUndoTransposeInputPitch(uint8_t pitch) const {
-    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR && pitch < SEQUENCER_STEP_REST) {
-      // This is an arpeggiation control step, so undo input transpose
-      pitch = TransposeInputPitch(pitch, -midi_.transpose_octaves);
-    }
-    return pitch;
-  }
-
   inline void RecordStep(const SequencerStep& step) {
     if (seq_recording_) {
       if (seq_overwrite_) { DeleteRecording(); }
