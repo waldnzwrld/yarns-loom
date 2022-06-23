@@ -36,6 +36,7 @@
 #include "stmlib/algorithms/voice_allocator.h"
 #include "stmlib/algorithms/note_stack.h"
 
+#include "yarns/resources.h"
 #include "yarns/looper.h"
 
 namespace yarns {
@@ -704,6 +705,9 @@ class Part {
   uint8_t GeneratedNoteOn(uint8_t pitch, uint8_t velocity);
   void GeneratedNoteOff(uint8_t pitch);
   void Reset();
+  uint16_t PPQN() const { // Pulses Per Quarter Note
+    return lut_clock_ratio_ticks[seq_.clock_division];
+  }
   void Clock();
   void Start();
   void Stop();
