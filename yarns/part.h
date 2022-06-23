@@ -709,6 +709,8 @@ class Part {
     return lut_clock_ratio_ticks[seq_.clock_division];
   }
   void Clock();
+  void StepSequencerArpeggiator(uint32_t step_counter);
+  void ClockStepGateEndings();
   void Start();
   void Stop();
   void StopRecording();
@@ -1058,6 +1060,7 @@ class Part {
   uint8_t cyclic_allocation_note_counter_;
   
   ArpeggiatorState arp_;
+  uint8_t euclidean_step_index_;
   
   bool seq_recording_;
   bool seq_overdubbing_;
