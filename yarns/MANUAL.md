@@ -193,7 +193,6 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - `DIRECT` gives full use of the keyboard, allowing accompaniment of a sequence, etc.
 - New `IT (INPUT TRANSPOSE OCTAVES)` setting to apply transposition to notes received by a part
   - Effectively an octave switch for the controller
-  - Ignored when using the step to control arpeggiator movement
 - Parts can filter notes by velocity
   - Added UI for previously hidden settings `V> (VELOCITY MIN)` and `V< (VELOCITY MAX)`
   - Present for all layouts except 4V
