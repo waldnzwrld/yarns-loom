@@ -248,6 +248,8 @@ const char* const calibration_strings[] = {
 };
 
 const char notes_long[] = "C d D e E F g G a A b B ";
+
+// Display starts at "-1" -- C4 = MIDI note 60 = octave index 5 = display octave 4
 const char octave[] = "-0123456789";
 
 void Ui::PrintParameterName() {
