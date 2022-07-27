@@ -105,6 +105,7 @@ const char* const voicing_oscillator_shape_values[OSC_SHAPE_FM] = {
   "\x88\xA0 SAW LOW-PASS SVF",
   "\x8CW PULSE WIDTH MOD",
   "\x88W SAW WIDTH MOD",
+  "\x88\x8C SAW-PULSE MORPH",
   "S$ SINE SYNC",
   "\x8C$ PULSE SYNC",
   "\x88$ SAW SYNC",

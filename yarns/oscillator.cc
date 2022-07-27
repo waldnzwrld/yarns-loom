@@ -64,6 +64,7 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   // Width mod
   &Oscillator::RenderPulse,
   &Oscillator::RenderSaw,
+  &Oscillator::RenderSawPulseMorph,
   &Oscillator::RenderSyncSine,
   &Oscillator::RenderSyncPulse,
   &Oscillator::RenderSyncSaw,
@@ -113,9 +114,6 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
       timbre = timbre * strength >> 15;
     } else {
       switch (shape_) {
-        case OSC_SHAPE_VARIABLE_PULSE:
-          CONSTRAIN(timbre, 0, 31767);
-          break;
         case OSC_SHAPE_FOLD_TRIANGLE:
           strength -= 7 * (pitch_ - (80 << 7));
           CONSTRAIN(strength, 0, 32767);
@@ -282,6 +280,7 @@ void Oscillator::RenderPulse() {
   uint32_t pw = 0x80000000;
   RENDER_WITH_PHASE_GAIN_TIMBRE(
     if (shape_ == OSC_SHAPE_VARIABLE_PULSE) {
+      CONSTRAIN(timbre, 0, 31767);
       pw = static_cast<uint32_t>(32767 - timbre) << 16;
     }
     bool self_reset = phase < phase_increment;
@@ -316,6 +315,28 @@ void Oscillator::RenderSaw() {
     }
   )
   svf_ = svf;
+}
+
+// Rotates the rising edge's slope from saw to pulse
+// /|/| -> _/‾|_/‾| -> _|‾|_|‾|
+void Oscillator::RenderSawPulseMorph() {
+  RENDER_WITH_PHASE_GAIN_TIMBRE(
+    // Prevent saw from reaching an infinitely steep rise, else we'd have to
+    // clumsily transition into a BLEP of what is now a rising pulse edge
+    CONSTRAIN(timbre, 0, 0x7ccc);
+
+    // Exponential timbre curve, biased toward square
+    uint32_t pw = Interpolate88(lut_env_expo, timbre << 1) << 15; // 0-50%
+    uint32_t saw_width = UINT32_MAX - (pw << 1); // 0-100%
+
+    bool self_reset = phase < phase_increment;
+    // BLEP falling pulse edge only
+    while (self_reset) { EDGES_PULSE(phase, phase_increment) }
+    if (phase < pw) next_sample += 0;
+    else if (phase < pw + saw_width) next_sample += ((phase - pw) / (saw_width >> 16)) >> 1;
+    else next_sample += 0x7fff;
+    this_sample = (this_sample - 0x4000) << 1;
+  )
 }
 
 #define SET_SYNC_INCREMENT \

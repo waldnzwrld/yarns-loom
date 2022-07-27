@@ -74,6 +74,7 @@ enum OscillatorShape {
   OSC_SHAPE_LP_SAW,
   OSC_SHAPE_VARIABLE_PULSE,
   OSC_SHAPE_VARIABLE_SAW,
+  OSC_SHAPE_SAW_PULSE_MORPH,
   OSC_SHAPE_SYNC_SINE,
   OSC_SHAPE_SYNC_PULSE,
   OSC_SHAPE_SYNC_SAW,
@@ -120,6 +121,7 @@ class Oscillator {
  private:
   void RenderPulse();
   void RenderSaw();
+  void RenderSawPulseMorph();
   void RenderFoldTriangle();
   void RenderFoldSine();
   void RenderFM();
