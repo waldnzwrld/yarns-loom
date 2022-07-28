@@ -80,9 +80,9 @@ enum OscillatorShape {
   OSC_SHAPE_SYNC_SAW,
   OSC_SHAPE_FOLD_SINE,
   OSC_SHAPE_FOLD_TRIANGLE,
+  OSC_SHAPE_DIRAC_COMB,
   OSC_SHAPE_TANH_SINE,
   OSC_SHAPE_EXP_SINE,
-  OSC_SHAPE_BUZZ,
   OSC_SHAPE_FM,
 };
 
@@ -132,7 +132,7 @@ class Oscillator {
   void RenderPhaseDistortionPulse();
   void RenderPhaseDistortionSaw();
   void RenderExponentialSine();
-  void RenderBuzz();
+  void RenderDiracComb();
   void RenderFilteredNoise();
   
   uint32_t ComputePhaseIncrement(int16_t midi_pitch) const;

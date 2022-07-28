@@ -111,9 +111,9 @@ const char* const voicing_oscillator_shape_values[OSC_SHAPE_FM] = {
   "\x88$ SAW SYNC",
   "SF SINE FOLD",
   "^F TRIANGLE FOLD",
-  "ST SINE TANH",
-  "SX SINE EXP",
   "\x8E\x8E DIRAC COMB",
+  "ST SINE TANH",
+  "SX SINE EXPONENTIAL",
 };
 
 const char* const lfo_shape_values[LFO_SHAPE_LAST] = {

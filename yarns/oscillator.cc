@@ -70,9 +70,9 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderSyncSaw,
   &Oscillator::RenderFoldSine,
   &Oscillator::RenderFoldTriangle,
+  &Oscillator::RenderDiracComb,
   &Oscillator::RenderTanhSine,
   &Oscillator::RenderExponentialSine,
-  &Oscillator::RenderBuzz,
   &Oscillator::RenderFM,
   // &Oscillator::RenderAudioRatePWM,
 };
@@ -108,7 +108,7 @@ void Oscillator::Refresh(int16_t pitch, int16_t timbre, uint16_t gain) {
     gain_.SetTarget((scale_ * gain) >> 17);
 
     int32_t strength = 32767;
-    if (shape_ == OSC_SHAPE_FOLD_SINE || shape_ >= OSC_SHAPE_FM) {
+    if (shape_ == OSC_SHAPE_FOLD_SINE || shape_ >= OSC_SHAPE_EXP_SINE) {
       strength -= 6 * (pitch_ - (92 << 7));
       CONSTRAIN(strength, 0, 32767);
       timbre = timbre * strength >> 15;
@@ -509,7 +509,7 @@ void Oscillator::RenderPhaseDistortionSaw() {
   )
 }
 
-void Oscillator::RenderBuzz() {
+void Oscillator::RenderDiracComb() {
   RENDER_WITH_PHASE_GAIN_TIMBRE(
     int32_t zone_14 = (pitch_ + ((32767 - timbre) >> 1));
     uint16_t crossfade = zone_14 << 6; // Ignore highest 4 bits
