@@ -119,8 +119,10 @@ class Oscillator {
   void Render();
   
  private:
-  void RenderPulse();
-  void RenderSaw();
+  void RenderLPPulse();
+  void RenderLPSaw();
+  void RenderVariablePulse();
+  void RenderVariableSaw();
   void RenderSawPulseMorph();
   void RenderFoldTriangle();
   void RenderFoldSine();
