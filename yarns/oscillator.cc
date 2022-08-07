@@ -72,7 +72,6 @@ Oscillator::RenderFn Oscillator::fn_table_[] = {
   &Oscillator::RenderTanhSine,
   &Oscillator::RenderExponentialSine,
   &Oscillator::RenderFM,
-  // &Oscillator::RenderAudioRatePWM,
 };
 
 void StateVariableFilter::Init(uint8_t interpolation_slope) {
