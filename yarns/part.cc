@@ -710,7 +710,10 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep* seq_step_ptr) const {
   }
 
   // Build arpeggiator step
-  const NoteEntry* arpeggio_note = &arp_keys_.stack.played_note(modulo(next.key_index, num_keys));
+  const NoteEntry* arpeggio_note = &arp_keys_.stack.note_by_priority(
+    static_cast<stmlib::NoteStackFlags>(voicing_.allocation_priority),
+    modulo(next.key_index, num_keys)
+  );
   next.key_index += next.key_increment;
 
   // TODO step type algorithm
