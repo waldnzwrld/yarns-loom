@@ -886,16 +886,22 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato) {
     uint8_t voice_index = 0;
     switch (voicing_.allocation_mode) {
       case VOICE_ALLOCATION_MODE_POLY:
-        voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_LRU);
-        break;
-      
-      case VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT:
-        voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_MRU);
-        break;
-
       case VOICE_ALLOCATION_MODE_POLY_NICE:
-        voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_NONE);
+      case VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT: {
+        bool can_steal = num_voices_ > mono_allocator_.priority_for_note(
+          static_cast<stmlib::NoteStackFlags>(voicing_.allocation_priority),
+          note
+        );
+        uint8_t note_to_steal_voice_from =
+          voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT
+          ? before.note // Highest priority before this note
+          : priority_note(num_voices_).note; // Note that just got deprioritized
+        uint8_t stealable_voice_index = can_steal
+          ? FindVoiceForNote(note_to_steal_voice_from) : NOT_ALLOCATED;
+        voice_index = poly_allocator_.NoteOn(note, stealable_voice_index);
+        if (voice_index == NOT_ALLOCATED) return;
         break;
+      }
         
       case VOICE_ALLOCATION_MODE_POLY_CYCLIC:
         if (cyclic_allocation_note_counter_ >= num_voices_) {
@@ -991,9 +997,9 @@ void Part::InternalNoteOff(uint8_t note) {
       if (
         had_extra_notes &&
         voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE
-      ) {
-        const NoteEntry& nice = priority_note(NOTE_STACK_PRIORITY_FIRST, num_voices_ - 1);
-        poly_allocator_.NoteOn(nice.note, VOICE_STEALING_MODE_NONE);
+      ) { // Reassign freed voice to the note that is now in the priority window
+        const NoteEntry& nice = priority_note(num_voices_ - 1);
+        poly_allocator_.NoteOn(nice.note, NOT_ALLOCATED);
         VoiceNoteOn(voice_index, nice.note, nice.velocity, true, false);
       }
     } else {
