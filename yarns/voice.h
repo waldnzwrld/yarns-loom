@@ -110,7 +110,6 @@ class Voice {
   void ResetAllControllers();
 
   void Refresh();
-  void SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento);
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
   void ControlChange(uint8_t controller, uint8_t value);
