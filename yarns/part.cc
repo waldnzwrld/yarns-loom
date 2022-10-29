@@ -628,7 +628,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep* seq_step_ptr) const {
   uint8_t num_octaves = seq_.arp_range + 1;
   uint8_t num_keys_all_octaves = num_keys * num_octaves;
   uint8_t display_octave = seq_step.octave();
-  if (display_octave > 0) display_octave--; // Match octave display in UI, with floor 0
+  if (display_octave > 0) display_octave--; // Match octave display in UI, ranging 0..9
   // Update arepggiator note/octave counter.
   switch (seq_.arp_direction) {
     case ARPEGGIATOR_DIRECTION_RANDOM:
@@ -643,7 +643,7 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep* seq_step_ptr) const {
         // If step value by color within octave is greater than total chord size, rest without moving
         if (seq_step.color_key_value() >= num_keys_all_octaves) return next;
 
-        // Advance active position by octave # -- C4 -> pos + 4
+        // Advance active position by octave # -- C4 -> pos + 4; C0 -> pos + 0
         next.key_index = modulo(next.key_index + display_octave, num_keys_all_octaves);
         if (seq_step.is_white()) {
           next.key_increment = 0; // Move is already complete
@@ -663,16 +663,18 @@ const ArpeggiatorState Part::BuildArpState(SequencerStep* seq_step_ptr) const {
         if (seq_step.color_key_value() >= num_keys_all_octaves) return next;
 
         // Map linear position to X-Y grid coordinates
-        uint8_t size = std::max(static_cast<uint8_t>(1), display_octave); // C4 -> 4x4 grid; minimum 1x1
+        // C4 -> 4x4 grid; C0 -> 1x1; C1 -> 1x1; C9 -> 9x9
+        uint8_t size = std::max(static_cast<uint8_t>(1), display_octave);
         uint8_t x_pos = modulo(next.key_index, size);
         uint8_t y_pos = modulo(next.key_index / size, size);
-        // Move within grid
+        // Move by 1 position within grid, with step color determining direction
         if (seq_step.is_white()) {
           x_pos = modulo(x_pos + 1, size);
         } else {
           y_pos = modulo(y_pos + 1, size);
         }
         // Map grid position back to linear position, which can be > chord size
+        // Max linear position is 81 (9x9), so no risk of int8_t overflow
         next.key_index = x_pos + y_pos * size;
         next.key_increment = 0; // Move is already complete
 
