@@ -585,7 +585,7 @@ const SequencerStep Part::BuildSeqStep(uint8_t step_index) const {
     // note = first note.
     // But this is not the case when we are playing several sequences at the
     // same time. In this case, we use root note = 60.
-    int8_t root_note = !has_siblings_ ? seq_.first_note() : 60;
+    int8_t root_note = !has_siblings_ ? seq_.first_note() : kC4;
     note = ApplySequencerInputResponse(note, root_note);
   }
   return SequencerStep((0x80 & step.data[0]) | (0x7f & note), step.data[1]);

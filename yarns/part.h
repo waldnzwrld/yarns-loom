@@ -529,7 +529,7 @@ struct SequencerSettings {
         return step[i].note();
       }
     }
-    return 60;
+    return kC4;
   }
 };
 
@@ -970,7 +970,7 @@ class Part {
   void VoiceNoteOff(uint8_t voice);
   void KillAllInstancesOfNote(uint8_t note);
 
-  uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
+  uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = kC4) const;
   const SequencerStep BuildSeqStep(uint8_t step_index) const;
   const Arpeggiator BuildArpState(const SequencerStep* seq_step_ptr) const {
     return arp_.BuildNextState(*this, arp_keys_, seq_step_ptr);
