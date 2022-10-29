@@ -39,6 +39,7 @@
 #include "yarns/resources.h"
 #include "yarns/looper.h"
 #include "yarns/sequencer_step.h"
+#include "yarns/arpeggiator.h"
 
 namespace yarns {
 
@@ -52,8 +53,6 @@ const uint8_t kNoteStackMapping = kNoteStackSize + 1; // 1-based
 
 const uint8_t kCCRecordOffOn = 110;
 const uint8_t kCCDeleteRecording = 111;
-
-const uint8_t kC4 = 60;
 
 enum ArpeggiatorDirection {
   ARPEGGIATOR_DIRECTION_LINEAR,
@@ -534,19 +533,6 @@ struct SequencerSettings {
   }
 };
 
-struct ArpeggiatorState {
-  SequencerStep step;
-  uint8_t step_index;
-  int8_t key_index;
-  int8_t octave;
-  int8_t key_increment;
-  void ResetKey() {
-    key_index = 0;
-    octave = 0;
-    key_increment = 1;
-  }
-};
-
 struct HeldKeys {
 
   static const uint8_t VELOCITY_SUSTAIN_MASK = 0x80;
@@ -986,7 +972,9 @@ class Part {
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = 60) const;
   const SequencerStep BuildSeqStep(uint8_t step_index) const;
-  const ArpeggiatorState BuildArpState(SequencerStep* seq_step_ptr) const;
+  const Arpeggiator BuildArpState(const SequencerStep* seq_step_ptr) const {
+    return arp_.BuildNextState(*this, arp_keys_, seq_step_ptr);
+  }
 
   MidiSettings midi_;
   VoicingSettings voicing_;
@@ -1007,7 +995,7 @@ class Part {
   uint8_t active_note_[kNumMaxVoicesPerPart];
   uint8_t cyclic_allocation_note_counter_;
   
-  ArpeggiatorState arp_;
+  Arpeggiator arp_;
   uint8_t euclidean_step_index_;
   
   bool seq_recording_;

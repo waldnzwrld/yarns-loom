@@ -5,6 +5,8 @@
 
 namespace yarns {
 
+const uint8_t kC4 = 60;
+
 enum SequencerStepFlags {
   SEQUENCER_STEP_REST = 0x80,
   SEQUENCER_STEP_TIE = 0x81
