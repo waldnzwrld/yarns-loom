@@ -173,9 +173,9 @@ struct PackedPart {
     max_note : 7,
     min_velocity : 7,
     max_velocity : 7,
-    out_mode : 2,
+    out_mode : 2, // 1 value unused
     sustain_mode : 3,
-    play_mode : 2,
+    play_mode : 2, // 1 value unused
     input_response : 2,
     sustain_polarity : 1;
 
@@ -184,7 +184,7 @@ struct PackedPart {
     allocation_mode : 4,
     allocation_priority : 2,
     portamento : 7,
-    legato_mode : 2,
+    legato_mode : 2, // 1 value unused
     pitch_bend_range : 5,
     vibrato_range : 4,
     vibrato_mod : 7,
@@ -197,7 +197,7 @@ struct PackedPart {
     aux_cv : 4,
     aux_cv_2 : 4,
     tuning_factor : 4,
-    oscillator_mode : 2,
+    oscillator_mode : 2, // 1 value unused
     oscillator_shape : 7, // 1 bit unused
     tremolo_mod : kTimbreBits,
     vibrato_shape : kLFOShapeBits,
