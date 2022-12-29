@@ -46,6 +46,7 @@ const uint8_t kNumCVOutputs = 4;
 // One paraphonic part, one voice per remaining output
 const uint8_t kNumSystemVoices = kNumParaphonicVoices + (kNumCVOutputs - 1);
 const uint8_t kMaxBarDuration = 32;
+const uint8_t kMidiChannelOmni = 0x10;
 
 struct PackedMulti {
   PackedPart parts[kNumParts];
@@ -188,7 +189,7 @@ class Multi {
 
   inline bool part_accepts_channel(uint8_t part, uint8_t channel) const {
     return is_remote_control_channel(channel) ||
-      midi(part).channel == 0x10 ||
+      midi(part).channel == kMidiChannelOmni ||
       midi(part).channel == channel;
   }
 

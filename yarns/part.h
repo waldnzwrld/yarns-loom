@@ -856,7 +856,7 @@ class Part {
   }
   
   inline uint8_t tx_channel() const {
-    return midi_.channel == 0x10 ? 0 : midi_.channel;
+    return midi_.channel == kMidiChannelOmni ? 0 : midi_.channel;
   }
   inline bool direct_thru() const {
     return midi_.out_mode == MIDI_OUT_MODE_THRU && !polychained_;
