@@ -46,6 +46,8 @@ using namespace stmlib;
 const uint8_t kCCMacroRecord = 116;
 const uint8_t kCCMacroPlayMode = 117;
 
+const uint8_t kMasterLFOPeriodTicksBits = 4;
+
 void Multi::PrintDebugByte(uint8_t byte) {
   ui.PrintDebugByte(byte);
 }
@@ -144,9 +146,9 @@ void Multi::Clock() {
 
     // Sync LFOs
     ++tick_counter_;
-    // The master LFO runs at 1/16 frequency to help it adapt smoothly to
-    // phase/frequency changes
-    master_lfo_.Tap(tick_counter_, 16);
+    // The master LFO runs at a fraction of the clock frequency, to help it
+    // adapt smoothly to phase/frequency changes
+    master_lfo_.Tap(tick_counter_, 1 << kMasterLFOPeriodTicksBits);
     for (uint8_t p = 0; p < num_active_parts_; ++p) {
       part_[p].mutable_looper().Clock(tick_counter_);
     }
@@ -295,10 +297,12 @@ void Multi::SpreadLFOs(int8_t spread, SyncedLFO** base_lfo, uint8_t num_lfos) {
 
 void Multi::Refresh() {
   master_lfo_.Refresh();
-  // Since the master LFO runs at 1/16 of clock freq, we compensate by treating
-  // each 1/16 of its phase as a new tick, to make these output ticks 1:1 with
+  // Since the master LFO runs at 1/n of clock freq, we compensate by treating
+  // each 1/n of its phase as a new tick, to make these output ticks 1:1 with
   // the original clock ticks
-  bool new_tick = (master_lfo_.GetPhase() << 4) < (master_lfo_.GetPhaseIncrement() << 4);
+  bool new_tick =
+    (master_lfo_.GetPhase() << kMasterLFOPeriodTicksBits) <
+    (master_lfo_.GetPhaseIncrement() << kMasterLFOPeriodTicksBits);
   if (new_tick) master_lfo_tick_counter_++;
 
   for (uint8_t p = 0; p < num_active_parts_; ++p) {
