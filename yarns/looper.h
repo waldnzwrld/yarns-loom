@@ -154,7 +154,7 @@ class Deck {
   Link next_link_[kMaxNotes];
 
   // Phase tracking
-  SyncedLFO lfo_;
+  SyncedLFO<23, 12> lfo_; // Gentle sync
   uint16_t pos_;
   bool needs_advance_;
 

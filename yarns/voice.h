@@ -100,6 +100,8 @@ enum LFORole {
   LFO_ROLE_LAST
 };
 
+using FastSyncedLFO = SyncedLFO<17, 9>; // Locks on in less than a second
+
 class CVOutput;
 
 class Voice {
@@ -210,7 +212,7 @@ class Voice {
   inline Oscillator* oscillator() {
     return &oscillator_;
   }
-  inline SyncedLFO* lfo(LFORole l) { return &lfos_[l]; }
+  inline FastSyncedLFO* lfo(LFORole l) { return &lfos_[l]; }
   inline Envelope* envelope() {
     return &envelope_;
   }
@@ -224,7 +226,7 @@ class Voice {
   }
   
  private:
-  SyncedLFO lfos_[LFO_ROLE_LAST];
+  FastSyncedLFO lfos_[LFO_ROLE_LAST];
   Envelope envelope_;
   Oscillator oscillator_;
 

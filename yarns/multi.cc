@@ -54,7 +54,7 @@ void Multi::PrintDebugByte(uint8_t byte) {
 
 void Multi::Init(bool reset_calibration) {
   just_intonation_processor.Init();
-  master_lfo_.Init(17, 9);
+  master_lfo_.Init();
   
   fill(
       &settings_.custom_pitch_table[0],
@@ -276,7 +276,7 @@ void Multi::ClockFast() {
   }
 }
 
-void Multi::SpreadLFOs(int8_t spread, SyncedLFO** base_lfo, uint8_t num_lfos) {
+void Multi::SpreadLFOs(int8_t spread, FastSyncedLFO** base_lfo, uint8_t num_lfos) {
   if (spread >= 0) { // Detune
     uint8_t spread_8 = spread << 1;
     uint16_t spread_expo_16 = UINT16_MAX - lut_env_expo[((127 - spread_8) << 1)];
@@ -310,7 +310,7 @@ void Multi::Refresh() {
     part.mutable_looper().Refresh();
     if (new_tick) {
       uint8_t lfo_rate = part.voicing_settings().lfo_rate;
-      SyncedLFO* part_lfos[part.num_voices()];
+      FastSyncedLFO* part_lfos[part.num_voices()];
       for (uint8_t v = 0; v < part.num_voices(); ++v) {
         part_lfos[v] = part.voice(v)->lfo(static_cast<LFORole>(0));
       }
@@ -321,7 +321,7 @@ void Multi::Refresh() {
       }
       SpreadLFOs(part.voicing_settings().lfo_spread_voices, &part_lfos[0], part.num_voices());
       for (uint8_t v = 0; v < part.num_voices(); ++v) {
-        SyncedLFO* voice_lfos[LFO_ROLE_LAST];
+        FastSyncedLFO* voice_lfos[LFO_ROLE_LAST];
         for (uint8_t l = 0; l < LFO_ROLE_LAST; ++l) {
           voice_lfos[l] = part.voice(v)->lfo(static_cast<LFORole>(l));
         }

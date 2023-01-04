@@ -524,7 +524,7 @@ class Multi {
   void UpdateTempo();
   void AllocateParts();
   void ClockSong();
-  void SpreadLFOs(int8_t spread, SyncedLFO** base_lfo, uint8_t num_lfos);
+  void SpreadLFOs(int8_t spread, FastSyncedLFO** base_lfo, uint8_t num_lfos);
   
   MultiSettings settings_;
   
@@ -548,7 +548,7 @@ class Multi {
   // While the clock is running, the master LFO syncs to the clock's phase/freq,
   // and while the clock is stopped, the master LFO continues free-running based
   // on its last sync
-  SyncedLFO master_lfo_;
+  FastSyncedLFO master_lfo_;
   // Roughly 1:1 with tick_counter_, but can free-run without the clock
   uint32_t master_lfo_tick_counter_;
 
