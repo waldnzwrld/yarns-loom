@@ -765,7 +765,7 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
 const uint32_t kTempoToRefreshPhaseIncrement = (UINT32_MAX / 4000) * 24 / 60;
 void Multi::UpdateTempo() {
   internal_clock_.set_tempo(settings_.clock_tempo);
-  if (running_) return;
+  if (running_) return; // If running, master LFO will get Tap instead
   master_lfo_.SetPhaseIncrement((settings_.clock_tempo * kTempoToRefreshPhaseIncrement) >> 4);
 }
 

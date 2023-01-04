@@ -191,14 +191,14 @@ struct PackedPart {
     lfo_rate : 7,
     tuning_root : 4,
     tuning_system : 6,
-    trigger_duration : 7, // probably excessive
+    trigger_duration : 7, // Breaking: probably excessive
     trigger_scale : 1,
     trigger_shape : 3,
     aux_cv : 4,
     aux_cv_2 : 4,
     tuning_factor : 4,
     oscillator_mode : 2, // 1 value unused
-    oscillator_shape : 7, // 1 bit unused
+    oscillator_shape : 7, // Breaking: 1 bit unused
     tremolo_mod : kTimbreBits,
     vibrato_shape : kLFOShapeBits,
     timbre_lfo_shape : kLFOShapeBits,

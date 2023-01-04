@@ -57,7 +57,7 @@ struct PackedMulti {
     layout : 4,
     clock_tempo : 8,
     clock_swing : 7,
-    clock_input_division : 3, // can 0-index for 1 fewer bit
+    clock_input_division : 3, // Breaking: can 0-index for 1 fewer bit
     clock_output_division : 5,
     clock_bar_duration : 6, // barely
     clock_override : 1,
