@@ -150,7 +150,7 @@ void Multi::Clock() {
     // adapt smoothly to phase/frequency changes
     master_lfo_.Tap(tick_counter_, 1 << kMasterLFOPeriodTicksBits);
     for (uint8_t p = 0; p < num_active_parts_; ++p) {
-      part_[p].mutable_looper().Clock(tick_counter_);
+      part_[p].mutable_looper().Clock();
     }
     
     ++swing_counter_;
@@ -762,11 +762,11 @@ void Multi::ChangeLayout(Layout old_layout, Layout new_layout) {
   }
 }
 
-const uint32_t kTempoToRefreshPhaseIncrement = (UINT32_MAX / 4000) * 24 / 60;
+
 void Multi::UpdateTempo() {
   internal_clock_.set_tempo(settings_.clock_tempo);
   if (running_) return; // If running, master LFO will get Tap instead
-  master_lfo_.SetPhaseIncrement((settings_.clock_tempo * kTempoToRefreshPhaseIncrement) >> kMasterLFOPeriodTicksBits);
+  master_lfo_.SetPhaseIncrement(tick_phase_increment() >> kMasterLFOPeriodTicksBits);
 }
 
 void Multi::AfterDeserialize() {

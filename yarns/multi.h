@@ -48,6 +48,9 @@ const uint8_t kNumSystemVoices = kNumParaphonicVoices + (kNumCVOutputs - 1);
 const uint8_t kMaxBarDuration = 32;
 const uint8_t kMidiChannelOmni = 0x10;
 
+// Converts BPM to the Refresh phase increment of an LFO that cycles at 24 PPQN
+const uint32_t kTempoToTickPhaseIncrement = (UINT32_MAX / 4000) * 24 / 60;
+
 struct PackedMulti {
   PackedPart parts[kNumParts];
 
@@ -402,6 +405,9 @@ class Multi {
   inline bool internal_clock() const { return settings_.clock_tempo > TEMPO_EXTERNAL; }
   inline uint32_t tick_counter() { return tick_counter_; }
   inline uint8_t tempo() const { return settings_.clock_tempo; }
+  inline uint32_t tick_phase_increment() const {
+    return settings_.clock_tempo * kTempoToTickPhaseIncrement;
+  }
   inline bool running() const { return running_; }
   inline bool recording() const { return recording_; }
   inline uint8_t recording_part() const { return recording_part_; }
