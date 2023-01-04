@@ -225,6 +225,7 @@ void Multi::Start(bool started_by_keyboard) {
   clock_output_prescaler_ = 0;
   stop_count_down_ = 0;
   tick_counter_ = master_lfo_tick_counter_ = -1;
+  master_lfo_.Init(-1); // Will output a tick on next Refresh
   bar_position_ = -1;
   swing_counter_ = -1;
   previous_output_division_ = 0;

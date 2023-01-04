@@ -49,8 +49,8 @@ class SyncedLFO {
 
   SyncedLFO() { }
   ~SyncedLFO() { }
-  void Init() {
-    phase_ = 0;
+  void Init(uint32_t phase = 0) {
+    phase_ = phase;
   }
 
   uint32_t GetPhase() const { return phase_; }
