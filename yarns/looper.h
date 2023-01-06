@@ -93,9 +93,7 @@ class Deck {
   inline uint16_t phase() const {
     return pos_;
   }
-  inline uint32_t period_ticks() const {
-    return part_->PPQN() << part_->sequencer_settings().loop_length;
-  }
+  uint16_t period_ticks() const;
   void Clock();
   inline void Refresh() {
     lfo_.Refresh();

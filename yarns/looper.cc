@@ -111,6 +111,10 @@ void Deck::Pack(PackedPart& storage) const {
   }
 }
 
+uint16_t Deck::period_ticks() const {
+  return part_->PPQN() << part_->sequencer_settings().loop_length;
+}
+
 void Deck::Clock() {
   lfo_.Tap(multi.tick_counter(), period_ticks(), pos_offset << 16);
 }
