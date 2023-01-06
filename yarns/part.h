@@ -51,6 +51,8 @@ const uint8_t kNumParaphonicVoices = 3;
 const uint8_t kNoteStackSize = 12;
 const uint8_t kNoteStackMapping = kNoteStackSize + 1; // 1-based
 
+const uint8_t kMidiChannelOmni = 0x10;
+
 const uint8_t kCCRecordOffOn = 110;
 const uint8_t kCCDeleteRecording = 111;
 

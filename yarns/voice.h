@@ -100,7 +100,7 @@ enum LFORole {
   LFO_ROLE_LAST
 };
 
-using FastSyncedLFO = SyncedLFO<17, 9>; // Locks on in less than a second
+typedef SyncedLFO<17, 9> FastSyncedLFO; // Locks on in less than a second
 
 class CVOutput;
 
