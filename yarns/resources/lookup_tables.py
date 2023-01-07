@@ -29,23 +29,28 @@
 # Lookup table definitions.
 
 import numpy
+import math
 from fractions import Fraction
 import itertools
+
+lookup_tables_32 = []
+lookup_tables = []
+lookup_tables_signed = []
 
 """----------------------------------------------------------------------------
 LFO and portamento increments.
 ----------------------------------------------------------------------------"""
 
-lookup_tables_32 = []
+refresh_rate = 4000
+audio_rate = 40000
 
-sample_rate = 4000
+
 min_frequency = 1.0 / 8.0  # Hertz
 max_frequency = 16.0  # Hertz
-
 excursion = 1 << 32
 num_values = 64
-min_increment = excursion * min_frequency / sample_rate
-max_increment = excursion * max_frequency / sample_rate
+min_increment = excursion * min_frequency / refresh_rate
+max_increment = excursion * max_frequency / refresh_rate
 
 rates = numpy.linspace(numpy.log(min_increment),
                        numpy.log(max_increment), num_values)
@@ -54,24 +59,23 @@ lookup_tables_32.append(
 )
 
 
+
 # Create lookup table for portamento.
 num_values = 128
 max_time = 5.0  # seconds
-min_time = 1.001 / sample_rate
-gamma = 0.25
-min_increment = excursion / (max_time * sample_rate)
-max_increment = excursion / (min_time * sample_rate)
 
+gamma = 0.25
+min_time = 1.001 / refresh_rate
+min_increment = excursion / (max_time * refresh_rate)
+max_increment = excursion / (min_time * refresh_rate)
 rates = numpy.linspace(numpy.power(max_increment, -gamma),
                        numpy.power(min_increment, -gamma), num_values)
-
 values = numpy.power(rates, -1/gamma).astype(int)
 lookup_tables_32.append(
     ('portamento_increments', values)
 )
 
 
-sample_rate = 40000
 
 # Create table for pitch.
 a4_midi = 69
@@ -82,7 +86,7 @@ notes = numpy.arange(
     (highest_octave + 12) * 128.0 + 16,
     16)
 pitches = a4_pitch * 2 ** ((notes - a4_midi * 128) / (128 * 12))
-increments = excursion / sample_rate * pitches
+increments = excursion / audio_rate * pitches
 
 lookup_tables_32.append(
     ('oscillator_increments', increments.astype(int)))
@@ -93,10 +97,9 @@ lookup_tables_32.append(
 Envelope curves
 -----------------------------------------------------------------------------"""
 
-lookup_tables = []
-lookup_tables_signed = []
+env_samples = 256.0
 
-env_linear = numpy.arange(0, 257.0) / 256.0
+env_linear = numpy.arange(0, env_samples + 1) / env_samples
 env_linear[-1] = env_linear[-2]
 env_expo = 1.0 - numpy.exp(-4 * env_linear)
 lookup_tables.append(('env_expo', env_expo / env_expo.max() * 65535.0))
@@ -474,7 +477,6 @@ Integer ratios for clock sync and FM
 
 lookup_tables_string = []
 
-import math
 MAXITER = 151
 def minkowski_inv(x):
     if x > 1 or x < 0:
@@ -639,7 +641,7 @@ SVF coefficients
 ----------------------------------------------------------------------------"""
 
 cutoff = 440.0 * 2 ** ((numpy.arange(0, 257) - 69) / 12.0)
-f = cutoff / sample_rate
+f = cutoff / audio_rate
 f[f > 1 / 8.0] = 1 / 8.0
 f = 2 * numpy.sin(numpy.pi * f)
 resonance = numpy.arange(0, 257) / 260.0
