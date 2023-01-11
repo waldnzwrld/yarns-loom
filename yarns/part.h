@@ -650,7 +650,6 @@ class Part {
   void StopRecording();
   void StartRecording();
   void DeleteSequence();
-  bool new_beat() const;
 
   inline void NewLayout() {
     midi_.min_note = 0;
