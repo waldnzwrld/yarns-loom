@@ -641,9 +641,7 @@ class Part {
   void GeneratedNoteOff(uint8_t pitch);
   void Reset();
   // Pulses Per Quarter Note
-  uint16_t PPQN() const {
-    return lut_clock_ratio_ticks[seq_.clock_division];
-  }
+  uint16_t PPQN() const { return lut_clock_ratio_ticks[seq_.clock_division]; }
   void Clock();
   void StepSequencerArpeggiator(uint32_t step_counter);
   void ClockStepGateEndings();
