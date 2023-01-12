@@ -868,7 +868,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   } else {
     for (uint8_t i = 0; i < num_active_parts_; ++i) {
       if (!part_accepts_channel(i, channel)) { continue; }
-      int8_t macro_zone;
+      int16_t macro_zone;
       switch (controller) {
       case kCCRecordOffOn:
         // Intercept this CC so multi can update its own recording state
@@ -881,10 +881,11 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         break;
       case kCCMacroRecord:
         // 0..3: record off, record on, overwrite, delete
-        macro_zone = value >> 5; // 0..3
+        macro_zone = ScaleAbsoluteCC(value, 0, 3);
         macro_zone >= 1 ? StartRecording(i) : StopRecording(i);
         if (
-          // Only on increasing value, so that leaving the knob in the delete zone doesn't doom any subsequent recordings
+          // Only on increasing value, so that leaving the knob in the delete
+          // zone doesn't doom any subsequent recordings
           macro_zone == 3 && value > macro_record_last_value_[i])
         {
           part_[i].DeleteRecording();
@@ -897,7 +898,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
         break;
       case kCCMacroPlayMode:
         // -2..2: step seq, step arp, manual, loop arp, loop seq
-        macro_zone = (5 * value >> 7) - 2;
+        macro_zone = ScaleAbsoluteCC(value, -2, 2);
         ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, i, macro_zone < 0);
         ApplySetting(SETTING_SEQUENCER_PLAY_MODE, i, abs(macro_zone));
         char label[2];
@@ -917,6 +918,14 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
   return thru;
 }
 
+int16_t Multi::ScaleAbsoluteCC(uint8_t value_7bits, int16_t min, int16_t max) const {
+  int16_t scaled_value;
+  uint8_t range = max - min + 1;
+  scaled_value = range * value_7bits >> 7;
+  scaled_value += min;
+  return scaled_value;
+}
+
 void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bits) {
   uint8_t* map = part_index == 0xff ?
     setting_defs.remote_control_cc_map : setting_defs.part_cc_map;
@@ -924,10 +933,7 @@ void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bit
   if (setting_index == 0xff) { return; }
   const Setting& setting = setting_defs.get(setting_index);
 
-  int16_t scaled_value;
-  uint8_t range = setting.max_value - setting.min_value + 1;
-  scaled_value = range * value_7bits >> 7;
-  scaled_value += setting.min_value;
+  int16_t scaled_value = ScaleAbsoluteCC(value_7bits, setting.min_value, setting.max_value);
   if (setting.unit == SETTING_UNIT_TEMPO) {
     scaled_value &= 0xfe;
     if (scaled_value < TEMPO_EXTERNAL) {
