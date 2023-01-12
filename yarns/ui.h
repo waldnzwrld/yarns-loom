@@ -123,8 +123,8 @@ class Ui {
   void DoEvents();
   void FlushEvents();
   void SplashOn(Splash s);
-  void SplashPartString(const char* text, uint8_t part) {
-    strcpy(buffer_, text);
+  void SplashPartString(const char* label, uint8_t part) {
+    strcpy(buffer_, label);
     buffer_[2] = '\0';
     display_.Print(buffer_);
     SplashOn(SPLASH_PART_STRING, part);

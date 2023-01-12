@@ -858,59 +858,59 @@ void Multi::StopRecording(uint8_t part) {
   }
 }
 
-bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
+bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bits) {
   bool thru = true;
   if (
     is_remote_control_channel(channel) &&
     setting_defs.remote_control_cc_map[controller] != 0xff
   ) {
-    SetFromCC(0xff, controller, value);
+    SetFromCC(0xff, controller, value_7bits);
   } else {
-    for (uint8_t i = 0; i < num_active_parts_; ++i) {
-      if (!part_accepts_channel(i, channel)) { continue; }
+    for (uint8_t part_index = 0; part_index < num_active_parts_; ++part_index) {
+      if (!part_accepts_channel(part_index, channel)) { continue; }
       int16_t macro_zone;
       switch (controller) {
       case kCCRecordOffOn:
         // Intercept this CC so multi can update its own recording state
-        value >= 64 ? StartRecording(i) : StopRecording(i);
-        ui.SplashOn(SPLASH_ACTIVE_PART, i);
+        value_7bits >= 64 ? StartRecording(part_index) : StopRecording(part_index);
+        ui.SplashOn(SPLASH_ACTIVE_PART, part_index);
         break;
       case kCCDeleteRecording:
-        part_[i].DeleteRecording();
-        ui.SplashPartString("RX", i);
+        part_[part_index].DeleteRecording();
+        ui.SplashPartString("RX", part_index);
         break;
       case kCCMacroRecord:
         // 0..3: record off, record on, overwrite, delete
-        macro_zone = ScaleAbsoluteCC(value, 0, 3);
-        macro_zone >= 1 ? StartRecording(i) : StopRecording(i);
+        macro_zone = ScaleAbsoluteCC(value_7bits, 0, 3);
+        macro_zone >= 1 ? StartRecording(part_index) : StopRecording(part_index);
         if (
           // Only on increasing value, so that leaving the knob in the delete
           // zone doesn't doom any subsequent recordings
-          macro_zone == 3 && value > macro_record_last_value_[i])
+          macro_zone == 3 && value_7bits > macro_record_last_value_[part_index])
         {
-          part_[i].DeleteRecording();
-          ui.SplashPartString("RX", i);
+          part_[part_index].DeleteRecording();
+          ui.SplashPartString("RX", part_index);
         } else {
-          part_[i].set_seq_overwrite(macro_zone == 2);
-          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "--"), i);
+          part_[part_index].set_seq_overwrite(macro_zone == 2);
+          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "--"), part_index);
         }
-        macro_record_last_value_[i] = value;
+        macro_record_last_value_[part_index] = value_7bits;
         break;
       case kCCMacroPlayMode:
         // -2..2: step seq, step arp, manual, loop arp, loop seq
-        macro_zone = ScaleAbsoluteCC(value, -2, 2);
-        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, i, macro_zone < 0);
-        ApplySetting(SETTING_SEQUENCER_PLAY_MODE, i, abs(macro_zone));
+        macro_zone = ScaleAbsoluteCC(value_7bits, -2, 2);
+        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, part_index, macro_zone < 0);
+        ApplySetting(SETTING_SEQUENCER_PLAY_MODE, part_index, abs(macro_zone));
         char label[2];
         if (macro_zone == 0) strcpy(label, "--"); else {
           label[0] = macro_zone < 0 ? 'S' : 'L';
           label[1] = abs(macro_zone) == 1 ? 'A' : 'S';
         }
-        ui.SplashPartString(label, i);
+        ui.SplashPartString(label, part_index);
         break;
       default:
-        thru = part_[i].ControlChange(channel, controller, value) && thru;
-        SetFromCC(i, controller, value);
+        thru = part_[part_index].ControlChange(channel, controller, value_7bits) && thru;
+        SetFromCC(part_index, controller, value_7bits);
         break;
       }
     }

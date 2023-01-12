@@ -269,7 +269,7 @@ class Multi {
     return thru;
   }
   
-  bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
+  bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bits);
   int16_t ScaleAbsoluteCC(uint8_t value_7bits, int16_t min, int16_t max) const;
   void SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value);
   uint8_t GetSetting(const Setting& setting, uint8_t part) const;
