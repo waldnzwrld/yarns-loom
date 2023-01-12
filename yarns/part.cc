@@ -304,7 +304,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       }
       break;
     
-    case 0x78:
+    case 0x78: // All Sound Off
       AllNotesOff();
       break;
       
@@ -312,7 +312,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       ResetAllControllers();
       break;
       
-    case 0x7b:
+    case 0x7b: // All Notes Off
       AllNotesOff();
       break;
   }
