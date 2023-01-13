@@ -482,12 +482,6 @@ void Ui::SplashOn(Splash s) {
       display_.Print(buffer_);
       break;
 
-    case SPLASH_DELETE_RECORDING:
-      strcpy(buffer_, "1D");
-      buffer_[0] += splash_part_;
-      display_.Print(buffer_);
-      break;
-
     case SPLASH_LOOPER_PHASE_OFFSET:
       Settings::PrintInteger(
         buffer_, recording_part().looper().pos_offset >> 9
@@ -765,7 +759,7 @@ void Ui::OnSwitchHeld(const Event& e) {
     case UI_SWITCH_REC:
       if (recording_any) {
         mutable_recording_part()->DeleteRecording();
-        SplashOn(SPLASH_DELETE_RECORDING, active_part_);
+        SplashPartString("RX", active_part_);
       } else {
         HeldKeys &keys = ActivePartHeldKeys();
         if (keys.universally_sustainable) {
@@ -917,7 +911,7 @@ void Ui::DoEvents() {
     OnClickLearning(Event());
   }
 
-  if (splash_) {
+  if (splash_) { // Check whether to end this splash (and maybe chain another)
     if (queue_.idle_time() < kRefreshPeriod || display_.scrolling()) {
       return; // Splash isn't over yet
     }

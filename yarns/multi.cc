@@ -869,12 +869,13 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
     for (uint8_t part_index = 0; part_index < num_active_parts_; ++part_index) {
       if (!part_accepts_channel(part_index, channel)) { continue; }
       int16_t macro_zone;
-      switch (controller) {
-      case kCCRecordOffOn:
-        // Intercept this CC so multi can update its own recording state
-        value_7bits >= 64 ? StartRecording(part_index) : StopRecording(part_index);
-        ui.SplashOn(SPLASH_ACTIVE_PART, part_index);
+      switch (controller) { // Intercept special CCs
+      case kCCRecordOffOn: {
+        bool start = value_7bits >= 64;
+        start ? StartRecording(part_index) : StopRecording(part_index);
+        ui.SplashPartString(start ? "R+" : "R-", part_index);
         break;
+      }
       case kCCDeleteRecording:
         part_[part_index].DeleteRecording();
         ui.SplashPartString("RX", part_index);
@@ -892,7 +893,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           ui.SplashPartString("RX", part_index);
         } else {
           part_[part_index].set_seq_overwrite(macro_zone == 2);
-          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "--"), part_index);
+          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "R-"), part_index);
         }
         macro_record_last_value_[part_index] = value_7bits;
         break;
