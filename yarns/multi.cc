@@ -43,6 +43,7 @@ namespace yarns {
 using namespace std;
 using namespace stmlib;
 
+const uint8_t kCCLooperPhaseOffset = 115;
 const uint8_t kCCMacroRecord = 116;
 const uint8_t kCCMacroPlayMode = 117;
 
@@ -908,6 +909,12 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           label[1] = abs(macro_zone) == 1 ? 'A' : 'S';
         }
         ui.SplashPartString(label, part_index);
+        break;
+      case kCCLooperPhaseOffset:
+        if (part_[part_index].looped()) {
+          part_->mutable_looper().pos_offset = value_7bits << 9;
+          ui.SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
+        }
         break;
       default:
         thru = part_[part_index].ControlChange(channel, controller, value_7bits) && thru;
