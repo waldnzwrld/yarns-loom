@@ -271,6 +271,9 @@ class Multi {
   
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bits);
   int16_t ScaleAbsoluteCC(uint8_t value_7bits, int16_t min, int16_t max) const;
+  inline int8_t IncrementFromRelativeCC(uint8_t value_7bits) const {
+    return value_7bits >= 64 ? (128 - value_7bits) : value_7bits;
+  }
   void SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value);
   uint8_t GetSetting(const Setting& setting, uint8_t part) const;
   void ApplySetting(SettingIndex setting, uint8_t part, int16_t raw_value) {

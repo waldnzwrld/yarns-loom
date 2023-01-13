@@ -631,6 +631,7 @@ class Part {
   }
   void InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato = false);
   void InternalNoteOff(uint8_t note);
+  // Absolute CCs only
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
   bool PitchBend(uint8_t channel, uint16_t pitch_bend);
   bool Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity);
