@@ -44,8 +44,23 @@ using namespace std;
 using namespace stmlib;
 
 const uint8_t kCCLooperPhaseOffset = 115;
-const uint8_t kCCMacroRecord = 116; // 0..3: record off, record on, overwrite, delete
-const uint8_t kCCMacroPlayMode = 117; // -2..2: step seq, step arp, manual, loop arp, loop seq
+
+const uint8_t kCCMacroRecord = 116;
+enum MacroRecord {
+  MACRO_RECORD_OFF,
+  MACRO_RECORD_ON,
+  MACRO_RECORD_OVERWRITE,
+  MACRO_RECORD_DELETE,
+};
+
+const uint8_t kCCMacroPlayMode = 117;
+enum MacroPlayMode {
+  MACRO_PLAY_MODE_STEP_SEQ = -2,
+  MACRO_PLAY_MODE_STEP_ARP,
+  MACRO_PLAY_MODE_MANUAL,
+  MACRO_PLAY_MODE_LOOP_ARP,
+  MACRO_PLAY_MODE_LOOP_SEQ
+};
 
 const uint8_t kMasterLFOPeriodTicksBits = 4;
 
@@ -879,26 +894,28 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
         ui.SplashPartString(start ? "R+" : "R-", part_index);
         break;
       }
+
       case kCCDeleteRecording:
         part_[part_index].DeleteRecording();
         ui.SplashPartString("RX", part_index);
         break;
+
       case kCCMacroRecord:
         if (RELATIVE) {
           if (recording_ && recording_part_ == part_index) {
-            macro_zone = part_[part_index].seq_overwrite() ? 2 : 1;
+            macro_zone = part_[part_index].seq_overwrite() ? MACRO_RECORD_OVERWRITE : MACRO_RECORD_ON;
           } else {
-            macro_zone = 0;
+            macro_zone = MACRO_RECORD_OFF;
           }
           macro_zone += IncrementFromRelativeCC(value_7bits);
-          CONSTRAIN(macro_zone, 0, 3);
+          CONSTRAIN(macro_zone, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
         } else {
-          macro_zone = ScaleAbsoluteCC(value_7bits, 0, 3);
+          macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
         }
 
-        macro_zone >= 1 ? StartRecording(part_index) : StopRecording(part_index);
+        macro_zone >= MACRO_RECORD_ON ? StartRecording(part_index) : StopRecording(part_index);
         if (
-          macro_zone == 3 &&
+          macro_zone == MACRO_RECORD_DELETE &&
           // Only on increasing value, so that leaving an absolute controller in
           // the delete zone doesn't doom any subsequent recordings
           (RELATIVE || value_7bits > macro_record_last_value_[part_index]))
@@ -906,11 +923,12 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           part_[part_index].DeleteRecording();
           ui.SplashPartString("RX", part_index);
         } else {
-          part_[part_index].set_seq_overwrite(macro_zone == 2);
-          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "R-"), part_index);
+          part_[part_index].set_seq_overwrite(macro_zone == MACRO_RECORD_OVERWRITE);
+          ui.SplashPartString(macro_zone == MACRO_RECORD_OVERWRITE ? "R*" : (macro_zone ? "R+" : "R-"), part_index);
         }
         macro_record_last_value_[part_index] = value_7bits;
         break;
+
       case kCCMacroPlayMode:
         if (RELATIVE) {
           macro_zone = part_[part_index].midi_settings().play_mode;
@@ -918,20 +936,21 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
             macro_zone = -macro_zone;
           }
           macro_zone += IncrementFromRelativeCC(value_7bits);
-          CONSTRAIN(macro_zone, -2, 2);
+          CONSTRAIN(macro_zone, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
         } else {
-          macro_zone = ScaleAbsoluteCC(value_7bits, -2, 2);
+          macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
         }
 
-        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, part_index, macro_zone < 0);
+        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, part_index, macro_zone < MACRO_PLAY_MODE_MANUAL);
         ApplySetting(SETTING_SEQUENCER_PLAY_MODE, part_index, abs(macro_zone));
         char label[2];
-        if (macro_zone == 0) strcpy(label, "--"); else {
-          label[0] = macro_zone < 0 ? 'S' : 'L';
+        if (macro_zone == MACRO_PLAY_MODE_MANUAL) strcpy(label, "--"); else {
+          label[0] = macro_zone < MACRO_PLAY_MODE_MANUAL ? 'S' : 'L';
           label[1] = abs(macro_zone) == 1 ? 'A' : 'S';
         }
         ui.SplashPartString(label, part_index);
         break;
+
       case kCCLooperPhaseOffset:
         if (part_[part_index].looped()) {
           if (RELATIVE) {
@@ -942,10 +961,12 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           ui.SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
         }
         break;
+
       default:
         thru = part_[part_index].ControlChange(channel, controller, value_7bits) && thru;
         SetFromCC(part_index, controller, value_7bits);
         break;
+
       }
     }
   }
