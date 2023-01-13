@@ -147,8 +147,8 @@ void Multi::Clock() {
 
     // Sync LFOs
     ++tick_counter_;
-    // The master LFO runs at a fraction of the clock frequency, to help it
-    // adapt smoothly to phase/frequency changes
+    // The master LFO runs at a fraction of the clock frequency, which makes for
+    // less jitter than 1-cycle-per-tick
     master_lfo_.Tap(tick_counter_, 1 << kMasterLFOPeriodTicksBits);
     for (uint8_t p = 0; p < num_active_parts_; ++p) {
       part_[p].mutable_looper().Clock();
