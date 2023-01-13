@@ -435,8 +435,8 @@ void Ui::PrintFactoryTesting() {
   }
 }
 
-void Ui::SplashOn(Splash s) {
-  splash_ = s;
+void Ui::SplashOn(Splash splash) {
+  splash_ = splash;
   queue_.Touch(); // Reset idle timer
   display_.set_brightness(UINT16_MAX);
   display_.set_fade(0);

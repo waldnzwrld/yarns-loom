@@ -121,7 +121,7 @@ class Ui {
   }
   void DoEvents();
   void FlushEvents();
-  void SplashOn(Splash s);
+  void SplashOn(Splash splash);
   void SplashPartString(const char* label, uint8_t part) {
     strcpy(buffer_, label);
     buffer_[2] = '\0';
