@@ -363,8 +363,7 @@ void Ui::PrintLooperRecordingStatus() {
   if (recording_mode_is_displaying_pitch_) {
     PrintNote(looper_tape.NotePitch(note_index));
   } else {
-    Settings::PrintInteger(buffer_, looper_tape.NoteAgeOrdinal(note_index) + 1);
-    display_.Print(buffer_);
+    PrintInteger(looper_tape.NoteAgeOrdinal(note_index) + 1);
   }
 }
 
@@ -384,8 +383,7 @@ void Ui::PrintRecordingStatus() {
     if (recording_mode_is_displaying_pitch_) {
       PrintRecordingStep();
     } else {
-      Settings::PrintInteger(buffer_, recording_part().recording_step() + 1);
-      display_.Print(buffer_);
+      PrintInteger(recording_part().recording_step() + 1);
     }
   }
 }
@@ -483,10 +481,7 @@ void Ui::SplashOn(Splash s) {
       break;
 
     case SPLASH_LOOPER_PHASE_OFFSET:
-      Settings::PrintInteger(
-        buffer_, recording_part().looper().pos_offset >> 9
-      );
-      display_.Print(buffer_);
+      PrintInteger(recording_part().looper().pos_offset >> 9);
       break;
 
     case SPLASH_PROGRAM_LOAD:

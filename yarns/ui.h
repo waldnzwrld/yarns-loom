@@ -143,6 +143,10 @@ class Ui {
   void Print(const char* text) {
     display_.Print(text, text);
   }
+  void PrintInteger(uint8_t number) {
+    Settings::PrintInteger(buffer_, number);
+    display_.Print(buffer_);
+  }
 
   void PrintDebugByte(uint8_t byte) {
     char buffer[3];
