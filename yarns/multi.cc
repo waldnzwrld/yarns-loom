@@ -44,8 +44,8 @@ using namespace std;
 using namespace stmlib;
 
 const uint8_t kCCLooperPhaseOffset = 115;
-const uint8_t kCCMacroRecord = 116;
-const uint8_t kCCMacroPlayMode = 117;
+const uint8_t kCCMacroRecord = 116; // 0..3: record off, record on, overwrite, delete
+const uint8_t kCCMacroPlayMode = 117; // -2..2: step seq, step arp, manual, loop arp, loop seq
 
 const uint8_t kMasterLFOPeriodTicksBits = 4;
 
@@ -882,7 +882,6 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
         ui.SplashPartString("RX", part_index);
         break;
       case kCCMacroRecord:
-        // 0..3: record off, record on, overwrite, delete
         macro_zone = ScaleAbsoluteCC(value_7bits, 0, 3);
         macro_zone >= 1 ? StartRecording(part_index) : StopRecording(part_index);
         if (
@@ -899,7 +898,6 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
         macro_record_last_value_[part_index] = value_7bits;
         break;
       case kCCMacroPlayMode:
-        // -2..2: step seq, step arp, manual, loop arp, loop seq
         macro_zone = ScaleAbsoluteCC(value_7bits, -2, 2);
         ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, part_index, macro_zone < 0);
         ApplySetting(SETTING_SEQUENCER_PLAY_MODE, part_index, abs(macro_zone));
