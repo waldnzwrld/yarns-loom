@@ -129,9 +129,16 @@ enum SustainMode {
 };
 
 enum LegatoMode {
+  // A trigger is sent at each new note, and portamento is applied to the note
+  // CV irrespectively of the playing style.
   LEGATO_MODE_OFF,
+  // Notes played legato are not retriggered, and portamento is applied only on
+  // notes played legato.
   LEGATO_MODE_AUTO_PORTAMENTO,
+  // Notes played legato are not retriggered, portamento is applied to the note
+  // CV irrespectively of the playing style.
   LEGATO_MODE_ON,
+
   LEGATO_MODE_LAST
 };
 struct PackedPart {
