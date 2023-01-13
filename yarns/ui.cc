@@ -619,14 +619,7 @@ void Ui::OnIncrementParameterSelect(const Event& e) {
 }
 
 void Ui::OnIncrementParameterEdit(const stmlib::Event& e) {
-  int16_t value = multi.GetSetting(setting(), active_part_);
-  if (
-    setting().unit == SETTING_UNIT_INT8 ||
-    setting().unit == SETTING_UNIT_LFO_SPREAD
-  ) {
-    value = static_cast<int8_t>(value);
-  }
-  value += e.data;
+  int16_t value = multi.IncrementSetting(setting(), active_part_, e.data);
   multi.ApplySetting(setting(), active_part_, value);
 }
 

@@ -991,7 +991,7 @@ void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bit
   uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
   int16_t raw_value;
   if (RELATIVE) {
-    raw_value = GetSetting(setting, part) + IncrementFromRelativeCC(value_7bits);
+    raw_value = IncrementSetting(setting, part, IncrementFromRelativeCC(value_7bits));
   } else {
     raw_value = ScaleAbsoluteCC(value_7bits, setting.min_value, setting.max_value);
   }
