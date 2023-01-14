@@ -129,9 +129,16 @@ enum SustainMode {
 };
 
 enum LegatoMode {
+  // A trigger is sent at each new note, and portamento is applied to the note
+  // CV irrespectively of the playing style.
   LEGATO_MODE_OFF,
+  // Notes played legato are not retriggered, and portamento is applied only on
+  // notes played legato.
   LEGATO_MODE_AUTO_PORTAMENTO,
+  // Notes played legato are not retriggered, portamento is applied to the note
+  // CV irrespectively of the playing style.
   LEGATO_MODE_ON,
+
   LEGATO_MODE_LAST
 };
 struct PackedPart {
@@ -139,8 +146,8 @@ struct PackedPart {
 
   struct PackedSequencerStep {
     unsigned int
-      pitch : 8,
-      velocity: 8;
+      pitch : 8, // values free: 126 (about 29 bits' worth across 30 steps)
+      velocity: 8; // values free: 0
   }__attribute__((packed));
   PackedSequencerStep sequencer_steps[kNumSteps];
 
@@ -154,10 +161,10 @@ struct PackedPart {
 
   signed int
     // MidiSettings
-    transpose_octaves : 3,
+    transpose_octaves : 3, // values free: 0
     // VoicingSettings
-    tuning_transpose : 7,
-    tuning_fine : 7,
+    tuning_transpose : 7, // values free: 55
+    tuning_fine : 7, // values free: 0
     lfo_spread_types : kTimbreBits,
     lfo_spread_voices : kTimbreBits,
     amplitude_mod_velocity : kTimbreBits,
@@ -170,36 +177,36 @@ struct PackedPart {
 
   // MidiSettings
   unsigned int
-    channel : 5,
+    channel : 5, // values free: 15
     min_note : 7,
     max_note : 7,
     min_velocity : 7,
     max_velocity : 7,
-    out_mode : 2, // 1 value unused
-    sustain_mode : 3,
-    play_mode : 2, // 1 value unused
-    input_response : 2,
+    out_mode : 2, // values free: 1
+    sustain_mode : 3, // values free: 1
+    play_mode : 2, // values free: 1
+    input_response : 2, // values free: 0
     sustain_polarity : 1;
 
   // VoicingSettings
   unsigned int
-    allocation_mode : 4,
-    allocation_priority : 2,
+    allocation_mode : 4, // values free: 6
+    allocation_priority : 2, // values free: 0
     portamento : 7,
-    legato_mode : 2, // 1 value unused
-    pitch_bend_range : 5,
-    vibrato_range : 4,
+    legato_mode : 2, // values free: 1
+    pitch_bend_range : 5, // values free: 8
+    vibrato_range : 4, // values free: 3
     vibrato_mod : 7,
-    lfo_rate : 7,
-    tuning_root : 4,
-    tuning_system : 6,
+    lfo_rate : 7, // values free: 32
+    tuning_root : 4, // values free: 4
+    tuning_system : 6, // values free: 30
     trigger_duration : 7, // Breaking: probably excessive
     trigger_scale : 1,
-    trigger_shape : 3,
-    aux_cv : 4,
-    aux_cv_2 : 4,
-    tuning_factor : 4,
-    oscillator_mode : 2, // 1 value unused
+    trigger_shape : 3, // values free: 2
+    aux_cv : 4, // values free: 0
+    aux_cv_2 : 4, // values free: 0
+    tuning_factor : 4, // values free: 2
+    oscillator_mode : 2, // values free: 1
     oscillator_shape : 7, // Breaking: 1 bit unused
     tremolo_mod : kTimbreBits,
     vibrato_shape : kLFOShapeBits,
@@ -214,17 +221,17 @@ struct PackedPart {
 
   // SequencerSettings
   unsigned int
-    clock_division : 5,
-    gate_length : 6,
-    arp_range : 2,
-    arp_direction : 3,
-    arp_pattern : 5,
-    euclidean_length : 5,
-    euclidean_fill : 5,
-    euclidean_rotate : 5,
-    num_steps : 5,
+    clock_division : 5, // values free: 0
+    gate_length : 6, // values free: 0
+    arp_range : 2, // values free: 0
+    arp_direction : 3, // values free: 3
+    arp_pattern : 5, // values free: 8
+    euclidean_length : 5, // values free: 0
+    euclidean_fill : 5, // values free: 0
+    euclidean_rotate : 5, // values free: 0
+    num_steps : 5, // values free: 1
     clock_quantization : 1,
-    loop_length : 3;
+    loop_length : 3; // values free: 0
 
 }__attribute__((packed));
 

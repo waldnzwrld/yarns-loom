@@ -56,14 +56,14 @@ struct PackedMulti {
   int8_t custom_pitch_table[12];
 
   unsigned int
-    layout : 4,
-    clock_tempo : 8,
-    clock_swing : 7,
+    layout : 4, // values free: 1
+    clock_tempo : 8, // values free: 54
+    clock_swing : 7, // values free: 28
     clock_input_division : 3, // Breaking: can 0-index for 1 fewer bit
-    clock_output_division : 5,
-    clock_bar_duration : 6, // barely
+    clock_output_division : 5, // values free: 0
+    clock_bar_duration : 6, // values free: 30
     clock_override : 1,
-    remote_control_channel : 5, // barely
+    remote_control_channel : 5, // values free: 15
     nudge_first_tick : 1,
     clock_manual_start : 1;
 
@@ -79,7 +79,7 @@ struct MultiSettings {
   uint8_t clock_bar_duration;
   uint8_t clock_override;
   int8_t custom_pitch_table[12];
-  uint8_t remote_control_channel;
+  uint8_t remote_control_channel; // first value = off
   uint8_t nudge_first_tick;
   uint8_t clock_manual_start;
   uint8_t padding[10];
