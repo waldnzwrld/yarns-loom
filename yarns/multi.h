@@ -55,7 +55,7 @@ struct PackedMulti {
 
   int8_t custom_pitch_table[12];
 
-  unsigned int
+  unsigned int // 7 bits to spare (plus 16 in flash_padding)
     layout : 4, // values free: 1
     clock_tempo : 8, // values free: 54
     clock_swing : 7, // values free: 28
