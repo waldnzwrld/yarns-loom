@@ -907,7 +907,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           } else {
             macro_zone = MACRO_RECORD_OFF;
           }
-          macro_zone += IncrementFromRelativeCC(value_7bits);
+          macro_zone += IncrementFromTwosComplementRelativeCC(value_7bits);
           CONSTRAIN(macro_zone, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
         } else {
           macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
@@ -935,7 +935,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           if (part_[part_index].sequencer_settings().clock_quantization) {
             macro_zone = -macro_zone;
           }
-          macro_zone += IncrementFromRelativeCC(value_7bits);
+          macro_zone += IncrementFromTwosComplementRelativeCC(value_7bits);
           CONSTRAIN(macro_zone, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
         } else {
           macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
@@ -954,7 +954,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
       case kCCLooperPhaseOffset:
         if (part_[part_index].looped()) {
           if (RELATIVE) {
-            part_->mutable_looper().pos_offset += (IncrementFromRelativeCC(value_7bits) << 9); // Wraps
+            part_->mutable_looper().pos_offset += (IncrementFromTwosComplementRelativeCC(value_7bits) << 9); // Wraps
           } else {
             part_->mutable_looper().pos_offset = value_7bits << 9;
           }
@@ -991,7 +991,7 @@ void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bit
   uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
   int16_t raw_value;
   if (RELATIVE) {
-    raw_value = IncrementSetting(setting, part, IncrementFromRelativeCC(value_7bits));
+    raw_value = IncrementSetting(setting, part, IncrementFromTwosComplementRelativeCC(value_7bits));
   } else {
     raw_value = ScaleAbsoluteCC(value_7bits, setting.min_value, setting.max_value);
   }

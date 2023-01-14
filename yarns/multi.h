@@ -271,9 +271,8 @@ class Multi {
   
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bits);
   int16_t ScaleAbsoluteCC(uint8_t value_7bits, int16_t min, int16_t max) const;
-  // Two's complement convention for relative CCs
-  inline int8_t IncrementFromRelativeCC(uint8_t value_7bits) const {
-    return value_7bits >= 64 ? -(128 - value_7bits) : value_7bits;
+  inline int8_t IncrementFromTwosComplementRelativeCC(uint8_t value_7bits) const {
+    return static_cast<int8_t>(value_7bits << 1) >> 1;
   }
   inline int16_t IncrementSetting(const Setting& setting, uint8_t part, int16_t increment) const {
     int16_t value = GetSetting(setting, part);
