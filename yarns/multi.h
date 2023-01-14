@@ -79,7 +79,7 @@ struct MultiSettings {
   uint8_t clock_bar_duration;
   uint8_t clock_override;
   int8_t custom_pitch_table[12];
-  uint8_t remote_control_channel;
+  uint8_t remote_control_channel; // first value = off
   uint8_t nudge_first_tick;
   uint8_t clock_manual_start;
   uint8_t padding[10];
