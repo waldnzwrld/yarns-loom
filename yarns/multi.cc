@@ -885,8 +885,11 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
     SetFromCC(0xff, controller, value_7bits);
   } else {
     for (uint8_t part_index = 0; part_index < num_active_parts_; ++part_index) {
-      if (!part_accepts_channel(part_index, channel)) { continue; }
+      if (!part_accepts_channel(part_index, channel)) continue;
+
       int16_t macro_zone;
+      int8_t relative_increment = IncrementFromTwosComplementRelativeCC(value_7bits);
+
       switch (controller) { // Intercept special CCs
       case kCCRecordOffOn: {
         bool start = value_7bits >= 64;
@@ -907,7 +910,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           } else {
             macro_zone = MACRO_RECORD_OFF;
           }
-          macro_zone += IncrementFromTwosComplementRelativeCC(value_7bits);
+          macro_zone += relative_increment;
           CONSTRAIN(macro_zone, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
         } else {
           macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
@@ -935,7 +938,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
           if (part_[part_index].sequencer_settings().clock_quantization) {
             macro_zone = -macro_zone;
           }
-          macro_zone += IncrementFromTwosComplementRelativeCC(value_7bits);
+          macro_zone += relative_increment;
           CONSTRAIN(macro_zone, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
         } else {
           macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
@@ -954,7 +957,7 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
       case kCCLooperPhaseOffset:
         if (part_[part_index].looped()) {
           if (RELATIVE) {
-            part_->mutable_looper().pos_offset += (IncrementFromTwosComplementRelativeCC(value_7bits) << 9); // Wraps
+            part_->mutable_looper().pos_offset += (relative_increment << 9); // Wraps
           } else {
             part_->mutable_looper().pos_offset = value_7bits << 9;
           }
