@@ -361,7 +361,7 @@ void Part::Clock() { // From Multi::ClockFast
 
   if (multi.tick_counter() % PPQN() == 0) { // New step
     step_counter_ = multi.tick_counter() / PPQN();
-    SeqArpStepResult result = BuildStepState(step_counter_);
+    SeqArpStepResult result = BuildNextStepState(step_counter_);
     arp_ = result.arp;
     if (!result.step.has_note()) return;
 
@@ -386,7 +386,7 @@ bool Part::step_has_euclidean_beat(uint32_t step_counter) const {
   return pattern_mask & pattern;
 }
 
-SeqArpStepResult Part::BuildStepState(uint32_t step_counter) const {
+SeqArpStepResult Part::BuildNextStepState(uint32_t step_counter) const {
   SeqArpStepResult result = SeqArpStepResult();
   result.step.data[0] = SEQUENCER_STEP_REST;
 
@@ -400,7 +400,7 @@ SeqArpStepResult Part::BuildStepState(uint32_t step_counter) const {
     step_ptr = &result.step;
   }
   if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-    result = BuildArpState(step_counter, step_ptr);
+    result = BuildNextArpState(step_counter, step_ptr);
   }
   return result;
 }
@@ -413,7 +413,7 @@ void Part::ClockStepGateEndings() {
     }
     // Peek at next step to see if it's a continuation
     // If more than one voice has a step ending, the peek is redundant
-    SequencerStep next_step = BuildStepState(step_counter_ + 1).step;
+    SequencerStep next_step = BuildNextStepState(step_counter_ + 1).step;
     if (next_step.is_continuation()) {
       // The next step contains a "sustain" message; or a slid note. Extends
       // the duration of the current note.

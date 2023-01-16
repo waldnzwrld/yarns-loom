@@ -658,7 +658,7 @@ class Part {
   void Clock();
   bool step_has_euclidean_beat(uint32_t step_counter) const;
   // Advance step sequencer and/or arpeggiator
-  SeqArpStepResult BuildStepState(uint32_t step_counter) const;
+  SeqArpStepResult BuildNextStepState(uint32_t step_counter) const;
   void ClockStepGateEndings();
   void Start();
   void Stop();
@@ -747,7 +747,7 @@ class Part {
       // Advance arp
       SequencerStep step = SequencerStep(pitch, velocity);
       step_counter_++;
-      SeqArpStepResult result = BuildArpState(step_counter_, &step);
+      SeqArpStepResult result = BuildNextArpState(step_counter_, &step);
       arp_ = result.arp;
       pitch = result.step.note();
       if (result.step.has_note()) {
@@ -775,7 +775,7 @@ class Part {
       uint8_t next_on_index = looper_.PeekNextOn();
       const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
-      next_step = BuildArpState(step_counter_ + 1, &next_step).step;
+      next_step = BuildNextArpState(step_counter_ + 1, &next_step).step;
       if (next_step.is_continuation()) {
         // Leave this pitch in the care of the next looper note
         output_pitch_for_looper_note_[next_on_index] = pitch;
@@ -986,7 +986,7 @@ class Part {
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = kC4) const;
   const SequencerStep BuildSeqStep(uint8_t step_index) const;
-  const SeqArpStepResult BuildArpState(uint32_t step_counter, const SequencerStep* seq_step_ptr) const {
+  const SeqArpStepResult BuildNextArpState(uint32_t step_counter, const SequencerStep* seq_step_ptr) const {
     return arp_.BuildNextState(*this, arp_keys_, step_counter, seq_step_ptr);
   }
 
