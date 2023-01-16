@@ -53,7 +53,7 @@ const SeqArpStepResult Arpeggiator::BuildNextState(
   const SequencerStep* seq_step_ptr
 ) const {
   SequencerStep seq_step;
-  SeqArpStepResult result = SeqArpStepResult();
+  SeqArpStepResult result = { *this, SequencerStep() };
   Arpeggiator& next = result.arp;
   // In case the pattern doesn't hit a note, the default output step is a REST
   result.step.data[0] = SEQUENCER_STEP_REST;
