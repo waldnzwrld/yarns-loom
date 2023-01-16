@@ -360,43 +360,49 @@ void Part::Clock() { // From Multi::ClockFast
   if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
 
   if (multi.tick_counter() % PPQN() == 0) { // New step
-    uint32_t step_counter = multi.tick_counter() / PPQN();
-    StepSequencerArpeggiator(step_counter);
+    step_counter_ = multi.tick_counter() / PPQN();
+    SeqArpStepResult result = BuildStepState(step_counter_);
+    arp_ = result.arp;
+    if (!result.step.has_note()) return;
+
+    uint8_t pitch = result.step.note();
+    uint8_t velocity = result.step.velocity();
+    GeneratedNoteOff(pitch); // Simulate a human retriggering a key
+    if (GeneratedNoteOn(pitch, velocity) && !manual_keys_.stack.Find(pitch)) {
+      InternalNoteOn(pitch, velocity, result.step.is_slid());
+    }
   }
   ClockStepGateEndings();
 }
 
-void Part::StepSequencerArpeggiator(uint32_t step_counter) {
-  if (seq_.euclidean_length != 0) {
-    // If euclidean rhythm is enabled, advance euclidean state
-    euclidean_step_index_ = (euclidean_step_index_ + 1) % seq_.euclidean_length;
-    uint32_t pattern_mask = 1 << ((euclidean_step_index_ + seq_.euclidean_rotate) % seq_.euclidean_length);
-    // Read euclidean pattern from ROM.
-    uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) << 5;
-    uint32_t pattern = lut_euclidean[offset + seq_.euclidean_fill];
-    // If skipping this beat, don't advance other state
-    if (!(pattern_mask & pattern)) return;
-  }
+bool Part::step_has_euclidean_beat(uint32_t step_counter) const {
+  if (seq_.euclidean_length == 0) return true;
 
+  uint8_t euclidean_step_index = step_counter % seq_.euclidean_length;
+  uint32_t pattern_mask = 1 << ((euclidean_step_index + seq_.euclidean_rotate) % seq_.euclidean_length);
+  // Read euclidean pattern from ROM.
+  uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) << 5;
+  uint32_t pattern = lut_euclidean[offset + seq_.euclidean_fill];
+  return pattern_mask & pattern;
+}
+
+SeqArpStepResult Part::BuildStepState(uint32_t step_counter) const {
+  SeqArpStepResult result = SeqArpStepResult();
+  result.step.data[0] = SEQUENCER_STEP_REST;
+
+  // If skipping this beat, don't advance any state
+  if (!step_has_euclidean_beat(step_counter)) return result;
+
+  // Advance sequencer and arpeggiator state
   SequencerStep* step_ptr = NULL;
-  SequencerStep step;
   if (seq_.num_steps) {
-    seq_step_ = step_counter % seq_.num_steps;
-    step = BuildSeqStep(seq_step_);
-    step_ptr = &step;
+    result.step = BuildSeqStep(step_counter % seq_.num_steps);
+    step_ptr = &result.step;
   }
   if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-    arp_ = BuildArpState(step_ptr);
-    step_ptr = &arp_.step;
+    result = BuildArpState(step_counter, step_ptr);
   }
-  if (step_ptr && step_ptr->has_note()) {
-    uint8_t pitch = step_ptr->note();
-    uint8_t velocity = step_ptr->velocity();
-    GeneratedNoteOff(pitch); // Simulate a human retriggering a key
-    if (GeneratedNoteOn(pitch, velocity) && !manual_keys_.stack.Find(pitch)) {
-      InternalNoteOn(pitch, velocity, step_ptr->is_slid());
-    }
-  }
+  return result;
 }
 
 void Part::ClockStepGateEndings() {
@@ -407,17 +413,8 @@ void Part::ClockStepGateEndings() {
     }
     // Peek at next step to see if it's a continuation
     // If more than one voice has a step ending, the peek is redundant
-    SequencerStep* next_step_ptr = NULL;
-    SequencerStep next_step;
-    if (seq_.num_steps) {
-      next_step = BuildSeqStep((seq_step_ + 1) % seq_.num_steps);
-      next_step_ptr = &next_step;
-    }
-    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-      next_step = BuildArpState(next_step_ptr).step;
-      next_step_ptr = &next_step;
-    }
-    if (next_step_ptr && next_step_ptr->is_continuation()) {
+    SequencerStep next_step = BuildStepState(step_counter_ + 1).step;
+    if (next_step.is_continuation()) {
       // The next step contains a "sustain" message; or a slid note. Extends
       // the duration of the current note.
       gate_length_counter_[v] += PPQN();
@@ -429,7 +426,6 @@ void Part::ClockStepGateEndings() {
 
 void Part::Start() {
   arp_.ResetKey();
-  arp_.step_index = euclidean_step_index_ = -1;
   
   looper_.Rewind();
   std::fill(

@@ -141,6 +141,12 @@ enum LegatoMode {
 
   LEGATO_MODE_LAST
 };
+
+struct SeqArpStepResult {
+  Arpeggiator arp;
+  SequencerStep step;
+};
+
 struct PackedPart {
   // Currently has 7 bits to spare
 
@@ -650,7 +656,9 @@ class Part {
   // Pulses Per Quarter Note
   uint16_t PPQN() const { return lut_clock_ratio_ticks[seq_.clock_division]; }
   void Clock();
-  void StepSequencerArpeggiator(uint32_t step_counter);
+  bool step_has_euclidean_beat(uint32_t step_counter) const;
+  // Advance step sequencer and/or arpeggiator
+  SeqArpStepResult BuildStepState(uint32_t step_counter) const;
   void ClockStepGateEndings();
   void Start();
   void Stop();
@@ -738,11 +746,13 @@ class Part {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Advance arp
       SequencerStep step = SequencerStep(pitch, velocity);
-      arp_ = BuildArpState(&step);
-      pitch = arp_.step.note();
-      if (arp_.step.has_note()) {
-        bool slide = arp_.step.is_slid();
-        InternalNoteOn(pitch, arp_.step.velocity(), slide);
+      step_counter_++;
+      SeqArpStepResult result = BuildArpState(step_counter_, &step);
+      arp_ = result.arp;
+      pitch = result.step.note();
+      if (result.step.has_note()) {
+        bool slide = result.step.is_slid();
+        InternalNoteOn(pitch, result.step.velocity(), slide);
         if (slide) {
           InternalNoteOff(output_pitch_for_looper_note_[looper_note_index]);
         }
@@ -765,7 +775,7 @@ class Part {
       uint8_t next_on_index = looper_.PeekNextOn();
       const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
-      next_step = BuildArpState(&next_step).step;
+      next_step = BuildArpState(step_counter_ + 1, &next_step).step;
       if (next_step.is_continuation()) {
         // Leave this pitch in the care of the next looper note
         output_pitch_for_looper_note_[next_on_index] = pitch;
@@ -919,10 +929,7 @@ class Part {
   inline bool recording() const { return seq_recording_; }
   inline bool overdubbing() const { return seq_overdubbing_; }
   inline uint8_t recording_step() const { return seq_rec_step_; }
-  inline uint8_t playing_step() const {
-    // correct for preemptive increment
-    return stmlib::modulo(seq_step_ - 1, seq_.num_steps);
-  }
+  inline uint8_t playing_step() const { return step_counter_ % seq_.num_steps; }
   inline uint8_t num_steps() const { return seq_.num_steps; }
   inline void increment_recording_step_index(uint8_t n) {
     seq_rec_step_ += n;
@@ -979,8 +986,8 @@ class Part {
 
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = kC4) const;
   const SequencerStep BuildSeqStep(uint8_t step_index) const;
-  const Arpeggiator BuildArpState(const SequencerStep* seq_step_ptr) const {
-    return arp_.BuildNextState(*this, arp_keys_, seq_step_ptr);
+  const SeqArpStepResult BuildArpState(uint32_t step_counter, const SequencerStep* seq_step_ptr) const {
+    return arp_.BuildNextState(*this, arp_keys_, step_counter, seq_step_ptr);
   }
 
   MidiSettings midi_;
@@ -1003,11 +1010,10 @@ class Part {
   uint8_t cyclic_allocation_note_counter_;
   
   Arpeggiator arp_;
-  uint8_t euclidean_step_index_;
   
   bool seq_recording_;
   bool seq_overdubbing_;
-  uint8_t seq_step_;
+  uint32_t step_counter_;
   uint8_t seq_rec_step_;
   bool seq_overwrite_;
   
