@@ -46,17 +46,17 @@ void Arpeggiator::ResetKey() {
   key_increment = 1;
 }
 
-const SeqArpStepResult Arpeggiator::BuildNextState(
+const SequencerArpeggiatorResult Arpeggiator::BuildNextResult(
   const Part& part,
   const HeldKeys& arp_keys,
   uint32_t step_counter,
   const SequencerStep* seq_step_ptr
 ) const {
   SequencerStep seq_step;
-  SeqArpStepResult result = { *this, SequencerStep() };
-  Arpeggiator& next = result.arp;
+  SequencerArpeggiatorResult result = { *this, SequencerStep() };
+  Arpeggiator& next = result.arpeggiator;
   // In case the pattern doesn't hit a note, the default output step is a REST
-  result.step.data[0] = SEQUENCER_STEP_REST;
+  result.note.data[0] = SEQUENCER_STEP_REST;
 
   // If sequencer/pattern doesn't hit a note, return a REST/TIE output step, and
   // don't advance the arp key
@@ -65,7 +65,7 @@ const SeqArpStepResult Arpeggiator::BuildNextState(
     if (!seq_step_ptr) return result;
     seq_step = *seq_step_ptr;
     if (!seq_step.has_note()) { // Here, the output step can also be a TIE
-      result.step.data[0] = seq_step.data[0];
+      result.note.data[0] = seq_step.data[0];
       return result;
     }
   } else { // Use an arp pattern
@@ -191,8 +191,8 @@ const SeqArpStepResult Arpeggiator::BuildNextState(
   while (note > 127) {
     note -= 12;
   }
-  result.step.data[0] = note;
-  result.step.data[1] = velocity;
+  result.note.data[0] = note;
+  result.note.data[1] = velocity;
 
   return result;
 }

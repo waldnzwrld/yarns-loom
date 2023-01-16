@@ -41,7 +41,7 @@ using namespace stmlib;
 
 class Part;
 class HeldKeys;
-class SeqArpStepResult;
+class SequencerArpeggiatorResult;
 
 struct Arpeggiator {
   int8_t key_index;
@@ -50,7 +50,7 @@ struct Arpeggiator {
 
   void ResetKey();
 
-  const SeqArpStepResult BuildNextState(
+  const SequencerArpeggiatorResult BuildNextResult(
     const Part& part,
     const HeldKeys& arp_keys,
     uint32_t step_counter,
