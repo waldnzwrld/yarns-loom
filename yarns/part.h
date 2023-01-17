@@ -747,7 +747,7 @@ class Part {
       // Advance arp
       SequencerStep step = SequencerStep(pitch, velocity);
       step_counter_++;
-      SequencerArpeggiatorResult result = BuildNextArpeggiatorResult(step_counter_, &step);
+      SequencerArpeggiatorResult result = BuildNextArpeggiatorResult(step_counter_, step);
       arpeggiator_ = result.arpeggiator;
       pitch = result.note.note();
       if (result.note.has_note()) {
@@ -775,7 +775,7 @@ class Part {
       uint8_t next_on_index = looper_.PeekNextOn();
       const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
-      next_step = BuildNextArpeggiatorResult(step_counter_ + 1, &next_step).note;
+      next_step = BuildNextArpeggiatorResult(step_counter_ + 1, next_step).note;
       if (next_step.is_continuation()) {
         // Leave this pitch in the care of the next looper note
         output_pitch_for_looper_note_[next_on_index] = pitch;
@@ -987,9 +987,9 @@ class Part {
   uint8_t ApplySequencerInputResponse(int16_t pitch, int8_t root_pitch = kC4) const;
   const SequencerStep BuildSeqStep(uint8_t step_index) const;
   const SequencerArpeggiatorResult BuildNextArpeggiatorResult(
-    uint32_t step_counter, const SequencerStep* seq_step_ptr) const {
+    uint32_t step_counter, const SequencerStep& seq_step) const {
     return arpeggiator_.BuildNextResult(
-      *this, arp_keys_, step_counter, seq_step_ptr);
+      *this, arp_keys_, step_counter, seq_step);
   }
 
   MidiSettings midi_;

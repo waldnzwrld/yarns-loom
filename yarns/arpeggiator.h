@@ -54,7 +54,7 @@ struct Arpeggiator {
     const Part& part,
     const HeldKeys& arp_keys,
     uint32_t step_counter,
-    const SequencerStep* seq_step_ptr
+    const SequencerStep seq_step
   ) const;
 
 };

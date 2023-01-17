@@ -387,10 +387,12 @@ bool Part::step_has_euclidean_beat(uint32_t step_counter) const {
 }
 
 SequencerArpeggiatorResult Part::BuildNextStepResult(uint32_t step_counter) const {
-  SequencerArpeggiatorResult result = {};
-  result.note.data[0] = SEQUENCER_STEP_REST;
+  // In case of early return, the arp does not advance, and the note is a REST
+  SequencerArpeggiatorResult result = {
+    arpeggiator_, SequencerStep(SEQUENCER_STEP_REST, 0),
+  };
 
-  // If skipping this beat, don't advance any state
+  // If skipping this beat, early return
   if (!step_has_euclidean_beat(step_counter)) return result;
 
   // Advance sequencer and arpeggiator state
@@ -400,7 +402,9 @@ SequencerArpeggiatorResult Part::BuildNextStepResult(uint32_t step_counter) cons
     step_ptr = &result.note;
   }
   if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-    result = BuildNextArpeggiatorResult(step_counter, step_ptr);
+    // If seq-driven and there are no steps, early return
+    if (seq_driven_arp() && !step_ptr) return result;
+    result = BuildNextArpeggiatorResult(step_counter, *step_ptr);
   }
   return result;
 }

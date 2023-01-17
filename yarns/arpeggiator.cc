@@ -49,21 +49,17 @@ void Arpeggiator::ResetKey() {
 const SequencerArpeggiatorResult Arpeggiator::BuildNextResult(
   const Part& part,
   const HeldKeys& arp_keys,
-  uint32_t step_counter,
-  const SequencerStep* seq_step_ptr
+  uint32_t step_counter, // May differ from part's current step (for peeking)
+  SequencerStep seq_step
 ) const {
-  SequencerStep seq_step;
-  SequencerArpeggiatorResult result = { *this, SequencerStep() };
+  // In case of early return, the arp does not advance, and the note is a REST
+  SequencerArpeggiatorResult result = {
+    *this, SequencerStep(SEQUENCER_STEP_REST, 0)
+  };
   Arpeggiator& next = result.arpeggiator;
-  // In case the pattern doesn't hit a note, the default output step is a REST
-  result.note.data[0] = SEQUENCER_STEP_REST;
 
-  // If sequencer/pattern doesn't hit a note, return a REST/TIE output step, and
-  // don't advance the arp key
   uint32_t pattern_mask, pattern;
   if (part.seq_driven_arp()) {
-    if (!seq_step_ptr) return result;
-    seq_step = *seq_step_ptr;
     if (!seq_step.has_note()) { // Here, the output step can also be a TIE
       result.note.data[0] = seq_step.data[0];
       return result;
