@@ -48,7 +48,7 @@ struct Arpeggiator {
   int8_t octave;
   int8_t key_increment;
 
-  void ResetKey();
+  void Reset();
 
   const SequencerArpeggiatorResult BuildNextResult(
     const Part& part,

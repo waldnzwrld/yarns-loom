@@ -429,7 +429,7 @@ void Part::ClockStepGateEndings() {
 }
 
 void Part::Start() {
-  arpeggiator_.ResetKey();
+  arpeggiator_.Reset();
   
   looper_.Rewind();
   std::fill(

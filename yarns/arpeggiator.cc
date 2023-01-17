@@ -40,7 +40,7 @@ namespace yarns {
     
 using namespace stmlib;
 
-void Arpeggiator::ResetKey() {
+void Arpeggiator::Reset() {
   key_index = 0;
   octave = 0;
   key_increment = 1;
@@ -76,7 +76,7 @@ const SequencerArpeggiatorResult Arpeggiator::BuildNextResult(
 
   uint8_t num_keys = arp_keys.stack.size();
   if (!num_keys) {
-    next.ResetKey();
+    next.Reset();
     return result;
   }
 
