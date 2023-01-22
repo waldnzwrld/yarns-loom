@@ -58,7 +58,6 @@ const SequencerArpeggiatorResult Arpeggiator::BuildNextResult(
   };
   Arpeggiator& next = result.arpeggiator;
 
-  uint32_t pattern_mask, pattern;
   if (part.seq_driven_arp()) {
     if (!seq_step.has_note()) { // Here, the output step can also be a TIE
       result.note.data[0] = seq_step.data[0];
@@ -69,8 +68,8 @@ const SequencerArpeggiatorResult Arpeggiator::BuildNextResult(
     // Build a dummy input step for JUMP/GRID
     seq_step.data[0] = kC4 + 1 + pattern_step_index;
     seq_step.data[1] = 0x7f; // Full velocity
-    pattern_mask = 1 << pattern_step_index;
-    pattern = lut_arpeggiator_patterns[LUT_ARPEGGIATOR_PATTERNS_SIZE - part.sequencer_settings().arp_pattern - 1];
+    uint16_t pattern_mask = 1 << pattern_step_index;
+    uint16_t pattern = lut_arpeggiator_patterns[LUT_ARPEGGIATOR_PATTERNS_SIZE - part.sequencer_settings().arp_pattern - 1];
     if (!(pattern_mask & pattern)) return result;
   }
 
