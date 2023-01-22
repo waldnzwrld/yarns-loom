@@ -644,6 +644,7 @@ class Part {
   }
   void InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato = false);
   void InternalNoteOff(uint8_t note);
+  // Absolute CCs only
   bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
   bool PitchBend(uint8_t channel, uint16_t pitch_bend);
   bool Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity);
@@ -1034,7 +1035,10 @@ class Part {
   
   looper::Deck looper_;
 
-  // Tracks which looper notes are currently being recorded
+  // Tracks which looper note (if any) is currently being recorded by a given
+  // held key. Used to a) find and conclude that looper note again when a
+  // NoteOff arrives, and b) allow ApplySequencerInputResponse to distinguish
+  // keys held for true manual control vs recording (ignored)
   uint8_t looper_note_recording_pressed_key_[kNoteStackMapping];
 
   // Tracks which looper notes are currently playing, so they can be turned off later
