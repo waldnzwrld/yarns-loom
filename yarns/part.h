@@ -662,7 +662,6 @@ class Part {
   SequencerArpeggiatorResult BuildNextStepResult(uint32_t step_counter) const;
   void ClockStepGateEndings();
   void Start();
-  void Stop();
   void StopRecording();
   void StartRecording();
   void DeleteSequence();

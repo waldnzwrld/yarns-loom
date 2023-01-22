@@ -261,7 +261,7 @@ void Multi::Stop() {
     return;
   }
   for (uint8_t i = 0; i < num_active_parts_; ++i) {
-    part_[i].Stop();
+    part_[i].StopSequencerArpeggiatorNotes();
   }
   midi_handler.OnStop();
   clock_pulse_counter_ = 0;

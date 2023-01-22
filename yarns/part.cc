@@ -349,11 +349,8 @@ bool Part::Aftertouch(uint8_t channel, uint8_t velocity) {
 }
 
 void Part::Reset() {
-  Stop();
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    VoiceNoteOff(i);
-    voice_[i]->ResetAllControllers();
-  }
+  AllNotesOff();
+  ResetAllControllers();
 }
 
 void Part::Clock() { // From Multi::ClockFast
@@ -456,11 +453,6 @@ void Part::Start() {
   );
 
   generated_notes_.Clear();
-}
-
-void Part::Stop() {
-  StopSequencerArpeggiatorNotes();
-  AllNotesOff();
 }
 
 void Part::StopRecording() {
