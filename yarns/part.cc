@@ -404,15 +404,13 @@ SequencerArpeggiatorResult Part::BuildNextStepResult(uint32_t step_counter) cons
   }
 
   // Advance sequencer and arpeggiator state
-  SequencerStep* step_ptr = NULL;
   if (seq_.num_steps) {
     result.note = BuildSeqStep(step_counter % seq_.num_steps);
-    step_ptr = &result.note;
   }
   if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
     // If seq-driven and there are no steps, early return
-    if (seq_driven_arp() && !step_ptr) return result;
-    result = BuildNextArpeggiatorResult(step_counter, *step_ptr);
+    if (seq_driven_arp() && !seq_.num_steps) return result;
+    result = BuildNextArpeggiatorResult(step_counter, result.note);
   }
   return result;
 }
