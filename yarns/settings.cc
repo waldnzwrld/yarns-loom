@@ -790,10 +790,15 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       break;
 
     case SETTING_UNIT_ARP_PATTERN:
-      if (value == 0) {
-        strcpy(buffer, "SEQUENCER");
-      } else {
-        PrintInteger(buffer, value);
+      {
+        int8_t pattern = LUT_ARPEGGIATOR_PATTERNS_SIZE - value;
+        if (pattern > 0) { // Pattern-driven, left side
+          PrintInteger(buffer, pattern);
+          if (buffer[0] == ' ') buffer[0] = 'P';
+        } else { // Sequencer-driven, right side
+          PrintInteger(buffer, abs(pattern));
+          if (buffer[0] == ' ') buffer[0] = 'S';
+        }
       }
       break;
 

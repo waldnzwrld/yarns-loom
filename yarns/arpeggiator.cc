@@ -70,7 +70,7 @@ const SequencerArpeggiatorResult Arpeggiator::BuildNextResult(
     seq_step.data[0] = kC4 + 1 + pattern_step_index;
     seq_step.data[1] = 0x7f; // Full velocity
     pattern_mask = 1 << pattern_step_index;
-    pattern = lut_arpeggiator_patterns[part.sequencer_settings().arp_pattern - 1];
+    pattern = lut_arpeggiator_patterns[LUT_ARPEGGIATOR_PATTERNS_SIZE - part.sequencer_settings().arp_pattern - 1];
     if (!(pattern_mask & pattern)) return result;
   }
 

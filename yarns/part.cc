@@ -113,7 +113,7 @@ void Part::Init() {
   seq_.gate_length = 3;
   seq_.arp_range = 0;
   seq_.arp_direction = 0;
-  seq_.arp_pattern = 1;
+  seq_.arp_pattern = LUT_ARPEGGIATOR_PATTERNS_SIZE - 1; // Pattern 0
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   midi_.play_mode = PLAY_MODE_MANUAL;
   seq_.clock_quantization = 0;
@@ -357,10 +357,21 @@ void Part::Reset() {
 }
 
 void Part::Clock() { // From Multi::ClockFast
+  bool new_step = multi.tick_counter() % PPQN() == 0;
+  if (new_step) {
+    step_counter_ = multi.tick_counter() / PPQN();
+    int8_t num_sequence_repeats_per_arp_reset = seq_.arp_pattern - LUT_ARPEGGIATOR_PATTERNS_SIZE;
+    if (num_sequence_repeats_per_arp_reset > 0) {
+      uint8_t num_quarter_notes_per_arp_reset =
+        num_sequence_repeats_per_arp_reset *
+        looped() ? (1 << seq_.loop_length) : seq_.num_steps;
+      if (step_counter_ % num_quarter_notes_per_arp_reset == 0) arpeggiator_.Reset();
+    }
+  }
+
   if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
 
-  if (multi.tick_counter() % PPQN() == 0) { // New step
-    step_counter_ = multi.tick_counter() / PPQN();
+  if (new_step) {
     SequencerArpeggiatorResult result = BuildNextStepResult(step_counter_);
     arpeggiator_ = result.arpeggiator;
     if (!result.note.has_note()) return;

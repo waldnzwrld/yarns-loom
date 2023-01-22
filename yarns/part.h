@@ -231,7 +231,7 @@ struct PackedPart {
     gate_length : 6, // values free: 0
     arp_range : 2, // values free: 0
     arp_direction : 3, // values free: 3
-    arp_pattern : 5, // values free: 8
+    arp_pattern : 5, // values free: 0
     euclidean_length : 5, // values free: 0
     euclidean_fill : 5, // values free: 0
     euclidean_rotate : 5, // values free: 0
@@ -720,7 +720,8 @@ class Part {
 
   // Does arpeggiator use notes from the loop/step sequence?
   inline bool seq_driven_arp() const {
-    return seq_.arp_pattern == 0;
+    int8_t pattern = LUT_ARPEGGIATOR_PATTERNS_SIZE - seq_.arp_pattern;
+    return pattern <= 0;
   }
 
   inline bool uses_poly_allocator() const {
