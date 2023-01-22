@@ -650,6 +650,7 @@ class Part {
   bool Aftertouch(uint8_t channel, uint8_t velocity);
   void AllNotesOff();
   void StopSequencerArpeggiatorNotes();
+  // Returns the 1-based index of the new note IFF there was room for it
   uint8_t GeneratedNoteOn(uint8_t pitch, uint8_t velocity);
   void GeneratedNoteOff(uint8_t pitch);
   void Reset();

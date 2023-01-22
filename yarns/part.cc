@@ -369,6 +369,7 @@ void Part::Clock() { // From Multi::ClockFast
     }
   }
 
+  // The rest of the method is only for the step sequencer and/or arpeggiator
   if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
 
   if (new_step) {
