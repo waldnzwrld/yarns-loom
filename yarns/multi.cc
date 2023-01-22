@@ -44,8 +44,23 @@ using namespace std;
 using namespace stmlib;
 
 const uint8_t kCCLooperPhaseOffset = 115;
-const uint8_t kCCMacroRecord = 116; // 0..3: record off, record on, overwrite, delete
-const uint8_t kCCMacroPlayMode = 117; // -2..2: step seq, step arp, manual, loop arp, loop seq
+
+const uint8_t kCCMacroRecord = 116;
+enum MacroRecord {
+  MACRO_RECORD_OFF,
+  MACRO_RECORD_ON,
+  MACRO_RECORD_OVERWRITE,
+  MACRO_RECORD_DELETE,
+};
+
+const uint8_t kCCMacroPlayMode = 117;
+enum MacroPlayMode {
+  MACRO_PLAY_MODE_STEP_SEQ = -2,
+  MACRO_PLAY_MODE_STEP_ARP,
+  MACRO_PLAY_MODE_MANUAL,
+  MACRO_PLAY_MODE_LOOP_ARP,
+  MACRO_PLAY_MODE_LOOP_SEQ
+};
 
 const uint8_t kMasterLFOPeriodTicksBits = 4;
 
@@ -859,6 +874,8 @@ void Multi::StopRecording(uint8_t part) {
   }
 }
 
+const bool RELATIVE = true;
+
 bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bits) {
   bool thru = true;
   if (
@@ -868,8 +885,11 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
     SetFromCC(0xff, controller, value_7bits);
   } else {
     for (uint8_t part_index = 0; part_index < num_active_parts_; ++part_index) {
-      if (!part_accepts_channel(part_index, channel)) { continue; }
+      if (!part_accepts_channel(part_index, channel)) continue;
+
       int16_t macro_zone;
+      int8_t relative_increment = IncrementFromTwosComplementRelativeCC(value_7bits);
+
       switch (controller) { // Intercept special CCs
       case kCCRecordOffOn: {
         bool start = value_7bits >= 64;
@@ -877,47 +897,79 @@ bool Multi::ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bi
         ui.SplashPartString(start ? "R+" : "R-", part_index);
         break;
       }
+
       case kCCDeleteRecording:
         part_[part_index].DeleteRecording();
         ui.SplashPartString("RX", part_index);
         break;
+
       case kCCMacroRecord:
-        macro_zone = ScaleAbsoluteCC(value_7bits, 0, 3);
-        macro_zone >= 1 ? StartRecording(part_index) : StopRecording(part_index);
+        if (RELATIVE) {
+          if (recording_ && recording_part_ == part_index) {
+            macro_zone = part_[part_index].seq_overwrite() ? MACRO_RECORD_OVERWRITE : MACRO_RECORD_ON;
+          } else {
+            macro_zone = MACRO_RECORD_OFF;
+          }
+          macro_zone += relative_increment;
+          CONSTRAIN(macro_zone, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
+        } else {
+          macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_RECORD_OFF, MACRO_RECORD_DELETE);
+        }
+
+        macro_zone >= MACRO_RECORD_ON ? StartRecording(part_index) : StopRecording(part_index);
         if (
-          // Only on increasing value, so that leaving the knob in the delete
-          // zone doesn't doom any subsequent recordings
-          macro_zone == 3 && value_7bits > macro_record_last_value_[part_index])
+          macro_zone == MACRO_RECORD_DELETE &&
+          // Only on increasing value, so that leaving an absolute controller in
+          // the delete zone doesn't doom any subsequent recordings
+          (RELATIVE || value_7bits > macro_record_last_value_[part_index]))
         {
           part_[part_index].DeleteRecording();
           ui.SplashPartString("RX", part_index);
         } else {
-          part_[part_index].set_seq_overwrite(macro_zone == 2);
-          ui.SplashPartString(macro_zone == 2 ? "R*" : (macro_zone ? "R+" : "R-"), part_index);
+          part_[part_index].set_seq_overwrite(macro_zone == MACRO_RECORD_OVERWRITE);
+          ui.SplashPartString(macro_zone == MACRO_RECORD_OVERWRITE ? "R*" : (macro_zone ? "R+" : "R-"), part_index);
         }
         macro_record_last_value_[part_index] = value_7bits;
         break;
+
       case kCCMacroPlayMode:
-        macro_zone = ScaleAbsoluteCC(value_7bits, -2, 2);
-        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, part_index, macro_zone < 0);
+        if (RELATIVE) {
+          macro_zone = part_[part_index].midi_settings().play_mode;
+          if (part_[part_index].sequencer_settings().clock_quantization) {
+            macro_zone = -macro_zone;
+          }
+          macro_zone += relative_increment;
+          CONSTRAIN(macro_zone, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
+        } else {
+          macro_zone = ScaleAbsoluteCC(value_7bits, MACRO_PLAY_MODE_STEP_SEQ, MACRO_PLAY_MODE_LOOP_SEQ);
+        }
+
+        ApplySetting(SETTING_SEQUENCER_CLOCK_QUANTIZATION, part_index, macro_zone < MACRO_PLAY_MODE_MANUAL);
         ApplySetting(SETTING_SEQUENCER_PLAY_MODE, part_index, abs(macro_zone));
         char label[2];
-        if (macro_zone == 0) strcpy(label, "--"); else {
-          label[0] = macro_zone < 0 ? 'S' : 'L';
+        if (macro_zone == MACRO_PLAY_MODE_MANUAL) strcpy(label, "--"); else {
+          label[0] = macro_zone < MACRO_PLAY_MODE_MANUAL ? 'S' : 'L';
           label[1] = abs(macro_zone) == 1 ? 'A' : 'S';
         }
         ui.SplashPartString(label, part_index);
         break;
+
       case kCCLooperPhaseOffset:
         if (part_[part_index].looped()) {
-          part_->mutable_looper().pos_offset = value_7bits << 9;
+          if (RELATIVE) {
+            part_->mutable_looper().pos_offset += (relative_increment << 9); // Wraps
+          } else {
+            part_->mutable_looper().pos_offset = value_7bits << 9;
+          }
           ui.SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
         }
         break;
+
       default:
         thru = part_[part_index].ControlChange(channel, controller, value_7bits) && thru;
         SetFromCC(part_index, controller, value_7bits);
         break;
+
       }
     }
   }
@@ -939,16 +991,20 @@ void Multi::SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value_7bit
   if (setting_index == 0xff) { return; }
   const Setting& setting = setting_defs.get(setting_index);
 
-  int16_t scaled_value = ScaleAbsoluteCC(value_7bits, setting.min_value, setting.max_value);
+  uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
+  int16_t raw_value;
+  if (RELATIVE) {
+    raw_value = IncrementSetting(setting, part, IncrementFromTwosComplementRelativeCC(value_7bits));
+  } else {
+    raw_value = ScaleAbsoluteCC(value_7bits, setting.min_value, setting.max_value);
+  }
   if (setting.unit == SETTING_UNIT_TEMPO) {
-    scaled_value &= 0xfe;
-    if (scaled_value < TEMPO_EXTERNAL) {
-      scaled_value = TEMPO_EXTERNAL;
+    raw_value &= 0xfe;
+    if (raw_value < TEMPO_EXTERNAL) {
+      raw_value = TEMPO_EXTERNAL;
     }
   }
-
-  uint8_t part = part_index == 0xff ? controller >> 5 : part_index;
-  ApplySettingAndSplash(setting, part, scaled_value);
+  ApplySettingAndSplash(setting, part, raw_value);
 }
 
 void Multi::ApplySettingAndSplash(const Setting& setting, uint8_t part, int16_t raw_value) {
