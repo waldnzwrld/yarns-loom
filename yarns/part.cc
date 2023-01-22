@@ -936,6 +936,14 @@ bool Part::Set(uint8_t address, uint8_t value) {
       arpeggiator_.key_increment = 1;
       break;
 
+    case PART_SEQUENCER_ARP_PATTERN:
+      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR &&
+        // If changing seq_driven_arp
+        (previous_value >= LUT_ARPEGGIATOR_PATTERNS_SIZE) !=
+        (value >= LUT_ARPEGGIATOR_PATTERNS_SIZE)
+      ) StopSequencerArpeggiatorNotes();
+      break;
+
     case PART_MIDI_SUSTAIN_MODE:
     case PART_MIDI_SUSTAIN_POLARITY:
       AllNotesOff();
