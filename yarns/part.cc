@@ -360,12 +360,13 @@ void Part::Clock() { // From Multi::ClockFast
   bool new_step = multi.tick_counter() % PPQN() == 0;
   if (new_step) {
     step_counter_ = multi.tick_counter() / PPQN();
-    int8_t num_sequence_repeats_per_arp_reset = seq_.arp_pattern - LUT_ARPEGGIATOR_PATTERNS_SIZE;
-    if (num_sequence_repeats_per_arp_reset > 0) {
-      uint8_t num_quarter_notes_per_arp_reset =
-        num_sequence_repeats_per_arp_reset *
+    int8_t sequence_repeats_per_arp_reset = seq_.arp_pattern - LUT_ARPEGGIATOR_PATTERNS_SIZE;
+    if (sequence_repeats_per_arp_reset > 0) {
+      uint8_t quarter_notes_per_sequence_repeat =
         looped() ? (1 << seq_.loop_length) : seq_.num_steps;
-      if (step_counter_ % num_quarter_notes_per_arp_reset == 0) arpeggiator_.Reset();
+      uint16_t quarter_notes_per_arp_reset =
+        sequence_repeats_per_arp_reset * quarter_notes_per_sequence_repeat;
+      if (step_counter_ % quarter_notes_per_arp_reset == 0) arpeggiator_.Reset();
     }
   }
 
