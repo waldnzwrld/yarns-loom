@@ -746,7 +746,8 @@ class Part {
     if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
       // Advance arp
       SequencerStep step = SequencerStep(pitch, velocity);
-      step_counter_++;
+      // NB: since this path implies seq_driven_arp, there is no arp pattern,
+      // and step_counter_ doesn't matter
       SequencerArpeggiatorResult result = BuildNextArpeggiatorResult(step_counter_, step);
       arpeggiator_ = result.arpeggiator;
       pitch = result.note.note();
@@ -754,6 +755,7 @@ class Part {
         bool slide = result.note.is_slid();
         InternalNoteOn(pitch, result.note.velocity(), slide);
         if (slide) {
+          // NB: currently impossible (see LooperPlayNoteOff)
           InternalNoteOff(output_pitch_for_looper_note_[looper_note_index]);
         }
         output_pitch_for_looper_note_[looper_note_index] = pitch;
@@ -775,9 +777,19 @@ class Part {
       uint8_t next_on_index = looper_.PeekNextOn();
       const looper::Note& next_on_note = looper_.note_at(next_on_index);
       SequencerStep next_step = SequencerStep(next_on_note.pitch, next_on_note.velocity);
-      next_step = BuildNextArpeggiatorResult(step_counter_ + 1, next_step).note;
+      // Predicting whether the looper will have looped around by this next note
+      // (and possibly caused an arp reset) is hard, but fortunately, a reset
+      // does not currently affect whether the arp output note is a
+      // continuation, so we don't care
+      //
+      // Also NB: step_counter_ doesn't matter (see LooperPlayNoteOn)
+      next_step = BuildNextArpeggiatorResult(step_counter_, next_step).note;
       if (next_step.is_continuation()) {
         // Leave this pitch in the care of the next looper note
+        //
+        // NB: currently impossible, since the arp can only return a
+        // continuation when driven by an input sequencer note that is a
+        // continuation, which the looper can't do
         output_pitch_for_looper_note_[next_on_index] = pitch;
       } else {
         InternalNoteOff(pitch);
