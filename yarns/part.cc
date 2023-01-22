@@ -375,13 +375,13 @@ void Part::Clock() { // From Multi::ClockFast
   if (new_step) {
     SequencerArpeggiatorResult result = BuildNextStepResult(step_counter_);
     arpeggiator_ = result.arpeggiator;
-    if (!result.note.has_note()) return;
-
-    uint8_t pitch = result.note.note();
-    uint8_t velocity = result.note.velocity();
-    GeneratedNoteOff(pitch); // Simulate a human retriggering a key
-    if (GeneratedNoteOn(pitch, velocity) && !manual_keys_.stack.Find(pitch)) {
-      InternalNoteOn(pitch, velocity, result.note.is_slid());
+    if (result.note.has_note()) {
+      uint8_t pitch = result.note.note();
+      uint8_t velocity = result.note.velocity();
+      GeneratedNoteOff(pitch); // Simulate a human retriggering a key
+      if (GeneratedNoteOn(pitch, velocity) && !manual_keys_.stack.Find(pitch)) {
+        InternalNoteOn(pitch, velocity, result.note.is_slid());
+      }
     }
   }
   ClockStepGateEndings();
