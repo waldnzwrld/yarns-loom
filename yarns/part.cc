@@ -386,25 +386,21 @@ void Part::Clock() { // From Multi::ClockFast
   ClockStepGateEndings();
 }
 
-bool Part::step_has_euclidean_beat(uint32_t step_counter) const {
-  if (seq_.euclidean_length == 0) return true;
-
-  uint8_t euclidean_step_index = step_counter % seq_.euclidean_length;
-  uint32_t pattern_mask = 1 << ((euclidean_step_index + seq_.euclidean_rotate) % seq_.euclidean_length);
-  // Read euclidean pattern from ROM.
-  uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) << 5;
-  uint32_t pattern = lut_euclidean[offset + seq_.euclidean_fill];
-  return pattern_mask & pattern;
-}
-
 SequencerArpeggiatorResult Part::BuildNextStepResult(uint32_t step_counter) const {
   // In case of early return, the arp does not advance, and the note is a REST
   SequencerArpeggiatorResult result = {
     arpeggiator_, SequencerStep(SEQUENCER_STEP_REST, 0),
   };
 
-  // If skipping this beat, early return
-  if (!step_has_euclidean_beat(step_counter)) return result;
+  if (seq_.euclidean_length != 0) {
+    // If euclidean rhythm is enabled, advance euclidean state
+    uint8_t euclidean_step_index = step_counter % seq_.euclidean_length;
+    uint32_t pattern_mask = 1 << ((euclidean_step_index + seq_.euclidean_rotate) % seq_.euclidean_length);
+    // Read euclidean pattern from ROM.
+    uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) << 5;
+    uint32_t pattern = lut_euclidean[offset + seq_.euclidean_fill];
+    if (!(pattern_mask & pattern)) return result; // If skipping this beat, early return
+  }
 
   // Advance sequencer and arpeggiator state
   SequencerStep* step_ptr = NULL;

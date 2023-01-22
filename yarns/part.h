@@ -656,7 +656,6 @@ class Part {
   // Pulses Per Quarter Note
   uint16_t PPQN() const { return lut_clock_ratio_ticks[seq_.clock_division]; }
   void Clock();
-  bool step_has_euclidean_beat(uint32_t step_counter) const;
   // Advance step sequencer and/or arpeggiator
   SequencerArpeggiatorResult BuildNextStepResult(uint32_t step_counter) const;
   void ClockStepGateEndings();
