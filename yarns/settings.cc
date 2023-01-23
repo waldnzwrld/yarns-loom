@@ -42,6 +42,12 @@ const char* const layout_values[LAYOUT_LAST] = {
   "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "31", "22", "21", "*2", "3M"
 };
 
+const char* const control_change_mode_values[CONTROL_CHANGE_MODE_LAST] = {
+  "OFF",
+  "ABSOLUTE 0-127",
+  "RELATIVE TWOS COMP INC=1 DEC=127",
+};
+
 const char* const midi_out_mode_values[] = {
   "OFF", "THRU", "ARP/SEQ"
 };
@@ -299,6 +305,12 @@ const Setting Settings::settings_[] = {
     "C>", "CLOCK OUTPUT",
     SETTING_DOMAIN_MULTI, { MULTI_CLOCK_OVERRIDE, 0 },
     SETTING_UNIT_ENUMERATION, 0, 1, boolean_values,
+    0xff, 0xff,
+  },
+  {
+    "CC", "CONTROL CHANGE MODE",
+    SETTING_DOMAIN_MULTI, { MULTI_CONTROL_CHANGE_MODE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, CONTROL_CHANGE_MODE_LAST - 1, control_change_mode_values,
     0xff, 0xff,
   },
   {
