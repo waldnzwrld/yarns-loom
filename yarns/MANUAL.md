@@ -4,7 +4,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 
 #### Table of contents
 - [Interface](#interface)
-    - [Global control and display of the active part and its play mode](#global-control-and-display-of-the-active-part-and-its-play-mode)
+  - [Global control and display of the active part and its play mode](#global-control-and-display-of-the-active-part-and-its-play-mode)
     - [Tap tempo changes](#tap-tempo-changes)
     - [Other changes](#other-changes)
 - [Synth voice](#synth-voice)
@@ -14,7 +14,15 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - [Sequencer](#sequencer)
     - [Recording interface](#recording-interface)
     - [Looper-style sequencing mode with real-time recording](#looper-style-sequencing-mode-with-real-time-recording)
-    - [Sequencer-driven arpeggiator](#sequencer-driven-arpeggiator)
+    - [Arpeggiator](#arpeggiator)
+      - [Interaction between `ARP DIRECTION` and `NOTE PRIORITY`](#interaction-between-arp-direction-and-note-priority)
+      - [Sequencer-driven arpeggiator](#sequencer-driven-arpeggiator)
+        - [Using `ARP PATTERN` to enable the sequencer-driven arpeggiator](#using-arp-pattern-to-enable-the-sequencer-driven-arpeggiator)
+        - [How it works](#how-it-works)
+      - [Special `ARP DIRECTIONS` (`JUMP` and `GRID`) use the sequencer pitch as movement instructions](#special-arp-directions-jump-and-grid-use-the-sequencer-pitch-as-movement-instructions)
+        - [Behaviors shared by `JUMP` and `GRID`](#behaviors-shared-by-jump-and-grid)
+        - [`JUMP` movement](#jump-movement)
+        - [`GRID` movement](#grid-movement)
 - [MIDI](#midi)
     - [Layouts](#layouts)
     - [Hold pedal](#hold-pedal)
@@ -27,7 +35,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 
 # Interface
 
-### Global control and display of the active part and its play mode
+## Global control and display of the active part and its play mode
 - Display periodically flashes the active part and its play mode
 - Hold `START` to switch the active part (the new active part will flash briefly on the screen).  The active part is used for:
   - Selecting the recording part when pressing `REC`
@@ -120,37 +128,63 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - Holds 30 notes max -- past this limit, overwrites oldest note
 - Step sequencer also reduced from 64 to 30 notes, to free up space in the preset storage
 
-### Sequencer-driven arpeggiator
-- Activated by setting the `ARP PATTERN` to `SEQUENCER`
-- As in the normal arpeggiator, the arp chord is controlled by holding keys on the keyboard
+### Arpeggiator
+
+#### Interaction between `ARP DIRECTION` and `NOTE PRIORITY`
+- `NOTE PRIORITY` sets the basic ordering/sorting of the arp chord (the keys held on the keyboard)
+- `ARP DIRECTION` sets the algorithm used to traverse the ordered arp chord
+- By combining these, traditional arp behaviors can be achieved:
+  - With `NOTE PRIORITY` = `LOW`: set `ARP DIRECTION` to `LINEAR` for "up," or `BOUNCE` for "up-down"
+  - With `NOTE PRIORITY` = `FIRST`: set `ARP DIRECTION` to `LINEAR` for "played order"
+
+#### Sequencer-driven arpeggiator
+
+##### Using `ARP PATTERN` to enable the sequencer-driven arpeggiator
+- Clockwise = pattern-based arpeggiator rhythms (stock Yarns)
+- Counter-clockwise = sequencer-driven arpeggiator
+  - `S1`-`S8` will reset the arpeggiator state after every 1-8 plays of the entire sequence (step or loop)
+    - Reset helps generate more predictable arp patterns
+  - `S0` never resets the arpeggiator state
+
+##### How it works
+- Like the normal arpeggiator, the arp chord is controlled by holding keys on the keyboard
 - Unlike the normal arpeggiator, the sequencer-driven arpeggiator advances when the loop/step sequencer encounters a new note, instead of advancing on every clock pulse
-- A sequence must exist to produce arpeggiator output
+- A sequence (either loop or step) must exist to produce arpeggiator output
 - The arpeggiator respects rests/ties in a step sequence
-- The velocity of the arpeggiator output is calculated by multiplying the velocities of the sequencer step and the held key
-- New arpeggiator directions `JUMP` and `GRID` use the sequencer pitch as instructions to move through the arp chord in non-linear fashion:
-  - Sequencer steps are interpreted based on their:
+- The velocity of the arpeggiator output is calculated by multiplying the velocities of the sequencer note and the held key
+
+#### Special `ARP DIRECTIONS` (`JUMP` and `GRID`) use the sequencer pitch as movement instructions
+
+##### Behaviors shared by `JUMP` and `GRID`
+  - Primarily useful when `ARP PATTERN` is sequencer-driven
+    - If `ARP PATTERN` is not sequencer-driven, the sequencer pitch data is replaced by the position in the 16-step pattern rhythm 
+  - Sequencer notes are interpreted based on their:
     - Color (black or white)
     - Displayed octave number (with C as the first note of the octave)
     - Pitch ordinal within octave and color, e.g.
       - On a sequencer step that is the 2nd white note of octave 5, the pitch ordinal is 2
       - On a sequencer step that is the 4th black note of octave 2, the pitch ordinal is 4
-  - The sequencer step's pitch ordinal is checked against the size of the arp chord to see if a note is emitted
+  - The sequencer note's pitch ordinal is checked against the size of the arp chord to see if a note is emitted
     - On a sequencer step with pitch ordinal N, the step is ignored unless there are N or more keys in the arp chord, e.g.:
       - On a sequencer step that is the 3rd white key of its octave, a note is emitted IFF there are 3+ keys in the arp chord
       - On sequencer step that is the 1st black key of its octave, a note is emitted IFF there are 1+ keys in the arp chord
     - Allows dynamic control of the arpeggiator's rhythmic pattern by varying the size of the arp chord
-  - `JUMP` uses a combination of relative and absolute movement through the chord
+
+##### `JUMP` movement
+  - Uses a combination of relative and absolute movement through the chord
     - Both colors advance the active position in the arp chord by octave-many places, wrapping around to the beginning of the chord
     - White steps emit a note from the active position in the arp chord, e.g.:
       - On a sequencer step that is the 5th white note of octave 2, where the starting active position is 1 out of the arp chord's 6 notes, the active position is first incremented by 2 to become 3, and then the 3rd note of the arp chord is emitted
     - Black steps ignore the active position, instead treating the pitch ordinal as an absolute position in the arp chord, e.g.:
       - On a sequencer step that the 3rd black note of octave 5, the emitted note is the 3rd note of the arp chord, while the active position is incremented by 5
-  - `GRID` simulates an X-Y coordinate system
-    - The arp chord is mapped onto the grid in linear fashion, repeated as necessary to fill the grid
-    - Octave sets the size of the grid: 4th octave => 4x4 grid (minimum 1x1)
-    - White keys advance by 1 along the X-axis, moving left-to-right and wrapping back to the left
-    - Black keys advance by 1 along the Y-axis, moving top-to-bottom and wrapping back to the top
-  - These arp directions can still be used with `ARP PATTERN` values other than `SEQUENCER`, but the results are less interesting
+
+##### `GRID` movement
+  - Simulates an X-Y coordinate system
+  - The arp chord is mapped onto the grid in linear fashion, repeated as necessary to fill the grid
+  - Octave sets the size of the grid: 4th octave => 4x4 grid (minimum 1x1)
+  - White keys advance by 1 along the X-axis, moving left-to-right and wrapping back to the left
+  - Black keys advance by 1 along the Y-axis, moving top-to-bottom and wrapping back to the top
+  
 
 # MIDI
 
@@ -247,4 +281,3 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - `PORTAMENTO` setting has a shared zero at center
   - Increases constant-time portamento when turning counter-clockwise of center, and increases constant-rate when turning clockwise
 - Broadened setting range from 51 to 64 values per curve shape
-  
