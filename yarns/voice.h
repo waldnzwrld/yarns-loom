@@ -83,6 +83,7 @@ enum ModAux {
   MOD_AUX_LAST
 };
 
+// A role used by a CV output when it is not acting as an audio oscillator
 enum DCRole {
   DC_PITCH,
   DC_VELOCITY,
@@ -99,6 +100,8 @@ enum LFORole {
   LFO_ROLE_LAST
 };
 
+typedef SyncedLFO<17, 9> FastSyncedLFO; // Locks on in less than a second
+
 class CVOutput;
 
 class Voice {
@@ -110,7 +113,6 @@ class Voice {
   void ResetAllControllers();
 
   void Refresh();
-  void SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento);
   void NoteOn(int16_t note, uint8_t velocity, uint8_t portamento, bool trigger);
   void NoteOff();
   void ControlChange(uint8_t controller, uint8_t value);
@@ -210,7 +212,7 @@ class Voice {
   inline Oscillator* oscillator() {
     return &oscillator_;
   }
-  inline SyncedLFO* lfo(LFORole l) { return &lfos_[l]; }
+  inline FastSyncedLFO* lfo(LFORole l) { return &lfos_[l]; }
   inline Envelope* envelope() {
     return &envelope_;
   }
@@ -224,7 +226,7 @@ class Voice {
   }
   
  private:
-  SyncedLFO lfos_[LFO_ROLE_LAST];
+  FastSyncedLFO lfos_[LFO_ROLE_LAST];
   Envelope envelope_;
   Oscillator oscillator_;
 
@@ -313,16 +315,19 @@ class CVOutput {
     }
   }
 
-  inline bool gate() const { return dc_voice_->gate(); }
-  inline bool trigger() const {
-    if (is_audio()) {
-      for (uint8_t i = 0; i < num_audio_voices_; ++i) {
-        if (audio_voices_[i]->trigger()) { return true; }
-      }
-      return false;
-    } else {
-      return dc_voice_->trigger();
+  inline bool gate() const {
+    if (!is_audio()) return dc_voice_->gate();
+    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+      if (audio_voices_[i]->gate()) return true;
     }
+    return false;
+  }
+  inline bool trigger() const {
+    if (!is_audio()) return dc_voice_->trigger();
+    for (uint8_t i = 0; i < num_audio_voices_; ++i) {
+      if (audio_voices_[i]->trigger()) return true;
+    }
+    return false;
   }
 
   inline bool is_audio() const {

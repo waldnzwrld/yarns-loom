@@ -58,7 +58,7 @@ void Voice::Init() {
   ResetAllControllers();
   
   for (uint8_t i = 0; i < LFO_ROLE_LAST; i++) {
-    lfos_[i].Init(17, 9); // Locks on in less than a second
+    lfos_[i].Init();
     lfos_[i].SetPhaseIncrement(lut_lfo_increments[50]);
   }
   pitch_bend_range_ = 2;
@@ -257,20 +257,17 @@ void CVOutput::Refresh() {
   if (is_envelope()) dac_interpolator_.ComputeSlope();
 }
 
-void Voice::SetPortamento(int16_t note, uint8_t velocity, uint8_t portamento) {
-  note_source_ = note_portamento_;  
-  note_target_ = note;
-  if (!portamento) {
-    note_source_ = note_target_;
-  }
-}
-
 void Voice::NoteOn(
     int16_t note,
     uint8_t velocity,
     uint8_t portamento,
     bool trigger) {
-  SetPortamento(note, velocity, portamento);
+  note_source_ = note_portamento_;  
+  note_target_ = note;
+  if (!portamento) {
+    note_source_ = note_target_;
+  }
+
   portamento_phase_ = 0;
   uint32_t split_point = LUT_PORTAMENTO_INCREMENTS_SIZE >> 1;
   if (portamento < split_point) {

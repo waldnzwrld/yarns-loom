@@ -42,6 +42,12 @@ const char* const layout_values[LAYOUT_LAST] = {
   "1M", "2M", "4M", "2P", "4P", "2>", "4>", "8>", "4T", "4V", "31", "22", "21", "*2", "3M"
 };
 
+const char* const control_change_mode_values[CONTROL_CHANGE_MODE_LAST] = {
+  "OFF",
+  "ABSOLUTE 0-127",
+  "RELATIVE TWOS COMP INC=1 DEC=127",
+};
+
 const char* const midi_out_mode_values[] = {
   "OFF", "THRU", "ARP/SEQ"
 };
@@ -50,9 +56,17 @@ const char* const boolean_values[] = {
   "OFF", "ON"
 };
 
-const char* const voicing_allocation_mode_values[VOICE_ALLOCATION_MODE_LAST] = {
-  "MONO", "POLY", "CYCLIC", "RANDOM", "VELO", "SORTED", "U1 UNISON",
-  "U2 UNISON 2", "STEAL MOST RECENT", "NICE"
+const char* const voicing_allocation_mode_values[POLY_MODE_LAST] = {
+  "MONOPHONIC",
+  "SM STEAL RELEASE MUTE",
+  "CYCLIC",
+  "RANDOM",
+  "VELOCITY",
+  "PRIORITY ORDER",
+  "UR UNISON RELEASE REASSIGN",
+  "UM UNISON RELEASE MUTE",
+  "SP STEAL HIGHEST PRIORITY",
+  "SR STEAL RELEASE REASSIGN",
 };
 
 const char* const sequencer_arp_direction_values[ARPEGGIATOR_DIRECTION_LAST] = {
@@ -105,14 +119,15 @@ const char* const voicing_oscillator_shape_values[OSC_SHAPE_FM] = {
   "\x88\xA0 SAW LOW-PASS SVF",
   "\x8CW PULSE WIDTH MOD",
   "\x88W SAW WIDTH MOD",
+  "\x88\x8C SAW-PULSE MORPH",
   "S$ SINE SYNC",
   "\x8C$ PULSE SYNC",
   "\x88$ SAW SYNC",
   "SF SINE FOLD",
   "^F TRIANGLE FOLD",
-  "ST SINE TANH",
-  "SX SINE EXP",
   "\x8E\x8E DIRAC COMB",
+  "ST SINE TANH",
+  "SX SINE EXPONENTIAL",
 };
 
 const char* const lfo_shape_values[LFO_SHAPE_LAST] = {
@@ -293,9 +308,15 @@ const Setting Settings::settings_[] = {
     0xff, 0xff,
   },
   {
+    "CC", "CONTROL CHANGE MODE",
+    SETTING_DOMAIN_MULTI, { MULTI_CONTROL_CHANGE_MODE, 0 },
+    SETTING_UNIT_ENUMERATION, 0, CONTROL_CHANGE_MODE_LAST - 1, control_change_mode_values,
+    0xff, 0xff,
+  },
+  {
     "CH", "CHANNEL",
     SETTING_DOMAIN_PART, { PART_MIDI_CHANNEL, 0 },
-    SETTING_UNIT_MIDI_CHANNEL, 0, 16, NULL,
+    SETTING_UNIT_MIDI_CHANNEL_LAST_OMNI, 0, 16, NULL,
     0xff, 4,
   },
   {
@@ -343,7 +364,7 @@ const Setting Settings::settings_[] = {
   {
     "VO", "VOICING",
     SETTING_DOMAIN_PART, { PART_VOICING_ALLOCATION_MODE, 0 },
-    SETTING_UNIT_ENUMERATION, 0, VOICE_ALLOCATION_MODE_LAST - 1,
+    SETTING_UNIT_ENUMERATION, 0, POLY_MODE_LAST - 1,
     voicing_allocation_mode_values,
     18, 8,
   },
@@ -411,13 +432,13 @@ const Setting Settings::settings_[] = {
     "VS", "VIBRATO SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_VIBRATO_SHAPE, 0 },
     SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
-    125, 0xff,
+    95, 0xff,
   },
   {
     "LS", "TIMBRE LFO SHAPE",
     SETTING_DOMAIN_PART, { PART_VOICING_TIMBRE_LFO_SHAPE, 0 },
     SETTING_UNIT_ENUMERATION, 0, LFO_SHAPE_LAST - 1, lfo_shape_values,
-    126, 0xff,
+    81, 0xff,
   },
   {
     "TS", "TREMOLO SHAPE",
@@ -604,13 +625,13 @@ const Setting Settings::settings_[] = {
   {
     "AP", "ARP PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_ARP_PATTERN, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE, NULL,
+    SETTING_UNIT_ARP_PATTERN, 0, 31, NULL,
     106, 28,
   },
   {
     "RP", "RHYTHMIC PATTERN",
     SETTING_DOMAIN_PART, { PART_SEQUENCER_ARP_PATTERN, 0 },
-    SETTING_UNIT_ARP_PATTERN, 0, LUT_ARPEGGIATOR_PATTERNS_SIZE, NULL,
+    SETTING_UNIT_ARP_PATTERN, 0, 31, NULL,
     0xff, 0xff,
   },
   {
@@ -670,7 +691,7 @@ const Setting Settings::settings_[] = {
   {
     "RC", "REMOTE CONTROL CHANNEL",
     SETTING_DOMAIN_MULTI, { MULTI_REMOTE_CONTROL_CHANNEL, 0 },
-    SETTING_UNIT_MIDI_CHANNEL_OFF, 0, 16, NULL,
+    SETTING_UNIT_MIDI_CHANNEL_FIRST_OFF, 0, 16, NULL,
     0xff, 0xff,
   },
   {
@@ -732,15 +753,15 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       }
       break;
 
-    case SETTING_UNIT_MIDI_CHANNEL:
-      if (value == 0x10) {
+    case SETTING_UNIT_MIDI_CHANNEL_LAST_OMNI:
+      if (value == kMidiChannelOmni) {
         strcpy(buffer, "ALL");
       } else {
         PrintInteger(buffer, value + 1);
       }
       break;
 
-    case SETTING_UNIT_MIDI_CHANNEL_OFF:
+    case SETTING_UNIT_MIDI_CHANNEL_FIRST_OFF:
       if (value == 0x00) {
         strcpy(buffer, "OFF");
       } else {
@@ -781,10 +802,15 @@ void Settings::Print(const Setting& setting, uint8_t value, char* buffer) const 
       break;
 
     case SETTING_UNIT_ARP_PATTERN:
-      if (value == 0) {
-        strcpy(buffer, "SEQUENCER");
-      } else {
-        PrintInteger(buffer, value);
+      {
+        int8_t pattern = LUT_ARPEGGIATOR_PATTERNS_SIZE - value;
+        if (pattern > 0) { // Pattern-driven, left side
+          PrintInteger(buffer, pattern);
+          if (buffer[0] == ' ') buffer[0] = 'P';
+        } else { // Sequencer-driven, right side
+          PrintInteger(buffer, abs(pattern));
+          if (buffer[0] == ' ') buffer[0] = 'S';
+        }
       }
       break;
 

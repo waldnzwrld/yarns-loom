@@ -74,7 +74,7 @@ void Part::Init() {
   midi_.transpose_octaves = 0;
 
   voicing_.allocation_priority = NOTE_STACK_PRIORITY_LAST;
-  voicing_.allocation_mode = VOICE_ALLOCATION_MODE_MONO;
+  voicing_.allocation_mode = POLY_MODE_OFF;
   voicing_.legato_mode = LEGATO_MODE_OFF;
   voicing_.portamento = 0;
   voicing_.pitch_bend_range = 2;
@@ -113,7 +113,7 @@ void Part::Init() {
   seq_.gate_length = 3;
   seq_.arp_range = 0;
   seq_.arp_direction = 0;
-  seq_.arp_pattern = 1;
+  seq_.arp_pattern = LUT_ARPEGGIATOR_PATTERNS_SIZE - 1; // Pattern 0
   midi_.input_response = SEQUENCER_INPUT_RESPONSE_TRANSPOSE;
   midi_.play_mode = PLAY_MODE_MANUAL;
   seq_.clock_quantization = 0;
@@ -262,16 +262,16 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       break;
       
     case kCCOmniModeOn:
-      midi_.channel = 0x10;
+      midi_.channel = kMidiChannelOmni;
       break;
       
     case kCCMonoModeOn:
-      voicing_.allocation_mode = VOICE_ALLOCATION_MODE_MONO;
+      voicing_.allocation_mode = POLY_MODE_OFF;
       TouchVoiceAllocation();
       break;
       
     case kCCPolyModeOn:
-      voicing_.allocation_mode = VOICE_ALLOCATION_MODE_POLY;
+      voicing_.allocation_mode = POLY_MODE_STEAL_RELEASE_SILENT;
       TouchVoiceAllocation();
       break;
       
@@ -297,14 +297,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       }
       break;
 
-    case 0x73:
-      if (looped()) {
-        looper_.pos_offset = value << 9;
-        ui.SplashOn(SPLASH_LOOPER_PHASE_OFFSET);
-      }
-      break;
-    
-    case 0x78:
+    case 0x78: // All Sound Off
       AllNotesOff();
       break;
       
@@ -312,7 +305,7 @@ bool Part::ControlChange(uint8_t channel, uint8_t controller, uint8_t value) {
       ResetAllControllers();
       break;
       
-    case 0x7b:
+    case 0x7b: // All Notes Off
       AllNotesOff();
       break;
   }
@@ -334,7 +327,7 @@ bool Part::PitchBend(uint8_t channel, uint16_t pitch_bend) {
 }
 
 bool Part::Aftertouch(uint8_t channel, uint8_t note, uint8_t velocity) {
-  if (voicing_.allocation_mode != VOICE_ALLOCATION_MODE_MONO) {
+  if (voicing_.allocation_mode != POLY_MODE_OFF) {
     uint8_t voice_index = \
         uses_poly_allocator() ? \
         poly_allocator_.Find(note) : \
@@ -356,53 +349,68 @@ bool Part::Aftertouch(uint8_t channel, uint8_t velocity) {
 }
 
 void Part::Reset() {
-  Stop();
-  for (uint8_t i = 0; i < num_voices_; ++i) {
-    VoiceNoteOff(i);
-    voice_[i]->ResetAllControllers();
-  }
+  AllNotesOff();
+  ResetAllControllers();
 }
 
 void Part::Clock() { // From Multi::ClockFast
+  bool new_step = multi.tick_counter() % PPQN() == 0;
+  if (new_step) {
+    step_counter_ = multi.tick_counter() / PPQN();
+    int8_t sequence_repeats_per_arp_reset = seq_.arp_pattern - LUT_ARPEGGIATOR_PATTERNS_SIZE;
+    if (sequence_repeats_per_arp_reset > 0) {
+      uint8_t quarter_notes_per_sequence_repeat =
+        looped() ? (1 << seq_.loop_length) : seq_.num_steps;
+      uint16_t quarter_notes_per_arp_reset =
+        sequence_repeats_per_arp_reset * quarter_notes_per_sequence_repeat;
+      if (step_counter_ % quarter_notes_per_arp_reset == 0) arpeggiator_.Reset();
+    }
+  }
+
+  // The rest of the method is only for the step sequencer and/or arpeggiator
   if (looper_in_use() || midi_.play_mode == PLAY_MODE_MANUAL) return;
 
-  if (multi.tick_counter() % PPQN() == 0) { // New step
-    uint32_t step_counter = multi.tick_counter() / PPQN();
-    StepSequencerArpeggiator(step_counter);
+  if (new_step) {
+    SequencerArpeggiatorResult result = BuildNextStepResult(step_counter_);
+    arpeggiator_ = result.arpeggiator;
+    if (result.note.has_note()) {
+      uint8_t pitch = result.note.note();
+      uint8_t velocity = result.note.velocity();
+      GeneratedNoteOff(pitch); // Simulate a human retriggering a key
+      if (GeneratedNoteOn(pitch, velocity) && !manual_keys_.stack.Find(pitch)) {
+        InternalNoteOn(pitch, velocity, result.note.is_slid());
+      }
+    }
   }
   ClockStepGateEndings();
 }
 
-void Part::StepSequencerArpeggiator(uint32_t step_counter) {
-  // Advance euclidean state.  If skipping this beat, don't advance other state
+SequencerArpeggiatorResult Part::BuildNextStepResult(uint32_t step_counter) const {
+  // In case of early return, the arp does not advance, and the note is a REST
+  SequencerArpeggiatorResult result = {
+    arpeggiator_, SequencerStep(SEQUENCER_STEP_REST, 0),
+  };
+
   if (seq_.euclidean_length != 0) {
-    euclidean_step_index_ = (euclidean_step_index_ + 1) % seq_.euclidean_length;
-    uint32_t pattern_mask = 1 << ((euclidean_step_index_ + seq_.euclidean_rotate) % seq_.euclidean_length);
+    // If euclidean rhythm is enabled, advance euclidean state
+    uint8_t euclidean_step_index = step_counter % seq_.euclidean_length;
+    uint32_t pattern_mask = 1 << ((euclidean_step_index + seq_.euclidean_rotate) % seq_.euclidean_length);
     // Read euclidean pattern from ROM.
     uint16_t offset = static_cast<uint16_t>(seq_.euclidean_length - 1) << 5;
     uint32_t pattern = lut_euclidean[offset + seq_.euclidean_fill];
-    if (!(pattern_mask & pattern)) return;
+    if (!(pattern_mask & pattern)) return result; // If skipping this beat, early return
   }
 
-  SequencerStep* step_ptr = NULL;
-  SequencerStep step;
+  // Advance sequencer and arpeggiator state
   if (seq_.num_steps) {
-    seq_step_ = step_counter % seq_.num_steps;
-    step = BuildSeqStep(seq_step_);
-    step_ptr = &step;
+    result.note = BuildSeqStep(step_counter % seq_.num_steps);
   }
   if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-    arp_ = BuildArpState(step_ptr);
-    step_ptr = &arp_.step;
+    // If seq-driven and there are no steps, early return
+    if (seq_driven_arp() && !seq_.num_steps) return result;
+    result = BuildNextArpeggiatorResult(step_counter, result.note);
   }
-  if (step_ptr && step_ptr->has_note()) {
-    uint8_t pitch = step_ptr->note();
-    uint8_t velocity = step_ptr->velocity();
-    GeneratedNoteOff(pitch); // Simulate a human retriggering a key
-    if (GeneratedNoteOn(pitch, velocity) && !manual_keys_.stack.Find(pitch)) {
-      InternalNoteOn(pitch, velocity, step_ptr->is_slid());
-    }
-  }
+  return result;
 }
 
 void Part::ClockStepGateEndings() {
@@ -413,17 +421,8 @@ void Part::ClockStepGateEndings() {
     }
     // Peek at next step to see if it's a continuation
     // If more than one voice has a step ending, the peek is redundant
-    SequencerStep* next_step_ptr = NULL;
-    SequencerStep next_step;
-    if (seq_.num_steps) {
-      next_step = BuildSeqStep((seq_step_ + 1) % seq_.num_steps);
-      next_step_ptr = &next_step;
-    }
-    if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR) {
-      next_step = BuildArpState(next_step_ptr).step;
-      next_step_ptr = &next_step;
-    }
-    if (next_step_ptr && next_step_ptr->is_continuation()) {
+    SequencerStep next_step = BuildNextStepResult(step_counter_ + 1).note;
+    if (next_step.is_continuation()) {
       // The next step contains a "sustain" message; or a slid note. Extends
       // the duration of the current note.
       gate_length_counter_[v] += PPQN();
@@ -434,8 +433,7 @@ void Part::ClockStepGateEndings() {
 }
 
 void Part::Start() {
-  arp_.ResetKey();
-  arp_.step_index = euclidean_step_index_ = -1;
+  arpeggiator_.Reset();
   
   looper_.Rewind();
   std::fill(
@@ -455,11 +453,6 @@ void Part::Start() {
   );
 
   generated_notes_.Clear();
-}
-
-void Part::Stop() {
-  StopSequencerArpeggiatorNotes();
-  AllNotesOff();
 }
 
 void Part::StopRecording() {
@@ -585,149 +578,10 @@ const SequencerStep Part::BuildSeqStep(uint8_t step_index) const {
     // note = first note.
     // But this is not the case when we are playing several sequences at the
     // same time. In this case, we use root note = 60.
-    int8_t root_note = !has_siblings_ ? seq_.first_note() : 60;
+    int8_t root_note = !has_siblings_ ? seq_.first_note() : kC4;
     note = ApplySequencerInputResponse(note, root_note);
   }
   return SequencerStep((0x80 & step.data[0]) | (0x7f & note), step.data[1]);
-}
-
-const ArpeggiatorState Part::BuildArpState(SequencerStep* seq_step_ptr) const {
-  SequencerStep seq_step;
-  ArpeggiatorState next = arp_;
-  // In case the pattern doesn't hit a note, the default output step is a REST
-  next.step.data[0] = SEQUENCER_STEP_REST;
-
-  // Always advance the pattern counter, even if we rest
-  next.step_index = (next.step_index + 1) % 16;
-
-  // If sequencer/pattern doesn't hit a note, return a REST/TIE output step, and
-  // don't advance the arp key
-  uint32_t pattern_mask, pattern;
-  if (seq_driven_arp()) {
-    if (!seq_step_ptr) return next;
-    seq_step = *seq_step_ptr;
-    if (!seq_step.has_note()) { // Here, the output step can also be a TIE
-      next.step.data[0] = seq_step.data[0];
-      return next;
-    }
-  } else {
-    // Build a dummy input step for JUMP/GRID
-    seq_step.data[0] = kC4 + 1 + next.step_index;
-    seq_step.data[1] = 0x7f; // Full velocity
-    pattern_mask = 1 << next.step_index;
-    pattern = lut_arpeggiator_patterns[seq_.arp_pattern - 1];
-    if (!(pattern_mask & pattern)) return next;
-  }
-
-  uint8_t num_keys = arp_keys_.stack.size();
-  if (!num_keys) {
-    next.ResetKey();
-    return next;
-  }
-
-  uint8_t num_octaves = seq_.arp_range + 1;
-  uint8_t num_keys_all_octaves = num_keys * num_octaves;
-  uint8_t display_octave = seq_step.octave();
-  if (display_octave > 0) display_octave--; // Match octave display in UI, with floor 0
-  // Update arepggiator note/octave counter.
-  switch (seq_.arp_direction) {
-    case ARPEGGIATOR_DIRECTION_RANDOM:
-      {
-        uint16_t random = Random::GetSample();
-        next.octave = random & 0xff;
-        next.key_index = random >> 8;
-      }
-      break;
-    case ARPEGGIATOR_DIRECTION_STEP_JUMP:
-      {
-        // If step value by color within octave is greater than total chord size, rest without moving
-        if (seq_step.color_key_value() >= num_keys_all_octaves) return next;
-
-        // Advance active position by octave # -- C4 -> pos + 4
-        next.key_index = modulo(next.key_index + display_octave, num_keys_all_octaves);
-        if (seq_step.is_white()) {
-          next.key_increment = 0; // Move is already complete
-        } else { // If black key
-          // Play the black key value as an absolute position in the arp chord,
-          // then return to active position
-          next.key_increment = next.key_index - seq_step.color_key_value();
-          next.key_index = seq_step.color_key_value();
-        }
-
-        next.octave = modulo(next.key_index / num_keys, num_octaves);
-      }
-      break;
-    case ARPEGGIATOR_DIRECTION_STEP_GRID:
-      {
-        // If step value by color within octave is greater than total chord size, rest without moving
-        if (seq_step.color_key_value() >= num_keys_all_octaves) return next;
-
-        // Map linear position to X-Y grid coordinates
-        uint8_t size = std::max(static_cast<uint8_t>(1), display_octave); // C4 -> 4x4 grid; minimum 1x1
-        uint8_t x_pos = modulo(next.key_index, size);
-        uint8_t y_pos = modulo(next.key_index / size, size);
-        // Move within grid
-        if (seq_step.is_white()) {
-          x_pos = modulo(x_pos + 1, size);
-        } else {
-          y_pos = modulo(y_pos + 1, size);
-        }
-        // Map grid position back to linear position, which can be > chord size
-        next.key_index = x_pos + y_pos * size;
-        next.key_increment = 0; // Move is already complete
-
-        next.octave = modulo(next.key_index / num_keys, num_octaves);
-      }
-      break;
-    default:
-      {
-        if (num_keys == 1 && seq_.arp_range == 0) {
-          // This is a corner case for the Up/down pattern code.
-          // Get it out of the way.
-          next.key_index = 0;
-          next.octave = 0;
-        } else {
-          bool wrapped = true;
-          while (wrapped) {
-            if (next.key_index >= num_keys || next.key_index < 0) {
-              next.octave += next.key_increment;
-              next.key_index = next.key_increment > 0 ? 0 : num_keys - 1;
-            }
-            wrapped = false;
-            if (next.octave > seq_.arp_range || next.octave < 0) {
-              next.octave = next.key_increment > 0 ? 0 : seq_.arp_range;
-              if (seq_.arp_direction == ARPEGGIATOR_DIRECTION_UP_DOWN) {
-                next.key_increment = -next.key_increment;
-                next.key_index = next.key_increment > 0 ? 1 : num_keys - 2;
-                next.octave = next.key_increment > 0 ? 0 : seq_.arp_range;
-                wrapped = true;
-              }
-            }
-          }
-        }
-      }
-      break;
-  }
-
-  // Build arpeggiator step
-  const NoteEntry* arpeggio_note = &arp_keys_.stack.played_note(modulo(next.key_index, num_keys));
-  next.key_index += next.key_increment;
-
-  // TODO step type algorithm
-
-  uint8_t note = arpeggio_note->note;
-  uint8_t velocity = arpeggio_note->velocity & 0x7f;
-  if (seq_driven_arp()) {
-    velocity = (velocity * seq_step.velocity()) >> 7;
-  }
-  note += 12 * next.octave;
-  while (note > 127) {
-    note -= 12;
-  }
-  next.step.data[0] = note;
-  next.step.data[1] = velocity;
-
-  return next;
 }
 
 void Part::ResetAllControllers() {
@@ -756,9 +610,10 @@ void Part::AllNotesOff() {
 
 void Part::StopNotesBySustainStatus(HeldKeys &keys, bool sustain_status) {
   for (uint8_t i = 1; i <= keys.stack.max_size(); ++i) {
-    NoteEntry* e = keys.stack.mutable_note(i);
-    if (keys.IsSustained(*e) != sustain_status) continue;
-    NoteOff(tx_channel(), e->note, false);
+    const NoteEntry& e = keys.stack.note(i);
+    if (e.note == NOTE_STACK_FREE_SLOT) continue;
+    if (keys.IsSustained(e) != sustain_status) continue;
+    NoteOff(tx_channel(), e.note, false);
   }
 }
 
@@ -770,7 +625,7 @@ struct DispatchNote {
 void Part::DispatchSortedNotes(bool via_note_off) {
   uint8_t num_notes = mono_allocator_.size();
   uint8_t num_dispatch = num_voices_;
-  bool unison = voicing_.allocation_mode != VOICE_ALLOCATION_MODE_POLY_SORTED;
+  bool unison = voicing_.allocation_mode != POLY_MODE_SORTED;
   if (!unison) { num_dispatch = std::min(num_dispatch, num_notes); }
 
   // Set up structures to track assignments
@@ -867,13 +722,13 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato) {
   const NoteEntry& before = priority_note();
   mono_allocator_.NoteOn(note, velocity);
   const NoteEntry& after = priority_note();
-  bool legato = force_legato || mono_allocator_.size() > 1;
-  if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
+  if (voicing_.allocation_mode == POLY_MODE_OFF) {
+    bool stealing = mono_allocator_.size() > 1;
     // Check if the note that has been played should be triggered according
     // to selected voice priority rules.
     if (before.note != after.note) {
       for (uint8_t i = 0; i < num_voices_; ++i) {
-        VoiceNoteOn(i, after.note, after.velocity, legato, true);
+        VoiceNoteOn(i, after.note, after.velocity, force_legato || stealing, true);
       }
     }
   } else if (uses_sorted_dispatch()) {
@@ -881,19 +736,25 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato) {
   } else {
     uint8_t voice_index = 0;
     switch (voicing_.allocation_mode) {
-      case VOICE_ALLOCATION_MODE_POLY:
-        voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_LRU);
+      case POLY_MODE_STEAL_RELEASE_SILENT:
+      case POLY_MODE_STEAL_RELEASE_REASSIGN:
+      case POLY_MODE_STEAL_HIGHEST_PRIORITY: {
+        bool note_justifies_steal = mono_allocator_.priority_for_note(
+          static_cast<stmlib::NoteStackFlags>(voicing_.allocation_priority),
+          note
+        ) < num_voices_;
+        uint8_t note_to_steal_voice_from =
+          voicing_.allocation_mode == POLY_MODE_STEAL_HIGHEST_PRIORITY
+          ? before.note // Highest priority before this note
+          : priority_note(num_voices_).note; // Note that just got deprioritized
+        uint8_t stealable_voice_index = note_justifies_steal
+          ? FindVoiceForNote(note_to_steal_voice_from) : NOT_ALLOCATED;
+        voice_index = poly_allocator_.NoteOn(note, stealable_voice_index);
+        if (voice_index == NOT_ALLOCATED) return;
         break;
-      
-      case VOICE_ALLOCATION_MODE_POLY_STEAL_MOST_RECENT:
-        voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_MRU);
-        break;
-
-      case VOICE_ALLOCATION_MODE_POLY_NICE:
-        voice_index = poly_allocator_.NoteOn(note, VOICE_STEALING_MODE_NONE);
-        break;
+      }
         
-      case VOICE_ALLOCATION_MODE_POLY_CYCLIC:
+      case POLY_MODE_CYCLIC:
         if (cyclic_allocation_note_counter_ >= num_voices_) {
           cyclic_allocation_note_counter_ = 0;
         }
@@ -901,11 +762,11 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato) {
         ++cyclic_allocation_note_counter_;
         break;
       
-      case VOICE_ALLOCATION_MODE_POLY_RANDOM:
+      case POLY_MODE_RANDOM:
         voice_index = (Random::GetWord() >> 24) % num_voices_;
         break;
         
-      case VOICE_ALLOCATION_MODE_POLY_VELOCITY:
+      case POLY_MODE_VELOCITY:
         voice_index = (static_cast<uint16_t>(velocity) * num_voices_) >> 7;
         break;
         
@@ -914,18 +775,10 @@ void Part::InternalNoteOn(uint8_t note, uint8_t velocity, bool force_legato) {
     }
     
     if (voice_index < num_voices_) {
-      if (legato) {
-        if (active_note_[voice_index] != VOICE_ALLOCATION_NOT_FOUND) {
-          // Disable legato when stealing
-          legato = false;
-        } else {
-          // Begin portamento from the preceding priority note
-          voice_[voice_index]->SetPortamento(Tune(before.note), velocity, 0);
-        }
-      }
       // Prevent the same note from being simultaneously played on two channels.
       KillAllInstancesOfNote(note);
-      VoiceNoteOn(voice_index, note, velocity, legato, true);
+      bool stealing = active_note_[voice_index] != VOICE_ALLOCATION_NOT_FOUND;
+      VoiceNoteOn(voice_index, note, velocity, force_legato || stealing, true);
     } else {
       // Polychaining forwarding.
       midi_handler.OnInternalNoteOn(tx_channel(), note, velocity);
@@ -957,7 +810,7 @@ void Part::InternalNoteOff(uint8_t note) {
   const NoteEntry& before = priority_note();
   mono_allocator_.NoteOff(note);
   const NoteEntry& after = priority_note();
-  if (voicing_.allocation_mode == VOICE_ALLOCATION_MODE_MONO) {
+  if (voicing_.allocation_mode == POLY_MODE_OFF) {
     if (mono_allocator_.size() == 0) {
       // No key is pressed, we just close the gate.
       for (uint8_t i = 0; i < num_voices_; ++i) {
@@ -972,8 +825,8 @@ void Part::InternalNoteOff(uint8_t note) {
   } else if (uses_sorted_dispatch()) {
     KillAllInstancesOfNote(note);
     if (
-        voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_UNISON_1 ||
-        had_extra_notes
+      voicing_.allocation_mode == POLY_MODE_UNISON_RELEASE_REASSIGN ||
+      had_extra_notes
     ) {
       DispatchSortedNotes(true);
     }
@@ -986,10 +839,10 @@ void Part::InternalNoteOff(uint8_t note) {
       VoiceNoteOff(voice_index);
       if (
         had_extra_notes &&
-        voicing_.allocation_mode == VOICE_ALLOCATION_MODE_POLY_NICE
-      ) {
-        const NoteEntry& nice = priority_note(NOTE_STACK_PRIORITY_FIRST, num_voices_ - 1);
-        poly_allocator_.NoteOn(nice.note, VOICE_STEALING_MODE_NONE);
+        voicing_.allocation_mode == POLY_MODE_STEAL_RELEASE_REASSIGN
+      ) { // Reassign freed voice to the note that is now in the priority window
+        const NoteEntry& nice = priority_note(num_voices_ - 1);
+        poly_allocator_.NoteOn(nice.note, NOT_ALLOCATED);
         VoiceNoteOn(voice_index, nice.note, nice.velocity, true, false);
       }
     } else {
@@ -1080,7 +933,15 @@ bool Part::Set(uint8_t address, uint8_t value) {
       break;
       
     case PART_SEQUENCER_ARP_DIRECTION:
-      arp_.key_increment = 1;
+      arpeggiator_.key_increment = 1;
+      break;
+
+    case PART_SEQUENCER_ARP_PATTERN:
+      if (midi_.play_mode == PLAY_MODE_ARPEGGIATOR &&
+        // If changing seq_driven_arp
+        (previous_value >= LUT_ARPEGGIATOR_PATTERNS_SIZE) !=
+        (value >= LUT_ARPEGGIATOR_PATTERNS_SIZE)
+      ) StopSequencerArpeggiatorNotes();
       break;
 
     case PART_MIDI_SUSTAIN_MODE:

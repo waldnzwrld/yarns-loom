@@ -47,24 +47,29 @@ const uint8_t kNumCVOutputs = 4;
 const uint8_t kNumSystemVoices = kNumParaphonicVoices + (kNumCVOutputs - 1);
 const uint8_t kMaxBarDuration = 32;
 
+// Converts BPM to the Refresh phase increment of an LFO that cycles at 24 PPQN
+const uint32_t kTempoToTickPhaseIncrement = (UINT32_MAX / 4000) * 24 / 60;
+
 struct PackedMulti {
   PackedPart parts[kNumParts];
 
   int8_t custom_pitch_table[12];
 
-  unsigned int
-    layout : 4,
-    clock_tempo : 8,
-    clock_swing : 7,
-    clock_input_division : 3, // can 0-index for 1 fewer bit
-    clock_output_division : 5,
-    clock_bar_duration : 6, // barely
+  unsigned int // 7 bits to spare (plus 8 in flash_padding)
+    layout : 4, // values free: 1
+    clock_tempo : 8, // values free: 54
+    clock_swing : 7, // values free: 28
+    clock_input_division : 3, // Breaking: can 0-index for 1 fewer bit
+    clock_output_division : 5, // values free: 0
+    clock_bar_duration : 6, // values free: 30
     clock_override : 1,
-    remote_control_channel : 5, // barely
+    remote_control_channel : 5, // values free: 15
     nudge_first_tick : 1,
     clock_manual_start : 1;
 
-  uint8_t flash_padding[2];
+  uint8_t control_change_mode; // Breaking: move to bitfield when convenient
+
+  uint8_t flash_padding[1];
 }__attribute__((packed));
 
 struct MultiSettings {
@@ -76,10 +81,11 @@ struct MultiSettings {
   uint8_t clock_bar_duration;
   uint8_t clock_override;
   int8_t custom_pitch_table[12];
-  uint8_t remote_control_channel;
+  uint8_t remote_control_channel; // first value = off
   uint8_t nudge_first_tick;
   uint8_t clock_manual_start;
-  uint8_t padding[10];
+  uint8_t control_change_mode;
+  uint8_t padding[9];
 
   void Pack(PackedMulti& packed) {
     for (uint8_t i = 0; i < 12; i++) {
@@ -95,6 +101,7 @@ struct MultiSettings {
     packed.remote_control_channel = remote_control_channel;
     packed.nudge_first_tick = nudge_first_tick;
     packed.clock_manual_start = clock_manual_start;
+    packed.control_change_mode = control_change_mode;
   }
 
   void Unpack(PackedMulti& packed) {
@@ -111,11 +118,19 @@ struct MultiSettings {
     remote_control_channel = packed.remote_control_channel;
     nudge_first_tick = packed.nudge_first_tick;
     clock_manual_start = packed.clock_manual_start;
+    control_change_mode = packed.control_change_mode;
   }
 };
 
 enum Tempo {
   TEMPO_EXTERNAL = 39
+};
+
+enum ControlChangeMode {
+  CONTROL_CHANGE_MODE_OFF,
+  CONTROL_CHANGE_MODE_ABSOLUTE,
+  CONTROL_CHANGE_MODE_RELATIVE_TWOS_COMPLEMENT,
+  CONTROL_CHANGE_MODE_LAST,
 };
 
 enum MultiSetting {
@@ -141,6 +156,7 @@ enum MultiSetting {
   MULTI_REMOTE_CONTROL_CHANNEL,
   MULTI_CLOCK_NUDGE_FIRST_TICK,
   MULTI_CLOCK_MANUAL_START,
+  MULTI_CONTROL_CHANGE_MODE,
 };
 
 enum Layout {
@@ -188,7 +204,7 @@ class Multi {
 
   inline bool part_accepts_channel(uint8_t part, uint8_t channel) const {
     return is_remote_control_channel(channel) ||
-      midi(part).channel == 0x10 ||
+      midi(part).channel == kMidiChannelOmni ||
       midi(part).channel == channel;
   }
 
@@ -266,7 +282,20 @@ class Multi {
     return thru;
   }
   
-  bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value);
+  bool ControlChange(uint8_t channel, uint8_t controller, uint8_t value_7bits);
+  int16_t ScaleAbsoluteCC(uint8_t value_7bits, int16_t min, int16_t max) const;
+  inline int8_t IncrementFromTwosComplementRelativeCC(uint8_t value_7bits) const {
+    return static_cast<int8_t>(value_7bits << 1) >> 1;
+  }
+  inline int16_t IncrementSetting(const Setting& setting, uint8_t part, int16_t increment) const {
+    int16_t value = GetSetting(setting, part);
+    if (
+      setting.unit == SETTING_UNIT_INT8 ||
+      setting.unit == SETTING_UNIT_LFO_SPREAD
+    ) value = static_cast<int8_t>(value);
+    value += increment;
+    return value;
+  }
   void SetFromCC(uint8_t part_index, uint8_t controller, uint8_t value);
   uint8_t GetSetting(const Setting& setting, uint8_t part) const;
   void ApplySetting(SettingIndex setting, uint8_t part, int16_t raw_value) {
@@ -401,6 +430,9 @@ class Multi {
   inline bool internal_clock() const { return settings_.clock_tempo > TEMPO_EXTERNAL; }
   inline uint32_t tick_counter() { return tick_counter_; }
   inline uint8_t tempo() const { return settings_.clock_tempo; }
+  inline uint32_t tick_phase_increment() const {
+    return settings_.clock_tempo * kTempoToTickPhaseIncrement;
+  }
   inline bool running() const { return running_; }
   inline bool recording() const { return recording_; }
   inline uint8_t recording_part() const { return recording_part_; }
@@ -523,7 +555,7 @@ class Multi {
   void UpdateTempo();
   void AllocateParts();
   void ClockSong();
-  void SpreadLFOs(int8_t spread, SyncedLFO** base_lfo, uint8_t num_lfos);
+  void SpreadLFOs(int8_t spread, FastSyncedLFO** base_lfo, uint8_t num_lfos);
   
   MultiSettings settings_;
   
@@ -543,8 +575,12 @@ class Multi {
   // Ticks since Start. At 240 BPM * 24 PPQN = 96 Hz, this overflows after 517 days -- acceptable
   uint32_t tick_counter_;
 
-  // Runs at 16 PPQN
-  SyncedLFO master_lfo_;
+  // The master LFO sits between the clock and the part-specific synced LFOs.
+  // While the clock is running, the master LFO syncs to the clock's phase/freq,
+  // and while the clock is stopped, the master LFO continues free-running based
+  // on its last sync
+  FastSyncedLFO master_lfo_;
+  // Roughly 1:1 with tick_counter_, but can free-run without the clock
   uint32_t master_lfo_tick_counter_;
 
   uint8_t clock_input_prescaler_;

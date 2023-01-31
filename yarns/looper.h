@@ -70,7 +70,7 @@ const uint8_t kBitsMIDI = 7;
 
 struct PackedNote {
   PackedNote() { }
-  unsigned int
+  unsigned int // values free: 0
     on_pos    : kBitsPos,
     off_pos   : kBitsPos,
     pitch     : kBitsMIDI,
@@ -93,7 +93,8 @@ class Deck {
   inline uint16_t phase() const {
     return pos_;
   }
-  void Clock(uint32_t tick_counter);
+  uint16_t period_ticks() const;
+  void Clock();
   inline void Refresh() {
     lfo_.Refresh();
     uint16_t new_phase = lfo_.GetPhase() >> 16;
@@ -154,7 +155,7 @@ class Deck {
   Link next_link_[kMaxNotes];
 
   // Phase tracking
-  SyncedLFO lfo_;
+  SyncedLFO<23, 12> lfo_; // Gentle sync
   uint16_t pos_;
   bool needs_advance_;
 
