@@ -29,7 +29,6 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 
 ### Community
 - [Discussion thread on the Mutable Instruments forums](https://forum.mutable-instruments.net/t/loom-alternative-firmware-for-yarns-looper-paraphony-and-more/17723)
-- [Support on Patreon](https://www.patreon.com/rcrogers)
 - Forks, pull requests, feature ideas, and bug reports are welcome (though I can't guarantee a timely response)
 - License: MIT License
 
