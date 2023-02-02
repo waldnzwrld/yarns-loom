@@ -174,11 +174,11 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 
 ##### `JUMP` movement
   - Uses a combination of relative and absolute movement through the chord
-    - Both colors advance the active position in the arp chord by octave-many places, wrapping around to the beginning of the chord
-    - White steps emit a note from the active position in the arp chord, e.g.:
-      - On a sequencer step that is the 5th white note of octave 2, where the starting active position is 1 out of the arp chord's 6 notes, the active position is first incremented by 2 to become 3, and then the 3rd note of the arp chord is emitted
-    - Black steps ignore the active position, instead treating the pitch ordinal as an absolute position in the arp chord, e.g.:
-      - On a sequencer step that the 3rd black note of octave 5, the emitted note is the 3rd note of the arp chord, while the active position is incremented by 5
+  - Both colors advance the active position in the arp chord by octave-many places, wrapping around to the beginning of the chord
+  - White steps emit a note from the active position in the arp chord, e.g.:
+    - On a sequencer step that is the 5th white note of octave 2, where the starting active position is 1 out of the arp chord's 6 notes, the active position is first incremented by 2 to become 3, and then the 3rd note of the arp chord is emitted
+  - Black steps ignore the active position, instead treating the pitch ordinal as an absolute position in the arp chord, e.g.:
+    - On a sequencer step that the 3rd black note of octave 5, the emitted note is the 3rd note of the arp chord, while the active position is incremented by 5
 
 ##### `GRID` movement
   - Simulates an X-Y coordinate system
