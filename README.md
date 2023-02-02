@@ -7,7 +7,7 @@ An alternative firmware for the [Yarns MIDI interface by Mutable Instruments](ht
 - [ADSR envelopes with velocity-sensitive segments and amplitude](yarns/MANUAL.md#amplitude-dynamics-envelope-and-tremolo)
 - [Tremolo with variable depth and shape](yarns/MANUAL.md#amplitude-dynamics-envelope-and-tremolo)
 - [New layouts, including a layout that features a 3-voice paraphonic part](yarns/MANUAL.md#layouts)
-- [New and improved algorithms for polyphonic dispatch](yarns/MANUAL.md#voicing-allocation-methods)
+- [New and improved algorithms for polyphonic voice allocation](yarns/MANUAL.md#polyphonic-voice-allocation-note-priority-and-voicing)
 - [New ways to use the hold pedal, including latch, sostenuto, and note filtering](yarns/MANUAL.md#hold-pedal)
 - [Velocity filtering](yarns/MANUAL.md#event-routing-filtering-and-transformation)
 - [Input octave switch](yarns/MANUAL.md#event-routing-filtering-and-transformation)
