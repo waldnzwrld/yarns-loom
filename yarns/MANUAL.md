@@ -70,27 +70,28 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - `TV (TIMBRE VEL MOD)` attenuverter for velocity's modulation of the timbre envelope (velocity can polarize the timbre envelope)
 
 ### Oscillator synthesis models
-- Filtered noise: `TIMBRE` sets filter cutoff
-  - Voice pitch sets filter resonance
-  - Variants: low-pass, notch, band-pass, high-pass
+- Filtered noise: `TIMBRE` sets filter cutoff, voice pitch sets filter resonance
+  - Low-pass, notch, band-pass, high-pass
 - Phase distortion, resonant pulse: `TIMBRE` sets filter cutoff
-  - Variants: low-pass, peaking, band-pass, high-pass
+  - Low-pass, peaking, band-pass, high-pass
 - Phase distortion, resonant saw: `TIMBRE` sets filter cutoff
-  - Variants: low-pass, peaking, band-pass, high-pass
+  - Low-pass, peaking, band-pass, high-pass
 - State-variable filter, low-pass: `TIMBRE` sets filter cutoff (resonance is fixed)
-  - Variants: pulse, saw
+  - Pulse, saw
 - Pulse-width modulation: `TIMBRE` sets pulse width
-  - Variants: pulse, saw
+  - Pulse, saw
 - Saw-pulse morph: `TIMBRE` morphs toward pulse
 - Hard sync: `TIMBRE` sets detuning of the secondary oscillator
-  - Variants: sine, pulse, saw
+  - Sine, pulse, saw
 - Wavefolder: `TIMBRE` sets fold gain
-  - Variants: sine, triangle
+  - Sine, triangle
 - Dirac comb: `TIMBRE` sets harmonic content
 - Compressed sine (`tanh`): `TIMBRE` sets compression amount
 - Exponential sine: `TIMBRE` sets exponentiation amount
 - Frequency modulation: `TIMBRE` sets modulation index
-  - Variants: 11 integer ratios (ordered from harmonic to inharmonic), 8 ratios based on the inverse Minkowski question-mark function, 7 ratios that are integer divisions/multiples of pi
+  - 11 integer ratios (ordered from harmonic to inharmonic)
+  - 8 ratios based on the inverse Minkowski question-mark function
+  - 7 ratios that are integer divisions/multiples of pi
 
 ### Amplitude dynamics: envelope and tremolo
 - Configured via the `▽A (AMPLITUDE MENU)`
