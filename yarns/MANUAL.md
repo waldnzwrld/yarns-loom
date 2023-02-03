@@ -165,11 +165,11 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
     - Key **color** (is the key black or white?)
     - Displayed **octave number** (with C as the first note of the octave)
     - **Pitch ordinal** within octave and color, e.g.
-      - On a sequencer step that is the 2nd white note of octave 5, the pitch ordinal is 2
-      - On a sequencer step that is the 4th black note of octave 2, the pitch ordinal is 4
+      - When the sequencer pitch is the 2nd white note of octave 5, the pitch ordinal is 2
+      - When the sequencer pitch is the 4th black note of octave 2, the pitch ordinal is 4
   - Before emitting a note, the arpeggiator checks the pitch ordinal against the size of the arp chord 
     - On a sequencer step with pitch ordinal N, the step is ignored unless there are N or more keys in the arp chord, e.g.:
-      - On a sequencer step that is the 3rd white key of its octave, a note is emitted IFF there are 3+ keys in the arp chord
+      - When the sequencer pitch is the 3rd white key of its octave, a note is emitted IFF there are 3+ keys in the arp chord
       - On sequencer step that is the 1st black key of its octave, a note is emitted IFF there are 1+ keys in the arp chord
     - Allows dynamic control of the arpeggiator's rhythmic pattern by varying the size of the arp chord
 
@@ -177,9 +177,9 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - Uses a combination of relative and absolute movement through the chord
   - Both colors advance the active position in the arp chord by octave-many places, wrapping around to the beginning of the chord
   - White steps emit a note from the active position in the arp chord, e.g.:
-    - On a sequencer step that is the 5th white note of octave 2, where the starting active position is 1 out of the arp chord's 6 notes, the active position is first incremented by 2 to become 3, and then the 3rd note of the arp chord is emitted
+    - When the sequencer pitch is the 5th white note of octave 2, and the active position is 1 out of the arp chord's 6 notes, the active position is first incremented by 2 to become 3, and then the 3rd note of the arp chord is emitted
   - Black steps ignore the active position, instead treating the pitch ordinal as an absolute position in the arp chord, e.g.:
-    - On a sequencer step that the 3rd black note of octave 5, the emitted note is the 3rd note of the arp chord, while the active position is incremented by 5
+    - When the sequencer pitch is the 3rd black note of octave 5, the emitted note is the 3rd note of the arp chord, while the active position is incremented by 5
 
 ##### `GRID` direction
   - Simulates an X-Y coordinate system
