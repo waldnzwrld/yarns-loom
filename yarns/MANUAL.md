@@ -168,10 +168,11 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
       - When the sequencer pitch is the 2nd white note of octave 5, the pitch ordinal is 2
       - When the sequencer pitch is the 4th black note of octave 2, the pitch ordinal is 4
   - Before emitting a note, the arpeggiator checks the pitch ordinal against the size of the arp chord 
-    - On a sequencer step with pitch ordinal N, the step is ignored unless there are N or more keys in the arp chord, e.g.:
-      - When the sequencer pitch is the 3rd white key of its octave, a note is emitted IFF there are 3+ keys in the arp chord
-      - On sequencer step that is the 1st black key of its octave, a note is emitted IFF there are 1+ keys in the arp chord
+    - For a sequencer pitch with pitch ordinal N, the arpeggiator emits a note only if there are N or more keys in the arp chord, e.g.:
+      - When the sequencer pitch is the 3rd white key of its octave, a note is emitted only if there are 3+ keys in the arp chord
+      - When the sequencer pitch is the 1st black key of its octave, a note is emitted only if there are 1+ keys in the arp chord
     - Allows dynamic control of the arpeggiator's rhythmic pattern by varying the size of the arp chord
+  - The octave and color are used for different purposes by each direction
 
 ##### `JUMP` direction
   - Uses a combination of relative and absolute movement through the chord
