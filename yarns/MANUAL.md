@@ -155,24 +155,25 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
 - The arpeggiator respects rests/ties in a step sequence
 - The velocity of the arpeggiator output is calculated by multiplying the velocities of the sequencer note and the held key
 
-#### Special `ARP DIRECTIONS` (`JUMP` and `GRID`) use the sequencer pitch as movement instructions
+#### Programmable `ARP DIRECTIONS` 
 
-##### Behaviors shared by `JUMP` and `GRID`
-  - Primarily useful when `ARP PATTERN` is sequencer-driven
+##### General concepts
+  - The arpeggiator always has some **active position**, e.g. "the 3rd key of the chord"
+  - Changes in the active position ("**movement**") are determined by the pitch of notes emitted by the sequencer 
     - If `ARP PATTERN` is not sequencer-driven, the sequencer pitch data is replaced by the position in the 16-step pattern rhythm 
-  - Sequencer notes are interpreted based on their:
-    - Color (black or white)
-    - Displayed octave number (with C as the first note of the octave)
-    - Pitch ordinal within octave and color, e.g.
+  - Sequencer pitch is interpreted based on its:
+    - Key **color** (is the key black or white?)
+    - Displayed **octave number** (with C as the first note of the octave)
+    - **Pitch ordinal** within octave and color, e.g.
       - On a sequencer step that is the 2nd white note of octave 5, the pitch ordinal is 2
       - On a sequencer step that is the 4th black note of octave 2, the pitch ordinal is 4
-  - The sequencer note's pitch ordinal is checked against the size of the arp chord to see if a note is emitted
+  - Before emitting a note, the arpeggiator checks the pitch ordinal against the size of the arp chord 
     - On a sequencer step with pitch ordinal N, the step is ignored unless there are N or more keys in the arp chord, e.g.:
       - On a sequencer step that is the 3rd white key of its octave, a note is emitted IFF there are 3+ keys in the arp chord
       - On sequencer step that is the 1st black key of its octave, a note is emitted IFF there are 1+ keys in the arp chord
     - Allows dynamic control of the arpeggiator's rhythmic pattern by varying the size of the arp chord
 
-##### `JUMP` movement
+##### `JUMP` direction
   - Uses a combination of relative and absolute movement through the chord
   - Both colors advance the active position in the arp chord by octave-many places, wrapping around to the beginning of the chord
   - White steps emit a note from the active position in the arp chord, e.g.:
@@ -180,7 +181,7 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - Black steps ignore the active position, instead treating the pitch ordinal as an absolute position in the arp chord, e.g.:
     - On a sequencer step that the 3rd black note of octave 5, the emitted note is the 3rd note of the arp chord, while the active position is incremented by 5
 
-##### `GRID` movement
+##### `GRID` direction
   - Simulates an X-Y coordinate system
   - The arp chord is mapped onto the grid in linear fashion, repeated as necessary to fill the grid
   - Octave sets the size of the grid: 4th octave => 4x4 grid (minimum 1x1)
