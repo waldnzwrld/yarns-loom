@@ -249,7 +249,8 @@ This manual explains how Loom differs from a stock Yarns.  For documentation abo
   - `POLY` -> `STEAL RELEASE MUTE`
     - Steal from the lowest-priority existing note IFF the incoming note has higher priority
     - Don't reassign on release
-  - `SORTED` -> `PRIORITY ORDER`: always voice the highest-priority notes
+  - `SORTED` -> `PRIORITY ORDER`
+    - Voice 1 always receives the note that has priority 1, voice 2 the note with priority 2, etc.
   - `U1` -> `UNISON RELEASE REASSIGN`
   - `U2` -> `UNISON RELEASE MUTE`
   - `STEAL MOST RECENT` -> `STEAL HIGHEST PRIORITY`
